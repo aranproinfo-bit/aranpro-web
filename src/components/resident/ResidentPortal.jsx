@@ -3,11 +3,13 @@ import { useCommunity } from '../../context/CommunityContext';
 import { formatCLP, formatDate, getMonthName } from '../../utils/formatters';
 import { printDocumentDirectly } from '../../utils/printDocument';
 import { AranproLogo } from '../common/MauranLogo';
+import { ExpenseReportModal } from '../common/ExpenseReportModal';
 import { 
   Building2, Home, User, CheckCircle2, AlertCircle, Eye, 
   Download, ArrowUpRight, DollarSign, FileText, Send, 
   CreditCard, Copy, Check, ShieldCheck, ChevronDown, ChevronUp, LogOut,
-  Megaphone, FolderOpen, KeyRound, Printer, Menu, X, Globe, Shield, Plus
+  Megaphone, FolderOpen, KeyRound, Printer, Menu, X, Globe, Shield, Plus,
+  FileCheck
 } from 'lucide-react';
 
 export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
@@ -18,6 +20,7 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
   const [committeeAnnForm, setCommitteeAnnForm] = useState({ title: '', content: '', priority: 'Importante' });
   const [showPayModal, setShowPayModal] = useState(false);
   const [showBillModal, setShowBillModal] = useState(false);
+  const [showExpenseReportModal, setShowExpenseReportModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [passwordSaved, setPasswordSaved] = useState(false);
@@ -215,10 +218,23 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
               setMobileSidebarOpen(false);
               setShowBillModal(true);
             }}
-            className="px-2 py-2 text-[11px] font-bold bg-white hover:bg-slate-50 text-[#0F3D2E] border border-[#D4B895] rounded-xl transition-colors flex items-center justify-center"
+            className="px-2 py-2 text-[11px] font-bold bg-white hover:bg-slate-50 text-[#0F3D2E] border border-[#D4B895] rounded-xl transition-colors flex items-center justify-center cursor-pointer"
+            title="Ver e imprimir su Colilla Individual de Cobro"
           >
             <Printer className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E] shrink-0" />
             <span className="truncate">Colilla PDF</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setMobileSidebarOpen(false);
+              setShowExpenseReportModal(true);
+            }}
+            className="px-2 py-2 text-[11px] font-bold bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895] rounded-xl transition-colors flex items-center justify-center cursor-pointer"
+            title="Ver Informe Oficial de Rendición de Gastos Comunes (Ley N° 21.442)"
+          >
+            <FileCheck className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E] shrink-0" />
+            <span className="truncate">Rendición PDF</span>
           </button>
 
           <button
@@ -588,10 +604,20 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
 
                   <button
                     onClick={() => setShowBillModal(true)}
-                    className="w-full sm:w-auto px-5 py-3 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-semibold text-sm rounded-2xl shadow-xs transition-colors flex items-center justify-center"
+                    className="w-full sm:w-auto px-5 py-3 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-sm rounded-2xl shadow-xs transition-colors flex items-center justify-center cursor-pointer"
+                    title="Ver su Colilla Individual de Cobro foliada"
                   >
                     <FileText className="w-4 h-4 mr-2 text-[#0F3D2E]" />
                     Ver Colilla de Cobro
+                  </button>
+
+                  <button
+                    onClick={() => setShowExpenseReportModal(true)}
+                    className="w-full sm:w-auto px-5 py-3 bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895] font-bold text-sm rounded-2xl shadow-xs transition-colors flex items-center justify-center cursor-pointer"
+                    title="Ver Rendición Oficial de Gastos Comunes de la Comunidad (Ley N° 21.442)"
+                  >
+                    <FileCheck className="w-4 h-4 mr-2 text-[#0F3D2E]" />
+                    Ver Rendición de Gastos
                   </button>
                 </div>
 
@@ -819,9 +845,20 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
                   Transparencia radical: haz clic en "Ver Respaldo" para inspeccionar la factura real emitida por cada proveedor.
                 </p>
               </div>
-              <div className="text-right">
-                <span className="text-xs text-slate-400 block">Total Gasto Común Emitido</span>
-                <span className="text-xl font-black text-[#0F3D2E]">{formatCLP(grandTotal)}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="text-left sm:text-right">
+                  <span className="text-xs text-slate-400 block">Total Gasto Común Emitido</span>
+                  <span className="text-xl font-black text-[#0F3D2E]">{formatCLP(grandTotal)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowExpenseReportModal(true)}
+                  className="px-4 py-2.5 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center cursor-pointer"
+                  title="Ver y descargar el Informe Oficial de Rendición de Gastos Comunes en PDF (1 Página Legal)"
+                >
+                  <FileCheck className="w-4 h-4 mr-1.5 text-[#D4B895]" />
+                  Rendición Oficial (PDF)
+                </button>
               </div>
             </div>
 
@@ -1615,6 +1652,13 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
           </div>
         </div>
       )}
+
+      {/* MODAL INFORME OFICIAL DE RENDICIÓN DE GASTOS COMUNES (LEY N° 21.442) */}
+      <ExpenseReportModal
+        isOpen={showExpenseReportModal}
+        onClose={() => setShowExpenseReportModal(false)}
+        community={community}
+      />
 
     </div>
   );

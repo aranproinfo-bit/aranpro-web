@@ -1168,7 +1168,7 @@ _Administración ARANPRO • Cuidando el patrimonio y la tranquilidad de tu hoga
 `🔔 *INFORMACIÓN OFICIAL COPROPIETARIOS — ${currentCommunity.name.toUpperCase()}*
 
 Estimados(as) Vecinos(as):
-Se comunica que se encuentra formalmente emitido el *Gasto Común del período ${currentCommunity.activePeriod?.month || billingMonth}/${currentCommunity.activePeriod?.year || billingYear}*.
+Se comunica que se encuentra formalmente emitido el *Gasto Común del período ${currentCommunity.activePeriod?.month || billingMonth}/${currentCommunity.activePeriod?.year || billingYear}* y disponible la *Rendición Oficial de Gastos* (Ley N° 21.442).
 
 📊 *Resumen Financiero del Período:*
 • Total Gastos Operacionales: ${formatCLP(metrics.totalExpenses)}
@@ -1176,9 +1176,13 @@ Se comunica que se encuentra formalmente emitido el *Gasto Común del período $
 • Monto Total Facturado: ${formatCLP(metrics.grandTotal)}
 • Cuota base promedio por unidad: ${formatCLP(metrics.unitsCount > 0 ? Math.round(metrics.grandTotal / metrics.unitsCount) : 0)}
 
+📑 *Documentación Legal Emitida y Publicada:*
+1️⃣ *Colilla Individual de Cobro:* Detalle de cuota mensual y estado de cuenta de su unidad.
+2️⃣ *Rendición Oficial de Gastos Comunes:* Planilla con el 100% de facturas, boletas y respaldos tributarios auditados (Arts. 6°, 13° y 14° Ley 21.442).
+
 📅 *Fecha Límite de Pago:* ${formatDate(currentCommunity.activePeriod?.dueDate || `${billingYear}-${String(billingMonth).padStart(2, '0')}-10`)}
 
-📲 *Consulte su colilla individual y respaldos tributarios oficiales en:*
+📲 *Consulte su Colilla Individual y descargue la Rendición Oficial de Gastos en:*
 ${portalUrl}
 
 Favor transferir a la cuenta de la comunidad e informar su pago en el portal.
@@ -9551,6 +9555,16 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
 
                   <button
                     type="button"
+                    onClick={() => setShowExpenseReportModal(true)}
+                    className="px-3.5 py-2 bg-white hover:bg-slate-50 text-[#0F3D2E] border border-slate-300 font-bold text-xs rounded-xl flex items-center shadow-2xs transition-colors cursor-pointer"
+                    title="Ver e imprimir la Rendición Oficial de Gastos Comunes del período (Documento Oficial ARANPRO Ley N° 21.442)"
+                  >
+                    <FileCheck className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
+                    Rendición de Gastos (PDF)
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handlePrintEmissionSheet}
                     className="px-3.5 py-2 bg-gradient-to-r from-[#0F3D2E] to-[#14533d] hover:from-[#0A291F] hover:to-[#0F3D2E] text-white border border-[#D4B895] font-black text-xs rounded-xl flex items-center shadow-xs transition-all cursor-pointer"
                     title="Imprimir o guardar la Planilla General de Prorrateo, Gastos y Cobro en formato legal ARANPRO para firma del Comité"
@@ -10040,16 +10054,26 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                   Emitir y Calcular Cobros del Mes
                 </button>
 
-                {/* Acciones de navegación y planilla */}
+                {/* Acciones de navegación, planilla y rendición */}
                 <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={handlePrintEmissionSheet}
-                    className="px-3.5 py-2 bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895] font-bold text-xs rounded-xl flex items-center cursor-pointer"
-                  >
-                    <Printer className="w-3.5 h-3.5 mr-1.5" />
-                    <span>Ver Planilla de Cobro Calculada (PDF)</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowExpenseReportModal(true)}
+                      className="px-3 py-2 bg-white hover:bg-slate-50 text-[#0F3D2E] border border-slate-300 font-bold text-xs rounded-xl flex items-center cursor-pointer shadow-2xs"
+                    >
+                      <FileCheck className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
+                      <span>Rendición de Gastos (PDF)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePrintEmissionSheet}
+                      className="px-3 py-2 bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895] font-bold text-xs rounded-xl flex items-center cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5 mr-1.5" />
+                      <span>Planilla de Prorrateo (PDF)</span>
+                    </button>
+                  </div>
 
                   <button
                     type="button"
@@ -16916,13 +16940,13 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
 
                     <div className="bg-[#F5F4EF] p-3.5 rounded-2xl border border-[#D4B895] space-y-1.5">
                       <span className="font-bold text-[#0F3D2E] block">
-                        Contenido del Correo Masivo Oficial:
+                        Instrumentos Legales Incluidos en el Despacho Masivo (Ley N° 21.442):
                       </span>
                       <ul className="list-disc list-inside space-y-1 text-slate-700">
-                        <li>Identificación de la unidad, titular y pagador.</li>
-                        <li>Desglose detallado: Gasto del mes, Cobro extra, Saldo anterior y Cuota repactada (si tiene convenio).</li>
-                        <li>Datos completos de transferencia bancaria de {currentCommunity.name}.</li>
-                        <li>Enlace directo con 1 clic al portal de copropietario para revisar boletas de respaldo e informar pago.</li>
+                        <li><strong>Colilla Individual de Cobro:</strong> Desglose detallado por unidad (Gasto del mes, Cobro extra, Saldo anterior y Cuota repactada).</li>
+                        <li><strong>Rendición Oficial de Gastos Comunes:</strong> Planilla con 100% de facturas electrónicas SII, boletas y respaldos tributarios auditados (Arts. 6°, 13° y 14°).</li>
+                        <li><strong>Datos Bancarios Oficiales:</strong> Cuenta corriente y RUT de {currentCommunity.name} para transferencia directa.</li>
+                        <li><strong>Enlace con 1 clic:</strong> Acceso seguro al portal vecinal para descargar colilla, rendición e informar el pago.</li>
                       </ul>
                     </div>
 
@@ -16959,12 +16983,15 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                         onClick={() => {
                           // Simular despacho masivo y armar mailto agrupado
                           const allEmails = unitsWithEmail.map(u => (!u.payerSameAsOwner && u.additionalUsers?.[0]?.email) || u.email).filter(Boolean);
-                          const subject = `Colillas de Cobro Gastos Comunes - ${currentCommunity.name} • Período ${currentCommunity.activePeriod?.month}/${currentCommunity.activePeriod?.year}`;
-                          const body = `Estimados Copropietarios de ${currentCommunity.name}:\n\n` +
-                            `Se encuentra emitida la colilla de cobro del período ${currentCommunity.activePeriod?.month}/${currentCommunity.activePeriod?.year}.\n` +
-                            `Pueden consultar su estado de cuenta individual y comprobantes de gastos en el portal oficial:\n` +
+                          const subject = `Colilla de Cobro y Rendición de Gastos Comunes - ${currentCommunity.name} • Período ${currentCommunity.activePeriod?.month}/${currentCommunity.activePeriod?.year}`;
+                          const body = `Estimados(as) Copropietarios(as) de ${currentCommunity.name}:\n\n` +
+                            `Se comunica que se encuentra formalmente emitido el Gasto Común y disponible la Rendición Oficial de Gastos correspondiente al período ${currentCommunity.activePeriod?.month}/${currentCommunity.activePeriod?.year} (Ley N° 21.442).\n\n` +
+                            `Documentos reglamentarios publicados en su portal:\n` +
+                            `1. Colilla Individual de Cobro con detalle y estado de cuenta de su unidad.\n` +
+                            `2. Rendición Oficial de Gastos Comunes con el 100% de facturas, boletas y respaldos tributarios auditados.\n\n` +
+                            `Pueden consultar su estado de cuenta, descargar ambos documentos e informar su pago en el portal oficial:\n` +
                             `${window.location.origin}${window.location.pathname}?c=${currentCommunity.slug}\n\n` +
-                            `Atentamente,\nARANPRO • Gestión Integral`;
+                            `Atentamente,\nARANPRO • Gestión Integral y Transparente`;
                           
                           if (allEmails.length > 0) {
                             window.location.href = `mailto:?bcc=${encodeURIComponent(allEmails.join(','))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
