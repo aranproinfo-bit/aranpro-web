@@ -302,10 +302,10 @@ export const ExpenseReportModal = ({
         {/* ======================================================== */}
         {/* CUERPO DEL DOCUMENTO (VISTA PREVIA REAL SIN CORTES) */}
         {/* ======================================================== */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-200/90 flex justify-center">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-200/90">
           <div 
             id="expense-rendition-printable-doc"
-            className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-300 text-slate-800 font-sans p-5 sm:p-7 space-y-2.5 transition-all print:p-0 print:border-none print:shadow-none print:max-w-none"
+            className="bg-white w-full max-w-4xl mx-auto rounded-2xl shadow-xl border border-slate-300 text-slate-800 font-sans p-5 sm:p-7 space-y-3 transition-all h-auto min-h-fit mb-8 print:p-0 print:m-0 print:mb-0 print:border-none print:shadow-none print:max-w-none"
           >
             {/* ======================================================== */}
             {/* FORMATO 1: 🏛️ EJECUTIVO AP (OFICIAL ARANPRO) */}
