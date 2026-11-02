@@ -239,10 +239,30 @@ export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb }) => {
   const [showExpenseReportModal, setShowExpenseReportModal] = useState(false);
   const [expenseReportTemplate, setExpenseReportTemplate] = useState('ejecutivo'); // 'ejecutivo' | 'clasico' | 'moderno'
 
-  // Estados para Auditoría Pre-Cierre y Envío Masivo
+  // Estados para Auditoría Pre-Cierre, Visación Comité, Períodos y Envío Masivo
   const [allowForcedClose, setAllowForcedClose] = useState(false);
   const [forcedCloseReason, setForcedCloseReason] = useState('');
   const [whatsappCopiedAlert, setWhatsappCopiedAlert] = useState(false);
+  const [selectedAuditPeriod, setSelectedAuditPeriod] = useState('active'); // 'active' | period id (e.g. 'hist-2026-11')
+  const [committeeClosingSignoff, setCommitteeClosingSignoff] = useState({
+    status: 'aprobado',
+    member: 'Carlos Morales Rojas',
+    role: 'Presidente Comité',
+    date: '2026-12-01',
+    time: '19:30',
+    notes: 'Cuentas y respaldos tributarios revisados y conformes conforme al Art. 17° de la Ley N° 21.442.'
+  });
+  const [showCommitteeSignoffModal, setShowCommitteeSignoffModal] = useState(false);
+  const [committeeSignoffForm, setCommitteeSignoffForm] = useState({
+    member: 'Carlos Morales Rojas',
+    role: 'Presidente Comité',
+    notes: 'Cuentas y respaldos tributarios revisados y conformes conforme al Art. 17° de la Ley N° 21.442.'
+  });
+  const [committeeWhatsAppCopiedAlert, setCommitteeWhatsAppCopiedAlert] = useState(false);
+  const [unitDispatchSearch, setUnitDispatchSearch] = useState('');
+  const [unitDispatchNotified, setUnitDispatchNotified] = useState({}); // { [unitId]: true }
+  const [showClosingConfirmModal, setShowClosingConfirmModal] = useState(false);
+  const [individualWhatsAppCopiedAlert, setIndividualWhatsAppCopiedAlert] = useState(null);
 
   // Estados para Presupuesto Anual & Cuota Fija (Ley N° 21.442)
   const [budgetYear, setBudgetYear] = useState(2027);
@@ -277,11 +297,13 @@ export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb }) => {
         else if (bitacoraUnit) setBitacoraUnit(null);
         else if (activeUnitBill) setActiveUnitBill(null);
         else if (showBulkEmailModal) setShowBulkEmailModal(false);
+        else if (showCommitteeSignoffModal) setShowCommitteeSignoffModal(false);
+        else if (showClosingConfirmModal) setShowClosingConfirmModal(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showExpenseReportModal, showAssemblyBudgetModal, showResidentBrochureModal, showIncreaseExplainerModal, showNewExpenseModal, collectionLetterUnit, showOfficialRegistryModal, bitacoraUnit, activeUnitBill, showBulkEmailModal]);
+  }, [showExpenseReportModal, showAssemblyBudgetModal, showResidentBrochureModal, showIncreaseExplainerModal, showNewExpenseModal, collectionLetterUnit, showOfficialRegistryModal, bitacoraUnit, activeUnitBill, showBulkEmailModal, showCommitteeSignoffModal, showClosingConfirmModal]);
 
   // Formularios de Mural de Avisos y Documentos
   const [annForm, setAnnForm] = useState({ title: '', content: '', priority: 'Importante' });
@@ -1194,6 +1216,215 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
     setTimeout(() => setWhatsappCopiedAlert(false), 4000);
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
+
+  // Enviar resumen borrador al Comité de Administración por WhatsApp previo a emisión
+  const handleSendDraftToCommitteeWhatsApp = () => {
+    if (!currentCommunity || !metrics) return;
+    const portalUrl = `${window.location.origin}${window.location.pathname}?c=${currentCommunity.slug}`;
+    const text = 
+`🔔 *BORRADOR DE CIERRE DE GASTO COMÚN — ${currentCommunity.name.toUpperCase()}*
+
+Estimado Comité de Administración:
+Ponemos a su disposición el borrador contable del período ${currentCommunity.activePeriod?.month || billingMonth}/${currentCommunity.activePeriod?.year || billingYear} para su correspondiente visación legal previa al despacho a los copropietarios (Ley N° 21.442 Art. 17°):
+
+📊 *Resumen de Cuentas del Período:*
+• Gastos Operacionales Ordinarios: ${formatCLP(metrics.totalExpenses)}
+• Fondo de Reserva Legal (${metrics.reserveFundPercentage}%): ${formatCLP(metrics.reserveFundAmount)}
+• Monto Total a Prorratear: ${formatCLP(metrics.grandTotal)}
+• Cuota Base Promedio por Casa: ${formatCLP(metrics.unitsCount > 0 ? Math.round(metrics.grandTotal / metrics.unitsCount) : 0)}
+
+📑 *Comprobantes y Respaldos:*
+• Total facturas y boletas ingresadas: ${currentCommunity.expenses?.length || 0}
+• 100% de facturas electrónicas SII y respaldos disponibles para revisión.
+
+📲 *Revise el borrador oficial de rendición y planilla en:*
+${portalUrl}
+
+Favor confirmar su V°B° para proceder a la emisión formal.
+_Administración ARANPRO_`;
+
+    navigator.clipboard.writeText(text);
+    setCommitteeWhatsAppCopiedAlert(true);
+    setTimeout(() => setCommitteeWhatsAppCopiedAlert(false), 4000);
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // Enviar colilla individualizada y enlace directo a un vecino por WhatsApp
+  const handleSendIndividualUnitWhatsApp = (unit) => {
+    if (!currentCommunity || !unit) return;
+    const fin = getUnitFinancials(unit);
+    const portalUrl = `${window.location.origin}${window.location.pathname}?c=${currentCommunity.slug}`;
+    const periodLabel = `${currentCommunity.activePeriod?.month || billingMonth}/${currentCommunity.activePeriod?.year || billingYear}`;
+    const dueDate = formatDate(currentCommunity.activePeriod?.dueDate || `${billingYear}-${String(billingMonth).padStart(2, '0')}-10`);
+    const payerName = (!unit.payerSameAsOwner && unit.additionalUsers?.[0]?.name) || unit.owner;
+
+    const text = 
+`🔔 *COBRO DE GASTO COMÚN — ${currentCommunity.name.toUpperCase()}*
+
+Estimado(a) *${payerName}* (Casa N° ${unit.number}):
+Le comunicamos que se encuentra emitido su cobro de gastos comunes del *período ${periodLabel}*:
+
+💰 *Total Exigible este Mes:* ${formatCLP(fin.totalToPay)}
+• Gasto del Mes: ${formatCLP(fin.currentCharge)}
+${fin.previousDebt > 0 ? `• Saldo Anterior: ${formatCLP(fin.previousDebt)}\n` : ''}${fin.repactacionActive ? `• Cuota Convenio (${Math.min(fin.repactacionPaidInstallments + 1, fin.repactacionTotalInstallments)}/${fin.repactacionTotalInstallments}): ${formatCLP(fin.repactedInstallment)}\n` : ''}${fin.creditBalance > 0 ? `• Saldo a Favor Descontado: -${formatCLP(fin.creditBalance)}\n` : ''}📅 *Fecha Límite de Pago:* ${dueDate}
+
+📲 *Consulte su colilla individual y la rendición oficial de gastos en:*
+${portalUrl}
+
+Favor transferir a la cuenta de la comunidad e informar su pago en el portal.
+_Administración ARANPRO_`;
+
+    navigator.clipboard.writeText(text);
+    setUnitDispatchNotified(prev => ({ ...prev, [unit.id]: true }));
+    setIndividualWhatsAppCopiedAlert(unit.number);
+    setTimeout(() => setIndividualWhatsAppCopiedAlert(null), 3500);
+
+    const cleanPhone = (unit.phone || '').replace(/[^0-9]/g, '');
+    const phoneParam = cleanPhone.length >= 8 ? `phone=${cleanPhone.startsWith('56') ? cleanPhone : '56' + cleanPhone}&` : '';
+    window.open(`https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleCopyUnitLink = (unit) => {
+    const portalUrl = `${window.location.origin}${window.location.pathname}?c=${currentCommunity.slug}`;
+    navigator.clipboard.writeText(portalUrl);
+    setIndividualWhatsAppCopiedAlert(unit.number);
+    setTimeout(() => setIndividualWhatsAppCopiedAlert(null), 3500);
+  };
+
+  // Generar e imprimir Acta Notarial de Cierre Contable y Traspaso de Período (Ley 21.442)
+  const handlePrintClosingAct = () => {
+    if (!currentCommunity) return;
+    const totals = calculateCommunityTotals(currentCommunity);
+    const m = currentCommunity.activePeriod?.month || billingMonth;
+    const y = currentCommunity.activePeriod?.year || billingYear;
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    const periodName = `${monthNames[m - 1]} ${y}`;
+    const cleanComm = currentCommunity.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const closedDate = new Date().toISOString().split('T')[0];
+
+    const debtorUnits = (currentCommunity.units || []).filter(u => getUnitFinancials(u).pendingDebt > 0);
+    const debtorRows = debtorUnits.map(u => {
+      const fin = getUnitFinancials(u);
+      return `
+        <tr>
+          <td style="padding: 4px 8px; border: 1px solid #cbd5e1; font-weight: bold;">Casa N° ${u.number}</td>
+          <td style="padding: 4px 8px; border: 1px solid #cbd5e1;">${u.owner}</td>
+          <td style="padding: 4px 8px; border: 1px solid #cbd5e1; text-align: right; font-family: monospace;">${formatCLP(fin.currentCharge)}</td>
+          <td style="padding: 4px 8px; border: 1px solid #cbd5e1; text-align: right; font-family: monospace; color: #dc2626; font-weight: bold;">${formatCLP(fin.pendingDebt)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const html = `
+      <div style="font-family: system-ui, sans-serif; color: #0f172a; line-height: 1.4; padding: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0F3D2E; padding-bottom: 8px;">
+          <div>
+            <div style="font-size: 11px; font-weight: 900; color: #0F3D2E; text-transform: uppercase;">ARANPRO GESTIÓN INMOBILIARIA</div>
+            <div style="font-size: 9px; color: #64748b;">RUT: 76.999.888-1 • Reg. MINVU N° 44.201</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 13px; font-weight: 900;">${currentCommunity.name}</div>
+            <div style="font-size: 10px; color: #64748b;">Fecha Acta: ${formatDate(closedDate)}</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 12px 0 8px 0;">
+          <h2 style="font-size: 14px; font-weight: 900; color: #0F3D2E; text-transform: uppercase; margin: 0;">ACTA NOTARIAL DE CIERRE CONTABLE Y TRASPASO DE SALDOS</h2>
+          <p style="font-size: 10px; color: #475569; margin: 2px 0 0 0;">Conforme a los Artículos 6°, 13°, 14° y 17° de la Ley N° 21.442 de Copropiedad Inmobiliaria</p>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 10px; margin-bottom: 12px;">
+          <strong>Certificación del Cierre del Período: ${periodName}</strong><br/>
+          Se deja constancia fehaciente de que con fecha <strong>${formatDate(closedDate)}</strong>, la Administración ARANPRO, con la visación conforme del Comité de Administración (${committeeClosingSignoff.member} - ${committeeClosingSignoff.role}), ha ejecutado el cierre contable del período <strong>${periodName}</strong>. La totalidad de los comprobantes y boletas tributarias electrónicas se encuentran auditadas y custodiadas en la nube de la comunidad.
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; font-size: 10px; text-align: center;">
+          <div style="border: 1px solid #cbd5e1; padding: 6px; border-radius: 6px; background: #fff;">
+            <span style="font-size: 8px; color: #64748b; text-transform: uppercase; display: block;">Total Gastos Mes</span>
+            <strong style="font-size: 12px;">${formatCLP(totals.totalExpenses)}</strong>
+          </div>
+          <div style="border: 1px solid #cbd5e1; padding: 6px; border-radius: 6px; background: #fff;">
+            <span style="font-size: 8px; color: #64748b; text-transform: uppercase; display: block;">Fondo Reserva</span>
+            <strong style="font-size: 12px; color: #92400e;">${formatCLP(totals.reserveFundAmount)}</strong>
+          </div>
+          <div style="border: 1px solid #cbd5e1; padding: 6px; border-radius: 6px; background: #fff;">
+            <span style="font-size: 8px; color: #64748b; text-transform: uppercase; display: block;">Total Facturado</span>
+            <strong style="font-size: 12px; color: #0F3D2E;">${formatCLP(totals.grandTotal)}</strong>
+          </div>
+          <div style="border: 1px solid #cbd5e1; padding: 6px; border-radius: 6px; background: #fff;">
+            <span style="font-size: 8px; color: #64748b; text-transform: uppercase; display: block;">Total Recaudado</span>
+            <strong style="font-size: 12px; color: #166534;">${formatCLP(totals.totalCollected)}</strong>
+          </div>
+        </div>
+
+        <div style="font-size: 10px; font-weight: bold; color: #0F3D2E; margin-bottom: 4px;">
+          NÓMINA DE SALDOS IMPAGOS TRASPASADOS A DEUDA ANTERIOR (${debtorUnits.length} UNIDADES):
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 16px;">
+          <thead>
+            <tr style="background: #F5F4EF; color: #0F3D2E; text-align: left;">
+              <th style="padding: 4px 8px; border: 1px solid #cbd5e1;">Unidad</th>
+              <th style="padding: 4px 8px; border: 1px solid #cbd5e1;">Copropietario</th>
+              <th style="padding: 4px 8px; border: 1px solid #cbd5e1; text-align: right;">Gasto del Mes</th>
+              <th style="padding: 4px 8px; border: 1px solid #cbd5e1; text-align: right;">Deuda Traspasada</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${debtorRows.length > 0 ? debtorRows : '<tr><td colspan="4" style="padding: 8px; text-align: center; color: #16a34a; font-weight: bold;">Sin deudas pendientes. Recaudación al 100%.</td></tr>'}
+          </tbody>
+        </table>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; font-size: 9px; margin-top: 24px;">
+          <div>
+            <div style="border-bottom: 1px solid #334155; height: 35px; margin-bottom: 4px;"></div>
+            <strong>ARANPRO GESTIÓN</strong><br/>
+            <span>Administrador de Copropiedad</span><br/>
+            <span style="font-size: 8px; color: #64748b;">Reg. MINVU N° 44.201</span>
+          </div>
+          <div>
+            <div style="border-bottom: 1px solid #334155; height: 35px; margin-bottom: 4px;"></div>
+            <strong>${committeeClosingSignoff.member || 'Presidente(a) Comité'}</strong><br/>
+            <span>${committeeClosingSignoff.role || 'Presidente Comité'}</span><br/>
+            <span style="font-size: 8px; color: #64748b;">Ley N° 21.442</span>
+          </div>
+          <div>
+            <div style="border-bottom: 1px solid #334155; height: 35px; margin-bottom: 4px;"></div>
+            <strong>Comisión Revisora</strong><br/>
+            <span>Revisión de Cuentas</span><br/>
+            <span style="font-size: 8px; color: #64748b;">Visación Conforme</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    printFormalDocument(html, `Acta_Cierre_Contable_${cleanComm}_Periodo_${m}_${y}`, { fitPage: true });
+  };
+
+  // Selector y resolución de datos de período histórico
+  const selectedHistoricalPeriodData = useMemo(() => {
+    if (selectedAuditPeriod === 'active' || !currentCommunity) return null;
+    return (currentCommunity.periodHistory || []).find(p => p.id === selectedAuditPeriod) || null;
+  }, [selectedAuditPeriod, currentCommunity]);
+
+  const communityForRendition = useMemo(() => {
+    if (!currentCommunity) return null;
+    if (!selectedHistoricalPeriodData) return currentCommunity;
+    const histKey = `${selectedHistoricalPeriodData.year}-${String(selectedHistoricalPeriodData.month).padStart(2, '0')}`;
+    const periodExpenses = (currentCommunity.historicalExpenses || []).filter(e => e.period === histKey);
+    return {
+      ...currentCommunity,
+      activePeriod: {
+        month: selectedHistoricalPeriodData.month,
+        year: selectedHistoricalPeriodData.year,
+        dueDate: selectedHistoricalPeriodData.closedAt,
+        status: 'CERRADO (HISTÓRICO)'
+      },
+      expenses: periodExpenses.length > 0 ? periodExpenses : currentCommunity.expenses
+    };
+  }, [currentCommunity, selectedHistoricalPeriodData]);
 
   // Generar e imprimir Planilla General de Emisión y Prorrateo de Gastos Comunes (Ley N° 21.442)
   const handlePrintEmissionSheet = () => {
@@ -9499,14 +9730,34 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
               {/* Tiras de Hitos de Fechas Clave */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center">
-                    <Calendar className="w-3 h-3 mr-1 text-[#0F3D2E]" /> Período Activo
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                    <span className="flex items-center"><Calendar className="w-3 h-3 mr-1 text-[#0F3D2E]" /> Período Contable</span>
+                    {selectedAuditPeriod !== 'active' && (
+                      <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded-full border border-amber-300">
+                        Histórico
+                      </span>
+                    )}
                   </div>
-                  <div className="text-sm font-black text-slate-900 mt-0.5">
-                    {currentCommunity.activePeriod?.month || billingMonth} / {currentCommunity.activePeriod?.year || billingYear}
+                  <div className="mt-1">
+                    <select
+                      value={selectedAuditPeriod}
+                      onChange={(e) => setSelectedAuditPeriod(e.target.value)}
+                      className="w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg px-2 py-1 focus:ring-1 focus:ring-[#0F3D2E] focus:border-[#0F3D2E] cursor-pointer"
+                    >
+                      <option value="active">
+                        {currentCommunity.activePeriod?.month || billingMonth} / {currentCommunity.activePeriod?.year || billingYear} (Activo — {currentCommunity.activePeriod?.status || 'EN PROCESO'})
+                      </option>
+                      {(currentCommunity.periodHistory || []).map((hist) => (
+                        <option key={hist.id} value={hist.id}>
+                          {hist.month} / {hist.year} (Cerrado {formatDate(hist.closedAt)})
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="text-[10px] text-slate-500">
-                    Estado: <span className="font-bold text-[#0F3D2E]">{currentCommunity.activePeriod?.status || 'EN PROCESO'}</span>
+                  <div className="text-[10px] text-slate-500 mt-1">
+                    {selectedAuditPeriod === 'active'
+                      ? 'Emisión y cobro en curso'
+                      : `Auditoría mes histórico cerrado`}
                   </div>
                 </div>
 
@@ -9515,10 +9766,12 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                     <Receipt className="w-3 h-3 mr-1 text-[#0F3D2E]" /> Gastos Ingresados
                   </div>
                   <div className="text-sm font-black text-slate-900 mt-0.5">
-                    {currentCommunity.expenses?.length || 0} cuentas ({formatCLP(metrics.totalExpenses)})
+                    {selectedHistoricalPeriodData
+                      ? `${selectedHistoricalPeriodData.totalExpenses ? formatCLP(selectedHistoricalPeriodData.totalExpenses) : 'Histórico'}`
+                      : `${currentCommunity.expenses?.length || 0} cuentas (${formatCLP(metrics.totalExpenses)})`}
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    Nómina activa del período
+                    {selectedHistoricalPeriodData ? 'Gasto total auditado' : 'Nómina activa del período'}
                   </div>
                 </div>
 
@@ -9527,13 +9780,32 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                     <Clock className="w-3 h-3 mr-1 text-[#0F3D2E]" /> Vencimiento Copropietarios
                   </div>
                   <div className="text-sm font-black text-slate-900 mt-0.5">
-                    {formatDate(currentCommunity.activePeriod?.dueDate || `${billingYear}-${String(billingMonth).padStart(2, '0')}-10`)}
+                    {formatDate(selectedHistoricalPeriodData?.closedAt || currentCommunity.activePeriod?.dueDate || `${billingYear}-${String(billingMonth).padStart(2, '0')}-10`)}
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    Fecha límite para pago de colillas
+                    {selectedHistoricalPeriodData ? 'Fecha de cierre definitivo' : 'Fecha límite para pago de colillas'}
                   </div>
                 </div>
               </div>
+
+              {/* BANNER INFORMATIVO SI ESTÁ EN MODO AUDITORÍA HISTÓRICA */}
+              {selectedAuditPeriod !== 'active' && (
+                <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-950 animate-fade-in">
+                  <div className="flex items-center space-x-2">
+                    <History className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>
+                      <strong>MODO AUDITORÍA HISTÓRICA:</strong> Estás consultando el período cerrado de <strong>{selectedHistoricalPeriodData?.month}/{selectedHistoricalPeriodData?.year}</strong>. Las colillas tipo y la rendición oficial de gastos reflejarán los datos auditados de este mes archivado.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAuditPeriod('active')}
+                    className="px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded-lg shrink-0 transition-colors cursor-pointer self-end sm:self-center"
+                  >
+                    Volver al Período Activo
+                  </button>
+                </div>
+              )}
 
               {/* ACCIONES OFICIALES & PREVISUALIZACIÓN */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
@@ -9889,6 +10161,87 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                 </div>
               )}
 
+              {/* VISACIÓN DIGITAL PREVIA DEL COMITÉ DE ADMINISTRACIÓN (ART. 17° LEY 21.442) */}
+              <div className="p-4 sm:p-5 bg-gradient-to-br from-[#F5F4EF] to-white rounded-2xl border border-[#D4B895] shadow-2xs space-y-3 mt-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#D4B895]/40 pb-3">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="p-2 bg-[#0F3D2E] text-[#D4B895] rounded-xl shrink-0">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-wide">
+                          Visación y V°B° Previo del Comité de Administración
+                        </span>
+                        <span className="text-[10px] font-bold bg-[#D4B895]/30 text-[#0F3D2E] px-2 py-0.2 rounded-full border border-[#D4B895]/50">
+                          Art. 17° Ley N° 21.442
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Conforme a la ley, las cuentas y respaldos deben ser puestos a disposición del Comité para su conformidad legal previa al despacho de cobros.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-xl text-xs font-black ${
+                      committeeClosingSignoff.status === 'aprobado'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border border-amber-300'
+                    }`}>
+                      {committeeClosingSignoff.status === 'aprobado' ? '✔ V°B° Conforme Registrado' : '⏳ Pendiente de V°B°'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1">
+                    <div className="text-[10px] uppercase font-bold text-slate-500">Representante que Visa:</div>
+                    <div className="font-bold text-slate-900">{committeeClosingSignoff.member} ({committeeClosingSignoff.role})</div>
+                    <div className="text-[11px] text-slate-500">Fecha y Hora: {formatDate(committeeClosingSignoff.date)} • {committeeClosingSignoff.time} hrs.</div>
+                    <div className="text-[11px] text-slate-600 italic mt-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      "{committeeClosingSignoff.notes}"
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col justify-between gap-2 p-3 bg-white rounded-xl border border-slate-200">
+                    <div className="text-slate-600 text-[11px]">
+                      Comparta el borrador de cuentas con el Comité por WhatsApp y registre su visación formal para respaldar el cobro y la emisión.
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleSendDraftToCommitteeWhatsApp}
+                        className="flex-1 min-w-[140px] px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                        title="Enviar mensaje borrador pre-armado con resumen de cuentas por WhatsApp al Comité"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
+                        <span>WhatsApp al Comité</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCommitteeSignoffForm({
+                            member: committeeClosingSignoff.member,
+                            role: committeeClosingSignoff.role,
+                            notes: committeeClosingSignoff.notes
+                          });
+                          setShowCommitteeSignoffModal(true);
+                        }}
+                        className="flex-1 min-w-[140px] px-3 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold rounded-xl text-xs flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <FileCheck className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
+                        <span>Registrar V°B° Comité</span>
+                      </button>
+                    </div>
+                    {committeeWhatsAppCopiedAlert && (
+                      <div className="text-[11px] text-emerald-800 font-bold text-center animate-fade-in">
+                        ✔ ¡Borrador para el Comité copiado y WhatsApp abierto!
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Botón de avance al Paso 2 */}
               <div className="pt-2 flex justify-end">
                 <button
@@ -10156,6 +10509,162 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                 </div>
               </div>
 
+              {/* TABLERO DE TRAZABILIDAD Y DESPACHO INDIVIDUAL DE COLILLAS */}
+              <div className="pt-2 border-t border-slate-100 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h5 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center">
+                      <Send className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
+                      Nómina de Despacho Individual & Trazabilidad por Unidad
+                    </h5>
+                    <p className="text-[11px] text-slate-500">
+                      Notifique por WhatsApp directo, copie el link del portal para cada copropietario o audite sus colillas particulares.
+                    </p>
+                  </div>
+                  <div className="w-full sm:w-64">
+                    <input
+                      type="text"
+                      value={unitDispatchSearch}
+                      onChange={(e) => setUnitDispatchSearch(e.target.value)}
+                      placeholder="Buscar por Casa o Copropietario..."
+                      className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0F3D2E]"
+                    />
+                  </div>
+                </div>
+
+                {/* 4 KPIs de Trazabilidad */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Total Casas</span>
+                    <strong className="text-sm font-black text-slate-900">{currentCommunity.units?.length || 0}</strong>
+                  </div>
+                  <div className="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200">
+                    <span className="text-[10px] text-emerald-800 font-bold uppercase block">Con Email</span>
+                    <strong className="text-sm font-black text-emerald-900">
+                      {currentCommunity.units?.filter(u => Boolean(u.email || u.additionalUsers?.[0]?.email)).length || 0}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200">
+                    <span className="text-[10px] text-amber-800 font-bold uppercase block">Sin Email (Aviso Directo)</span>
+                    <strong className="text-sm font-black text-amber-900">
+                      {currentCommunity.units?.filter(u => !u.email && !u.additionalUsers?.[0]?.email).length || 0}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-200">
+                    <span className="text-[10px] text-blue-800 font-bold uppercase block">Notificados Hoy</span>
+                    <strong className="text-sm font-black text-blue-900">
+                      {Object.keys(unitDispatchNotified).length}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Tabla de Unidades para Despacho Individual */}
+                <div className="border border-slate-200 rounded-xl overflow-hidden max-h-[360px] overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#F5F4EF] text-slate-700 font-bold text-[11px] sticky top-0 z-10 border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3">Unidad / Vecino</th>
+                        <th className="py-2.5 px-3">Contacto</th>
+                        <th className="py-2.5 px-3 text-right">Total a Cobrar</th>
+                        <th className="py-2.5 px-3 text-center">Estado Notif.</th>
+                        <th className="py-2.5 px-3 text-right">Acciones de Notificación</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {(currentCommunity.units || [])
+                        .filter(u => {
+                          if (!unitDispatchSearch.trim()) return true;
+                          const s = unitDispatchSearch.toLowerCase();
+                          return String(u.number).toLowerCase().includes(s) ||
+                            (u.owner || '').toLowerCase().includes(s) ||
+                            (u.email || '').toLowerCase().includes(s);
+                        })
+                        .map(unit => {
+                          const fin = getUnitFinancials(unit);
+                          const isNotified = Boolean(unitDispatchNotified[unit.id]);
+                          const contactEmail = unit.email || unit.additionalUsers?.[0]?.email;
+                          const contactPhone = unit.phone;
+
+                          return (
+                            <tr key={unit.id} className="hover:bg-slate-50 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="font-bold text-slate-900">Casa {unit.number}</div>
+                                <div className="text-[10px] text-slate-500 truncate max-w-[160px]">{unit.owner}</div>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                {contactEmail ? (
+                                  <div className="text-[11px] text-slate-700 font-mono truncate max-w-[170px]">{contactEmail}</div>
+                                ) : (
+                                  <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-semibold">Sin email</span>
+                                )}
+                                {contactPhone && (
+                                  <div className="text-[10px] text-slate-500 font-mono">{contactPhone}</div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <div className="font-bold text-[#0F3D2E]">{formatCLP(fin.totalToPay)}</div>
+                                {fin.previousDebt > 0 && (
+                                  <div className="text-[9.5px] text-rose-600">Incluye {formatCLP(fin.previousDebt)} mora</div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setUnitDispatchNotified(prev => ({ ...prev, [unit.id]: !prev[unit.id] }))}
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-colors ${
+                                    isNotified
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                      : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                  }`}
+                                  title="Haga clic para alternar el estado de notificación"
+                                >
+                                  {isNotified ? '✔ Notificado' : '⏳ Pendiente'}
+                                </button>
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <div className="flex items-center justify-end space-x-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSendIndividualUnitWhatsApp(unit)}
+                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold flex items-center shadow-2xs transition-colors cursor-pointer"
+                                    title="Enviar colilla y mensaje personalizado por WhatsApp"
+                                  >
+                                    <MessageCircle className="w-3 h-3 mr-1" />
+                                    <span>WhatsApp</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyUnitLink(unit)}
+                                    className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[11px] font-medium flex items-center transition-colors cursor-pointer"
+                                    title="Copiar enlace directo al portal para esta unidad"
+                                  >
+                                    <Copy className="w-3 h-3 mr-1 text-slate-500" />
+                                    <span>Link</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveUnitBill(unit)}
+                                    className="px-2 py-1 bg-white hover:bg-slate-100 text-[#0F3D2E] border border-slate-300 rounded-lg text-[11px] font-bold flex items-center transition-colors cursor-pointer"
+                                    title="Ver colilla individual"
+                                  >
+                                    <Eye className="w-3 h-3 mr-1 text-[#0F3D2E]" />
+                                    <span>Colilla</span>
+                                  </button>
+                                </div>
+                                {individualWhatsAppCopiedAlert === unit.number && (
+                                  <div className="text-[9.5px] text-emerald-700 font-bold mt-0.5 animate-fade-in">
+                                    ✔ ¡Copiado y abierto!
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               {/* Botón de avance al Paso 4 */}
               <div className="pt-2 flex justify-end border-t border-slate-100">
                 <button
@@ -10205,6 +10714,52 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                     <span>El período activo se incrementa automáticamente (ej. de {currentCommunity.activePeriod?.month} al mes siguiente).</span>
                   </div>
                 </div>
+
+                {/* Pre-Visualización de Traspasos Contables */}
+                <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                    <div className="text-xs font-black uppercase text-slate-800">
+                      Pre-Visualización de Traspasos Contables al Nuevo Ciclo
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handlePrintClosingAct}
+                      className="px-3 py-1.5 bg-white hover:bg-slate-100 text-[#0F3D2E] border border-slate-300 font-bold text-xs rounded-lg flex items-center shadow-2xs transition-colors cursor-pointer self-start sm:self-auto"
+                      title="Generar e imprimir el Acta Notarial de Cierre Contable y Traspaso de Saldos (Ley N° 21.442)"
+                    >
+                      <Printer className="w-3.5 h-3.5 mr-1 text-[#0F3D2E]" />
+                      <span>Acta Notarial de Cierre (PDF)</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                      <span className="text-[10px] uppercase text-slate-500 font-bold block">Gasto Facturado en el Mes:</span>
+                      <strong className="text-sm font-black text-slate-900">{formatCLP(metrics.grandTotal)}</strong>
+                      <span className="text-[10px] text-slate-500 block">Total prorrateado en colillas</span>
+                    </div>
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                      <span className="text-[10px] uppercase text-slate-500 font-bold block">Recaudado hasta la fecha:</span>
+                      <strong className="text-sm font-black text-emerald-700">
+                        {formatCLP(calculateCommunityTotals(currentCommunity).totalCollected)}
+                      </strong>
+                      <span className="text-[10px] text-slate-500 block">
+                        {calculateCommunityTotals(currentCommunity).unitsPaidCount} de {currentCommunity.units?.length || 0} unidades al día
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                      <span className="text-[10px] uppercase text-slate-500 font-bold block">Traspaso a "Saldo Anterior":</span>
+                      <strong className="text-sm font-black text-rose-600">
+                        {formatCLP(
+                          Math.max(0, calculateCommunityTotals(currentCommunity).grandTotal - calculateCommunityTotals(currentCommunity).totalCollected)
+                        )}
+                      </strong>
+                      <span className="text-[10px] text-slate-500 block">
+                        {(currentCommunity.units || []).filter(u => getUnitFinancials(u).pendingDebt > 0).length} unidades acumularán mora
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {preClosingAudit?.hasCriticalBlock && !allowForcedClose ? (
@@ -10225,25 +10780,14 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                 <div className="space-y-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      const warningMsg = allowForcedClose
-                        ? `ADVERTENCIA: Va a realizar un CIERRE EXCEPCIONAL con alertas pendientes: "${forcedCloseReason || 'Sin motivo especificado'}".\n\n¿Desea cerrar el período ${currentCommunity.activePeriod?.month}/${currentCommunity.activePeriod?.year} y traspasar los ${currentCommunity.expenses?.length || 0} gastos al histórico?`
-                        : `¿Confirmar CIERRE Y ARCHIVO del período ${currentCommunity.activePeriod?.month}/${currentCommunity.activePeriod?.year}?\n\n• Los ${currentCommunity.expenses?.length || 0} gastos actuales se traspasarán al Histórico.\n• La nómina del nuevo mes quedará en $0.\n• Los saldos impagos pasarán como Deuda Anterior.\n• Se abrirá el mes siguiente.`;
-
-                      if (confirm(warningMsg)) {
-                        closeAndArchivePeriod(currentCommunity.id);
-                        alert('✅ ¡Período cerrado exitosamente!\n\n1. Los gastos han sido archivados en "Gastos & Respaldos > Histórico & Traspaso".\n2. La nómina del mes actual se encuentra limpia para el nuevo ciclo.\n3. Se actualizaron los saldos pendientes de los copropietarios.');
-                        setActiveTab('gastos');
-                        setExpensesSubTab('historico');
-                      }
-                    }}
+                    onClick={() => setShowClosingConfirmModal(true)}
                     className="w-full py-3.5 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center shadow-md cursor-pointer"
                   >
                     <Archive className="w-4 h-4 mr-2 text-[#D4B895]" />
-                    Cerrar Mes Actual, Traspasar Gastos al Histórico y Abrir Siguiente Período
+                    Revisar y Ejecutar Cierre de Mes con Traspaso Contable
                   </button>
                   <p className="text-[11px] text-slate-500 text-center">
-                    Al confirmar, será redirigido inmediatamente a la pestaña de Histórico para verificar los gastos archivados.
+                    Se abrirá la ventana de confirmación formal para emitir el Acta Notarial y archivar los gastos.
                   </p>
                 </div>
               )}
@@ -13040,7 +13584,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
       <ExpenseReportModal
         isOpen={showExpenseReportModal}
         onClose={() => setShowExpenseReportModal(false)}
-        community={currentCommunity}
+        community={communityForRendition || currentCommunity}
         onExportCSV={exportExpensesToCSV}
       />
 
@@ -16644,7 +17188,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
         );
       })()}
 
-      {/* MODAL DOCUMENTO OFICIAL LEY N° 21.442: REGISTRO DE COPROPIETARIOS, OCUPANTES Y ASIGNACIONES */}
+{/* MODAL DOCUMENTO OFICIAL LEY N° 21.442: REGISTRO DE COPROPIETARIOS, OCUPANTES Y ASIGNACIONES */}
       {showOfficialRegistryModal && currentCommunity && (() => {
         const units = currentCommunity.units || [];
         const totalOwners = units.filter(u => u.owner).length;
@@ -16976,7 +17520,9 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
         );
       })()}
 
-      {/* MODAL CARTAS DE COBRANZA PREVENTIVA Y NOTIFICACIÓN PREJUDICIAL (LEY N° 21.442) */}
+
+
+{/* MODAL CARTAS DE COBRANZA PREVENTIVA Y NOTIFICACIÓN PREJUDICIAL (LEY N° 21.442) */}
       {collectionLetterUnit && currentCommunity && (() => {
         const unit = collectionLetterUnit;
         const fin = getUnitFinancials(unit);
@@ -17895,6 +18441,263 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                 </div>
               </div>
 
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MODAL DE VISACIÓN Y V°B° DEL COMITÉ DE ADMINISTRACIÓN (LEY N° 21.442) */}
+      {showCommitteeSignoffModal && currentCommunity && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-xs transition-opacity animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCommitteeSignoffModal(false);
+          }}
+        >
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-[#D4B895] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-3.5 bg-[#0F3D2E] text-white border-b border-[#D4B895]/30">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-[#D4B895]/20 text-[#D4B895] rounded-xl border border-[#D4B895]/30">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black tracking-tight">
+                    Visación y V°B° del Comité de Administración
+                  </h4>
+                  <p className="text-[11px] text-white/70">
+                    Art. 17° Ley N° 21.442 • Validación de Cuentas y Respaldos
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCommitteeSignoffModal(false)}
+                className="text-white/60 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Miembro del Comité que Visa
+                </label>
+                <select
+                  value={committeeSignoffForm.member}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const role = val.includes('Marcela') ? 'Tesorera Comité' : 'Presidente Comité';
+                    setCommitteeSignoffForm(prev => ({ ...prev, member: val, role }));
+                  }}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-[#0F3D2E]"
+                >
+                  <option value="Carlos Morales Rojas">Carlos Morales Rojas (Casa 1 - Presidente Comité)</option>
+                  <option value="Marcela Castillo Gómez">Marcela Castillo Gómez (Casa 4 - Tesorera Comité)</option>
+                  <option value="Otro Representante">Otro Representante Autorizado</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Cargo o Rol
+                  </label>
+                  <input
+                    type="text"
+                    value={committeeSignoffForm.role}
+                    onChange={(e) => setCommitteeSignoffForm(prev => ({ ...prev, role: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-[#0F3D2E]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Estado de Visación
+                  </label>
+                  <select
+                    value={committeeClosingSignoff.status}
+                    onChange={(e) => setCommitteeClosingSignoff(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-[#0F3D2E]"
+                  >
+                    <option value="aprobado">Aprobado Conforme (Sin Reparos)</option>
+                    <option value="observaciones">Aprobado con Observaciones</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Observaciones / Constancia en Acta
+                </label>
+                <textarea
+                  rows={3}
+                  value={committeeSignoffForm.notes}
+                  onChange={(e) => setCommitteeSignoffForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Detalle de la revisión de cuentas, boletas y respaldos..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-[#0F3D2E] leading-relaxed"
+                />
+              </div>
+
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-900 text-[11px] flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  Al registrar el V°B°, este quedará estampado en el encabezado de las colillas y en el Acta Notarial de Cierre Contable.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 px-5 py-3.5 bg-slate-50 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setShowCommitteeSignoffModal(false)}
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCommitteeClosingSignoff({
+                    status: 'aprobado',
+                    member: committeeSignoffForm.member,
+                    role: committeeSignoffForm.role,
+                    date: new Date().toISOString().split('T')[0],
+                    time: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
+                    notes: committeeSignoffForm.notes
+                  });
+                  setShowCommitteeSignoffModal(false);
+                }}
+                className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold rounded-xl text-xs flex items-center shadow-xs cursor-pointer"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
+                Guardar Visación Conforme
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CONFIRMACIÓN DE CIERRE CONTABLE & TRASPASO DE SALDOS (LEY N° 21.442) */}
+      {showClosingConfirmModal && currentCommunity && (() => {
+        const debtorUnits = (currentCommunity.units || []).filter(u => getUnitFinancials(u).pendingDebt > 0);
+        const totalPendingDebt = debtorUnits.reduce((acc, u) => acc + getUnitFinancials(u).pendingDebt, 0);
+
+        return (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/85 backdrop-blur-xs transition-opacity animate-fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowClosingConfirmModal(false);
+            }}
+          >
+            <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-[#D4B895] flex flex-col max-h-[92vh]">
+              <div className="flex items-center justify-between px-5 py-4 bg-[#0F3D2E] text-white border-b border-[#D4B895]/30 shrink-0">
+                <div className="flex items-center space-x-2.5">
+                  <div className="p-2 bg-[#D4B895]/20 text-[#D4B895] rounded-xl border border-[#D4B895]/30">
+                    <Archive className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black tracking-tight">
+                      Confirmación de Cierre Contable y Traspaso de Saldos
+                    </h4>
+                    <p className="text-[11px] text-white/70">
+                      Período {currentCommunity.activePeriod?.month || billingMonth}/{currentCommunity.activePeriod?.year || billingYear} • Ley N° 21.442
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowClosingConfirmModal(false)}
+                  className="text-white/60 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4 overflow-y-auto text-xs">
+                {allowForcedClose && (
+                  <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-rose-900">
+                    <strong className="block font-black text-rose-950">ADVERTENCIA: CIERRE EXCEPCIONAL AUTORIZADO</strong>
+                    <span>Motivo: "{forcedCloseReason || 'Sin motivo especificado'}".</span>
+                  </div>
+                )}
+
+                <p className="text-slate-600 leading-relaxed">
+                  Está a punto de ejecutar el cierre contable oficial del período <strong>{currentCommunity.activePeriod?.month}/{currentCommunity.activePeriod?.year}</strong> para <strong>{currentCommunity.name}</strong>. Esta operación congelará las cuentas del período actual y realizará los siguientes 4 traspasos automáticos:
+                </p>
+
+                <div className="space-y-2 bg-[#F5F4EF] p-3.5 rounded-2xl border border-slate-200">
+                  <div className="flex items-start space-x-2">
+                    <span className="font-black text-[#0F3D2E]">1.</span>
+                    <span><strong>Archivo Histórico:</strong> Los {currentCommunity.expenses?.length || 0} gastos del mes se traspasarán a <em>Histórico & Traspaso</em> con sus respaldos tributarios.</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="font-black text-[#0F3D2E]">2.</span>
+                    <span><strong>Nómina Limpia:</strong> La nómina de gastos se reinicia en $0 para comenzar a imputar las boletas y facturas del siguiente período.</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="font-black text-[#0F3D2E]">3.</span>
+                    <span><strong>Traspaso de Deudas:</strong> Un total de <strong>{formatCLP(totalPendingDebt)}</strong> de {debtorUnits.length} unidad(es) impaga(s) se traspasarán como "Saldo Anterior" para el nuevo mes.</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="font-black text-[#0F3D2E]">4.</span>
+                    <span><strong>Apertura de Nuevo Ciclo:</strong> Se abrirá el mes siguiente para continuar la gestión regular.</span>
+                  </div>
+                </div>
+
+                {debtorUnits.length > 0 && (
+                  <div>
+                    <div className="font-bold text-slate-800 text-[11px] uppercase mb-1.5 flex items-center justify-between">
+                      <span>Nómina de Deudas que Pasan a Saldo Anterior:</span>
+                      <span className="text-rose-600 font-bold">{debtorUnits.length} Casas • {formatCLP(totalPendingDebt)}</span>
+                    </div>
+                    <div className="max-h-36 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-white">
+                      {debtorUnits.map(u => (
+                        <div key={u.id} className="p-2 flex items-center justify-between text-[11px]">
+                          <span><strong>Casa {u.number}</strong> ({u.owner})</span>
+                          <span className="font-mono font-bold text-rose-600">{formatCLP(getUnitFinancials(u).pendingDebt)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-4 bg-slate-50 border-t border-slate-200 shrink-0">
+                <button
+                  type="button"
+                  onClick={handlePrintClosingAct}
+                  className="w-full sm:w-auto px-4 py-2 bg-white hover:bg-slate-100 text-[#0F3D2E] border border-slate-300 font-bold rounded-xl text-xs flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                  title="Imprimir o guardar como PDF el Acta Notarial de Cierre Contable"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
+                  Acta Notarial de Cierre (PDF)
+                </button>
+
+                <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowClosingConfirmModal(false)}
+                    className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold rounded-xl text-xs cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowClosingConfirmModal(false);
+                      closeAndArchivePeriod(currentCommunity.id);
+                      alert('✅ ¡Período cerrado exitosamente!\n\n1. Los gastos han sido archivados en "Gastos & Respaldos > Histórico & Traspaso".\n2. La nómina del mes actual se encuentra limpia para el nuevo ciclo.\n3. Se actualizaron los saldos pendientes de los copropietarios.');
+                      setActiveTab('gastos');
+                      setExpensesSubTab('historico');
+                    }}
+                    className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold rounded-xl text-xs flex items-center shadow-xs cursor-pointer"
+                  >
+                    <Archive className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
+                    Confirmar Cierre y Traspaso
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         );

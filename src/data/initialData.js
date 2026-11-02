@@ -267,6 +267,18 @@ export const initialCommunities = [
     // Historial de meses cerrados anteriores
     periodHistory: [
       {
+        id: 'hist-2026-11',
+        month: 11,
+        year: 2026,
+        closedAt: '2026-11-30',
+        totalExpenses: 644900,
+        reserveFundAmount: 35100,
+        grandTotal: 680000,
+        totalCollected: 637500,
+        unitsPaidCount: 15,
+        unitsCount: 16
+      },
+      {
         id: 'hist-2026-10',
         month: 10,
         year: 2026,
