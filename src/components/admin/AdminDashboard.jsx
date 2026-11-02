@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
 import { formatCLP, formatDate, formatRut } from '../../utils/formatters';
 import { AranproLogo } from '../common/MauranLogo';
+import { printDocumentDirectly as printFormalDocument } from '../../utils/printDocument';
 import { AssemblyQuorumModule } from './AssemblyQuorumModule';
 import { PreventiveMaintenanceModule } from './PreventiveMaintenanceModule';
 import { SuggestionsAndComplaintsModule } from './SuggestionsAndComplaintsModule';
@@ -345,6 +346,7 @@ export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb }) => {
   const [asambleasSubTab, setAsambleasSubTab] = useState('asamblea'); // 'asamblea' | 'consultas' | 'actas' | 'poderes'
   const [comunicadosSubTab, setComunicadosSubTab] = useState('mural'); // 'mural' | 'reclamos'
   const [comiteSubTab, setComiteSubTab] = useState('reuniones'); // 'reuniones' | 'novedades' | 'tareas' | 'directorio'
+  const [emisionSubTab, setEmisionSubTab] = useState('todos'); // 'todos' | 'auditoria' | 'calculo' | 'despacho' | 'cierre'
   const [providerSearchQuery, setProviderSearchQuery] = useState('');
   const [providerCategoryFilter, setProviderCategoryFilter] = useState('ALL');
   const [providerContractFilter, setProviderContractFilter] = useState('ALL');
@@ -1186,6 +1188,196 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
     setWhatsappCopiedAlert(true);
     setTimeout(() => setWhatsappCopiedAlert(false), 4000);
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // Generar e imprimir Planilla General de Emisión y Prorrateo de Gastos Comunes (Ley N° 21.442)
+  const handlePrintEmissionSheet = () => {
+    if (!currentCommunity) return;
+    const totals = calculateCommunityTotals(currentCommunity);
+    const m = currentCommunity.activePeriod?.month || billingMonth;
+    const y = currentCommunity.activePeriod?.year || billingYear;
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    const periodName = `${monthNames[m - 1]} ${y}`;
+    const dueDate = currentCommunity.activePeriod?.dueDate || `${y}-${String(m).padStart(2, '0')}-10`;
+    const cleanComm = currentCommunity.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    const unitsRows = (currentCommunity.units || []).map(u => {
+      const fin = getUnitFinancials(u);
+      return `
+        <tr>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0F3D2E;">
+            Casa ${u.number}
+          </td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; color: #1e293b;">
+            ${u.owner || 'Sin asignar'}
+          </td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace;">
+            ${(u.sharePercentage || 0).toFixed(2)}%
+          </td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace;">
+            ${formatCLP(fin.baseCharge || 0)}
+          </td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace;">
+            ${formatCLP(fin.reserveFund || 0)}
+          </td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace;">
+            ${formatCLP(fin.extraCharge || 0)}
+          </td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace; color: ${fin.previousDebt > 0 ? '#b91c1c' : '#64748b'};">
+            ${formatCLP(fin.previousDebt || 0)}
+          </td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace; color: ${fin.creditBalance > 0 ? '#047857' : '#64748b'};">
+            ${fin.creditBalance > 0 ? `-${formatCLP(fin.creditBalance)}` : '$0'}
+          </td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace; font-weight: 900; color: #0F3D2E; background-color: #F5F4EF;">
+            ${formatCLP(fin.totalToPay || 0)}
+          </td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">
+            <span style="display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 9px; font-weight: bold; ${
+              fin.isFullyPaid 
+                ? 'background-color: #d1fae5; color: #065f46;'
+                : fin.previousDebt > 0 
+                ? 'background-color: #fee2e2; color: #991b1b;'
+                : 'background-color: #fef3c7; color: #92400e;'
+            }">
+              ${fin.isFullyPaid ? 'AL DÍA' : fin.previousDebt > 0 ? 'MOROSO' : 'EMITIDO'}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const totalSharePct = (currentCommunity.units || []).reduce((acc, u) => acc + (parseFloat(u.sharePercentage) || 0), 0);
+    const sumBaseCharge = (currentCommunity.units || []).reduce((acc, u) => acc + (getUnitFinancials(u).baseCharge || 0), 0);
+    const sumReserve = (currentCommunity.units || []).reduce((acc, u) => acc + (getUnitFinancials(u).reserveFund || 0), 0);
+    const sumExtra = (currentCommunity.units || []).reduce((acc, u) => acc + (getUnitFinancials(u).extraCharge || 0), 0);
+    const sumPrevDebt = (currentCommunity.units || []).reduce((acc, u) => acc + (getUnitFinancials(u).previousDebt || 0), 0);
+    const sumCredits = (currentCommunity.units || []).reduce((acc, u) => acc + (getUnitFinancials(u).creditBalance || 0), 0);
+    const sumGrandTotal = (currentCommunity.units || []).reduce((acc, u) => acc + (getUnitFinancials(u).totalToPay || 0), 0);
+
+    const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Planilla General de Emisión y Prorrateo - ${periodName} - ${currentCommunity.name}</title>
+  <style>
+    @page { size: letter landscape; margin: 10mm 12mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 12px; font-size: 11px; line-height: 1.35; background: #fff; }
+    .header-bar { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0F3D2E; padding-bottom: 10px; margin-bottom: 12px; }
+    .logo-title { font-size: 18px; font-weight: 900; color: #0F3D2E; letter-spacing: -0.5px; margin: 0; }
+    .logo-sub { font-size: 10px; font-weight: 700; color: #D4B895; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+    .badge-period { display: inline-block; background: #0F3D2E; color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
+    .kpi-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; }
+    .kpi-label { font-size: 9px; font-weight: bold; text-transform: uppercase; color: #64748b; }
+    .kpi-val { font-size: 13px; font-weight: 900; color: #0F3D2E; font-family: monospace; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-bottom: 15px; }
+    th { background: #0F3D2E; color: #fff; font-weight: 800; text-transform: uppercase; font-size: 8.5px; padding: 6px 8px; border: 1px solid #0F3D2E; letter-spacing: 0.3px; }
+    td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
+    .totals-row td { background: #F5F4EF; font-weight: 900; font-family: monospace; border-top: 2px solid #0F3D2E; border-bottom: 2px solid #0F3D2E; font-size: 10px; }
+    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 25px; page-break-inside: avoid; }
+    .sig-box { border-top: 1px solid #94a3b8; text-align: center; padding-top: 8px; font-size: 10px; color: #334155; }
+    .legal-footer { margin-top: 12px; font-size: 8px; color: #64748b; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="header-bar">
+    <div>
+      <div class="logo-title">${companySettings?.brandName || 'ARANPRO'} • GESTIÓN INTEGRAL</div>
+      <div class="logo-sub">Planilla General de Emisión, Prorrateo & Cobro de Gastos Comunes</div>
+      <div style="font-size: 11px; color: #334155; margin-top: 4px;">
+        <strong>${currentCommunity.name}</strong> • RUT: ${currentCommunity.rut || '96.854.120-K'} • ${currentCommunity.address || 'Av. Los Pajaritos 1234'} (${currentCommunity.city || 'La Serena / Coquimbo'})
+      </div>
+    </div>
+    <div style="text-align: right;">
+      <span class="badge-period">PERÍODO ${periodName.toUpperCase()}</span>
+      <div style="font-size: 10px; color: #475569; margin-top: 4px;">
+        <strong>Emisión:</strong> ${formatDate(new Date().toISOString().split('T')[0])}<br/>
+        <strong>Vencimiento:</strong> ${formatDate(dueDate)}<br/>
+        <strong>Reparto:</strong> ${splitMode === 'equal' ? 'Partes Iguales' : 'Según % Alícuota'}
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Gastos Ordinarios Mes</div>
+      <div class="kpi-val">${formatCLP(totals.totalExpenses)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Fondo de Reserva (${totals.reserveFundPercentage}%)</div>
+      <div class="kpi-val">${formatCLP(totals.reserveFundAmount)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Nómina Cobro</div>
+      <div class="kpi-val" style="color: #065f46;">${formatCLP(totals.grandTotal)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Unidades Totales</div>
+      <div class="kpi-val">${totals.unitsCount} Casas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cuota Base Promedio</div>
+      <div class="kpi-val">${formatCLP(totals.unitsCount > 0 ? Math.round(totals.grandTotal / totals.unitsCount) : 0)}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align: left;">Unidad</th>
+        <th style="text-align: left;">Copropietario / Titular</th>
+        <th style="text-align: right;">% Alícuota</th>
+        <th style="text-align: right;">G. Común Base</th>
+        <th style="text-align: right;">F. Reserva</th>
+        <th style="text-align: right;">Cargos Extra</th>
+        <th style="text-align: right;">Deuda Anterior</th>
+        <th style="text-align: right;">Saldo Favor</th>
+        <th style="text-align: right; background: #0A291F;">Total a Cobrar</th>
+        <th style="text-align: center;">Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${unitsRows}
+      <tr class="totals-row">
+        <td colspan="2" style="text-align: right;">TOTALES GENERALES DEL PERÍODO:</td>
+        <td style="text-align: right;">${totalSharePct.toFixed(2)}%</td>
+        <td style="text-align: right;">${formatCLP(sumBaseCharge)}</td>
+        <td style="text-align: right;">${formatCLP(sumReserve)}</td>
+        <td style="text-align: right;">${formatCLP(sumExtra)}</td>
+        <td style="text-align: right; color: #b91c1c;">${formatCLP(sumPrevDebt)}</td>
+        <td style="text-align: right; color: #047857;">${sumCredits > 0 ? `-${formatCLP(sumCredits)}` : '$0'}</td>
+        <td style="text-align: right; color: #0F3D2E; font-size: 10.5px;">${formatCLP(sumGrandTotal)}</td>
+        <td style="text-align: center;">${(currentCommunity.units || []).length} UNIDADES</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="signatures">
+    <div class="sig-box">
+      <strong>${companySettings?.administratorName || 'Administrador General ARANPRO'}</strong><br/>
+      Administrador de Condominios Ley N° 21.442<br/>
+      <span style="font-size: 8.5px; color: #64748b;">Firma y Timbre de Emisión Oficial</span>
+    </div>
+    <div class="sig-box">
+      <strong>Comité de Administración</strong><br/>
+      ${currentCommunity.name}<br/>
+      <span style="font-size: 8.5px; color: #64748b;">Visación y Visto Bueno Art. 17° Ley N° 21.442</span>
+    </div>
+  </div>
+
+  <div class="legal-footer">
+    Documento contable oficial emitido en conformidad a la Ley N° 21.442 sobre Copropiedad Inmobiliaria (Arts. 5° y 6°). Plataforma ARANPRO Gestión Integral • Documento Foliado Digitalmente.
+  </div>
+</body>
+</html>
+    `;
+
+    printFormalDocument(html, `Planilla_Emision_Prorrateo_${m}_${y}_${cleanComm}`);
   };
 
   // Enviar recordatorio o colilla por WhatsApp directo al vecino
@@ -2487,7 +2679,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
     { id: 'resumen', label: 'Dashboard Financiero', shortLabel: 'Dashboard', icon: BarChart3, badge: null },
     { id: 'unidades', label: 'Unidades (Casas)', shortLabel: 'Unidades', icon: Home, badge: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} por validar` : currentCommunity?.units?.length || 0, alertBadge: pendingPaymentsCount > 0 },
     { id: 'gastos', label: 'Gastos & Respaldos', shortLabel: 'Gastos', icon: FileText, badge: currentCommunity?.expenses?.length || 0, alertBadge: urgentMaintCount > 0 },
-    { id: 'emision', label: 'Cierre y Cobro del Mes', shortLabel: 'Cierre Mes', icon: RefreshCw, badge: null },
+    { id: 'emision', label: 'Cierre y Cobro del Mes', shortLabel: 'Cierre Mes', icon: RefreshCw, badge: preClosingAudit?.hasCriticalBlock ? 'Alerta' : currentCommunity?.activePeriod?.status || 'Activo', alertBadge: preClosingAudit?.hasCriticalBlock },
     { id: 'comite', label: 'Comité de Administración', shortLabel: 'Comité', icon: ClipboardList, badge: pendingCommitteeTasksCount > 0 ? `${pendingCommitteeTasksCount} pendientes` : 'Art. 17°', alertBadge: pendingCommitteeTasksCount > 0 },
     { id: 'asambleas', label: 'Asambleas & Quórum', shortLabel: 'Asambleas', icon: Users, badge: 'Ley 21.442' },
     { id: 'comunicados', label: 'Mural & Reclamos', shortLabel: 'Mural & Reclamos', icon: Megaphone, badge: totalDocsAndAnnCount, alertBadge: pendingTicketsCount > 0 },
@@ -2618,6 +2810,9 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                   }
                   if (tab.id === 'asambleas' && !asambleasSubTab) {
                     setAsambleasSubTab('asamblea');
+                  }
+                  if (tab.id === 'emision' && !emisionSubTab) {
+                    setEmisionSubTab('todos');
                   }
                   if (tab.id === 'comunicados' && !comunicadosSubTab) {
                     setComunicadosSubTab('mural');
@@ -2889,6 +3084,151 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                         : urgentMaintCount > 0 ? 'bg-rose-500 text-white font-black animate-pulse' : 'bg-emerald-100 text-emerald-800'
                     }`}>
                       {currentCommunity?.preventiveMaintenances?.length || 5}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* SUB-ÍNDICES DE CIERRE Y COBRO DEL MES EN LA BARRA LATERAL */}
+              {tab.id === 'emision' && (!sidebarCollapsed || isMobile) && (
+                <div className={`ml-3.5 pl-2 border-l-2 border-[#D4B895]/50 space-y-0.5 my-1 ${activeTab === 'emision' ? 'block' : 'hidden'}`}>
+                  {/* Sub-índice 0: Flujo Completo */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('emision');
+                      setEmisionSubTab('todos');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'emision' && emisionSubTab === 'todos'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Layers className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'emision' && emisionSubTab === 'todos' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">Flujo Completo</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'emision' && emisionSubTab === 'todos'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      1-4
+                    </span>
+                  </button>
+
+                  {/* Sub-índice 1: Auditoría Pre-Cierre */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('emision');
+                      setEmisionSubTab('auditoria');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'emision' && emisionSubTab === 'auditoria'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'emision' && emisionSubTab === 'auditoria' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">1. Auditoría Pre-Cierre</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      preClosingAudit?.hasCriticalBlock
+                        ? 'bg-rose-500 text-white font-black animate-pulse'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {preClosingAudit?.hasCriticalBlock ? 'Alerta' : 'OK'}
+                    </span>
+                  </button>
+
+                  {/* Sub-índice 2: Cálculo & Emisión */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('emision');
+                      setEmisionSubTab('calculo');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'emision' && emisionSubTab === 'calculo'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Calculator className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'emision' && emisionSubTab === 'calculo' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">2. Cálculo & Emisión</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'emision' && emisionSubTab === 'calculo'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {splitMode === 'equal' ? 'Iguales' : 'Alícuota'}
+                    </span>
+                  </button>
+
+                  {/* Sub-índice 3: Despacho Masivo */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('emision');
+                      setEmisionSubTab('despacho');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'emision' && emisionSubTab === 'despacho'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Send className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'emision' && emisionSubTab === 'despacho' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">3. Despacho Masivo</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'emision' && emisionSubTab === 'despacho'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      Email/WSP
+                    </span>
+                  </button>
+
+                  {/* Sub-índice 4: Cierre & Histórico */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('emision');
+                      setEmisionSubTab('cierre');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'emision' && emisionSubTab === 'cierre'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Archive className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'emision' && emisionSubTab === 'cierre' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">4. Cierre & Histórico</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'emision' && emisionSubTab === 'cierre'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      Nuevo Mes
                     </span>
                   </button>
                 </div>
@@ -9189,9 +9529,110 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                   </div>
                 </div>
               </div>
+
+              {/* ACCIONES OFICIALES & PREVISUALIZACIÓN */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <div className="text-xs text-slate-500 font-medium">
+                  Documentos legales listos para el Comité y Copropietarios según Ley N° 21.442.
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const firstUnit = currentCommunity.units?.[0];
+                      if (firstUnit) setActiveUnitBill(firstUnit);
+                    }}
+                    className="px-3.5 py-2 bg-white hover:bg-slate-50 text-[#0F3D2E] border border-slate-300 font-bold text-xs rounded-xl flex items-center shadow-2xs transition-colors cursor-pointer"
+                    title="Previsualizar el borrador de colilla individual que recibirá cada copropietario"
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
+                    Previsualizar Colilla Tipo
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePrintEmissionSheet}
+                    className="px-3.5 py-2 bg-gradient-to-r from-[#0F3D2E] to-[#14533d] hover:from-[#0A291F] hover:to-[#0F3D2E] text-white border border-[#D4B895] font-black text-xs rounded-xl flex items-center shadow-xs transition-all cursor-pointer"
+                    title="Imprimir o guardar la Planilla General de Prorrateo, Gastos y Cobro en formato legal ARANPRO para firma del Comité"
+                  >
+                    <Printer className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
+                    Planilla Prorrateo & Emisión (PDF)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* BARRA HORIZONTAL DE PASOS (STEP WIZARD) */}
+            <div className="flex items-center gap-1.5 p-1.5 bg-[#F5F4EF] rounded-2xl border border-slate-200 overflow-x-auto shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setEmisionSubTab('todos')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center space-x-1.5 ${
+                  emisionSubTab === 'todos'
+                    ? 'bg-[#0F3D2E] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Todos los Pasos (1-4)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmisionSubTab('auditoria')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center space-x-1.5 ${
+                  emisionSubTab === 'auditoria'
+                    ? 'bg-[#0F3D2E] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>1. Auditoría Pre-Cierre</span>
+                <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-black ${
+                  preClosingAudit?.hasCriticalBlock ? 'bg-rose-500 text-white animate-pulse' : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {preClosingAudit?.hasCriticalBlock ? 'Alerta' : 'OK'}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmisionSubTab('calculo')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center space-x-1.5 ${
+                  emisionSubTab === 'calculo'
+                    ? 'bg-[#0F3D2E] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                <span>2. Cálculo & Emisión</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmisionSubTab('despacho')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center space-x-1.5 ${
+                  emisionSubTab === 'despacho'
+                    ? 'bg-[#0F3D2E] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>3. Despacho Masivo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmisionSubTab('cierre')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center space-x-1.5 ${
+                  emisionSubTab === 'cierre'
+                    ? 'bg-[#0F3D2E] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Archive className="w-3.5 h-3.5" />
+                <span>4. Cierre & Histórico</span>
+              </button>
             </div>
 
             {/* PASO 1: SEMÁFORO DE AUDITORÍA PRE-CIERRE */}
+            {(emisionSubTab === 'todos' || emisionSubTab === 'auditoria') && (
             <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-5">
               <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
@@ -9432,9 +9873,23 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                   </div>
                 </div>
               )}
+
+              {/* Botón de avance al Paso 2 */}
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEmisionSubTab('calculo')}
+                  className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+                >
+                  <span>Siguiente: Ir a Paso 2 (Cálculo & Emisión)</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-[#D4B895]" />
+                </button>
+              </div>
             </div>
+            )}
 
             {/* PASO 2: CÁLCULO Y EMISIÓN DE CUOTAS */}
+            {(emisionSubTab === 'todos' || emisionSubTab === 'calculo') && (
             <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-6">
               <div className="border-b border-slate-100 pb-4">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#0F3D2E]">
@@ -9574,10 +10029,33 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Emitir y Calcular Cobros del Mes
                 </button>
+
+                {/* Acciones de navegación y planilla */}
+                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={handlePrintEmissionSheet}
+                    className="px-3.5 py-2 bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895] font-bold text-xs rounded-xl flex items-center cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5 mr-1.5" />
+                    <span>Ver Planilla de Cobro Calculada (PDF)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEmisionSubTab('despacho')}
+                    className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+                  >
+                    <span>Siguiente: Ir a Paso 3 (Despacho Masivo)</span>
+                    <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-[#D4B895]" />
+                  </button>
+                </div>
               </div>
             </div>
+            )}
 
             {/* PASO 3: DESPACHO MASIVO A LOS COPROPIETARIOS */}
+            {(emisionSubTab === 'todos' || emisionSubTab === 'despacho') && (
             <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
               <div className="border-b border-slate-100 pb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#0F3D2E]">
@@ -9642,9 +10120,23 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                   )}
                 </div>
               </div>
+
+              {/* Botón de avance al Paso 4 */}
+              <div className="pt-2 flex justify-end border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEmisionSubTab('cierre')}
+                  className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+                >
+                  <span>Siguiente: Ir a Paso 4 (Cierre & Histórico)</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-[#D4B895]" />
+                </button>
+              </div>
             </div>
+            )}
 
             {/* PASO 4: CIERRE DEFINITIVO, ARCHIVO EN HISTÓRICO Y APERTURA DE NUEVO MES */}
+            {(emisionSubTab === 'todos' || emisionSubTab === 'cierre') && (
             <div className={`p-6 sm:p-8 rounded-3xl border-2 shadow-sm space-y-5 transition-all ${
               preClosingAudit?.hasCriticalBlock && !allowForcedClose
                 ? 'bg-slate-50 border-slate-300'
@@ -9721,6 +10213,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                 </div>
               )}
             </div>
+            )}
           </div>
         )}
 
