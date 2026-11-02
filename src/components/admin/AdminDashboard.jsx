@@ -9430,10 +9430,10 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
 
         {/* TAB 4: CIERRE Y COBRO DEL MES */}
         {activeTab === 'emision' && currentCommunity && metrics && (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="w-full space-y-4 animate-fade-in">
 
             {/* CABECERA CON RELOJ CALENDARIO (COUNTDOWN TIMER) & ESTADO DEL PERÍODO */}
-            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-5">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
                 <div>
                   <div className="flex items-center space-x-2">
@@ -9633,7 +9633,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
 
             {/* PASO 1: SEMÁFORO DE AUDITORÍA PRE-CIERRE */}
             {(emisionSubTab === 'todos' || emisionSubTab === 'auditoria') && (
-            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-5">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
               <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-[#0F3D2E]">
@@ -9890,8 +9890,8 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
 
             {/* PASO 2: CÁLCULO Y EMISIÓN DE CUOTAS */}
             {(emisionSubTab === 'todos' || emisionSubTab === 'calculo') && (
-            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-6">
-              <div className="border-b border-slate-100 pb-4">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+              <div className="border-b border-slate-100 pb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#0F3D2E]">
                   Paso 2 • Cálculo Contable
                 </span>
@@ -9903,67 +9903,77 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                 </p>
               </div>
 
-              {/* Selector de Modalidad de Reparto */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Modalidad de Reparto entre las Casas
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSplitMode('equal')}
-                    className={`p-3.5 rounded-2xl border text-left transition-all ${
-                      splitMode === 'equal'
-                        ? 'bg-[#F5F4EF] border-[#0F3D2E] ring-2 ring-[#0F3D2E]/20'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="text-xs font-black text-[#0F3D2E]">División en Partes Iguales</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
-                      Todas las casas pagan exactamente el mismo monto ({formatCLP(metrics.unitsCount > 0 ? Math.round(metrics.grandTotal / metrics.unitsCount) : 0)} c/u).
+              {/* Contenedor en 2 Columnas para aprovechamiento total de ancho */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Columna Izquierda: Selector de Modalidad de Reparto */}
+                <div className="space-y-2 flex flex-col justify-between">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Modalidad de Reparto entre las Casas
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setSplitMode('equal')}
+                        className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                          splitMode === 'equal'
+                            ? 'bg-[#F5F4EF] border-[#0F3D2E] ring-2 ring-[#0F3D2E]/20'
+                            : 'bg-white border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="text-xs font-black text-[#0F3D2E]">Partes Iguales</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Todas las casas pagan exactamente el mismo monto ({formatCLP(metrics.unitsCount > 0 ? Math.round(metrics.grandTotal / metrics.unitsCount) : 0)} c/u).
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSplitMode('prorated')}
+                        className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                          splitMode === 'prorated'
+                            ? 'bg-[#F5F4EF] border-[#0F3D2E] ring-2 ring-[#0F3D2E]/20'
+                            : 'bg-white border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="text-xs font-black text-[#0F3D2E]">Porcentaje de Alícuota (%)</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Calcula según el % de prorrateo asignado a cada unidad en el reglamento.
+                        </div>
+                      </button>
                     </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSplitMode('prorated')}
-                    className={`p-3.5 rounded-2xl border text-left transition-all ${
-                      splitMode === 'prorated'
-                        ? 'bg-[#F5F4EF] border-[#0F3D2E] ring-2 ring-[#0F3D2E]/20'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="text-xs font-black text-[#0F3D2E]">Porcentaje de Alícuota (%)</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
-                      Calcula según el % de prorrateo asignado a cada unidad en el reglamento.
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3 text-xs">
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-600 font-medium">Suma de Gastos Operacionales Ordinarios:</span>
-                  <span className="font-bold text-slate-900">{formatCLP(metrics.totalExpenses)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-600 font-medium">Fondo de Reserva ({metrics.reserveFundPercentage}%):</span>
-                  <span className="font-bold text-slate-900">{formatCLP(metrics.reserveFundAmount)}</span>
-                </div>
-                {metrics.reserveFundExpenses > 0 && (
-                  <div className="flex justify-between py-1 border-b border-slate-200/60 text-amber-800">
-                    <span>Gastos cubiertos por Fondo de Reserva (no encarecen cuota):</span>
-                    <span className="font-bold">{formatCLP(metrics.reserveFundExpenses)}</span>
                   </div>
-                )}
-                <div className="flex justify-between py-1 text-sm font-black text-[#0F3D2E]">
-                  <span>Total a Cobrar a la Comunidad:</span>
-                  <span>{formatCLP(metrics.grandTotal)}</span>
+
+                  <div className="p-3 bg-[#F5F4EF]/60 rounded-xl border border-[#D4B895]/40 text-[11px] text-[#0F3D2E]">
+                    <strong>Ley N° 21.442 • Art. 6°:</strong> Los gastos comunes ordinarios se distribuirán en proporción al derecho que a cada copropietario le corresponde en los bienes de dominio común (alícuota), a menos que el reglamento disponga otra forma.
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 text-slate-600 pt-2 border-t border-slate-200/60">
-                  <span>Cuota base por casa ({metrics.unitsCount} unidades • {splitMode === 'equal' ? 'Partes iguales' : 'Según % alícuota'}):</span>
-                  <span className="font-black text-[#0F3D2E] text-sm">
-                    {formatCLP(metrics.unitsCount > 0 ? Math.round(metrics.grandTotal / metrics.unitsCount) : 0)}
-                  </span>
+
+                {/* Columna Derecha: Resumen Financiero del Mes */}
+                <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-2.5 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-200/60">
+                    <span className="text-slate-600 font-medium">Suma de Gastos Operacionales Ordinarios:</span>
+                    <span className="font-bold text-slate-900">{formatCLP(metrics.totalExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-200/60">
+                    <span className="text-slate-600 font-medium">Fondo de Reserva ({metrics.reserveFundPercentage}%):</span>
+                    <span className="font-bold text-slate-900">{formatCLP(metrics.reserveFundAmount)}</span>
+                  </div>
+                  {metrics.reserveFundExpenses > 0 && (
+                    <div className="flex justify-between py-1 border-b border-slate-200/60 text-amber-800">
+                      <span>Gastos cubiertos por Fondo de Reserva:</span>
+                      <span className="font-bold">{formatCLP(metrics.reserveFundExpenses)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-1 text-sm font-black text-[#0F3D2E]">
+                    <span>Total a Cobrar a la Comunidad:</span>
+                    <span>{formatCLP(metrics.grandTotal)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 text-slate-600 pt-2 border-t border-slate-200/60">
+                    <span>Cuota base por casa ({metrics.unitsCount} unidades • {splitMode === 'equal' ? 'Partes iguales' : 'Según % alícuota'}):</span>
+                    <span className="font-black text-[#0F3D2E] text-sm">
+                      {formatCLP(metrics.unitsCount > 0 ? Math.round(metrics.grandTotal / metrics.unitsCount) : 0)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -10056,7 +10066,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
 
             {/* PASO 3: DESPACHO MASIVO A LOS COPROPIETARIOS */}
             {(emisionSubTab === 'todos' || emisionSubTab === 'despacho') && (
-            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
               <div className="border-b border-slate-100 pb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#0F3D2E]">
                   Paso 3 • Despacho & Notificación a Copropietarios
@@ -10137,7 +10147,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
 
             {/* PASO 4: CIERRE DEFINITIVO, ARCHIVO EN HISTÓRICO Y APERTURA DE NUEVO MES */}
             {(emisionSubTab === 'todos' || emisionSubTab === 'cierre') && (
-            <div className={`p-6 sm:p-8 rounded-3xl border-2 shadow-sm space-y-5 transition-all ${
+            <div className={`p-5 sm:p-6 rounded-2xl border-2 shadow-xs space-y-4 transition-all ${
               preClosingAudit?.hasCriticalBlock && !allowForcedClose
                 ? 'bg-slate-50 border-slate-300'
                 : 'bg-white border-[#D4B895]'
@@ -10152,7 +10162,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                 <p className="text-xs text-slate-600 mt-1">
                   Al ejecutar el cierre, el sistema realiza automáticamente 4 acciones legales y contables:
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-xs text-slate-700">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3 text-xs text-slate-700">
                   <div className="p-3 bg-white rounded-xl border border-slate-200">
                     <strong className="text-[#0F3D2E] block">1. Traspaso Automático al Histórico:</strong>
                     <span>Los {currentCommunity.expenses?.length || 0} gastos actuales pasan a `Histórico & Traspaso` asociados a su mes ({currentCommunity.activePeriod?.month}/{currentCommunity.activePeriod?.year}) y administración.</span>
