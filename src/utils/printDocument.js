@@ -69,10 +69,12 @@ export const printDocumentDirectly = (elementOrId, documentTitle = 'Documento_Of
 
     const fitPageStyle = options.fitPage ? `
       .print-wrapper {
-        max-height: 265mm !important;
-        overflow: hidden !important;
         page-break-after: avoid !important;
         page-break-inside: avoid !important;
+      }
+      @page {
+        size: ${options.pageSize || 'letter portrait'};
+        margin: ${options.margin || '5mm 6mm 5mm 6mm'};
       }
     ` : '';
 
@@ -90,7 +92,7 @@ export const printDocumentDirectly = (elementOrId, documentTitle = 'Documento_Of
           <style>
             @page {
               size: ${options.pageSize || 'letter portrait'};
-              margin: ${options.margin || '7mm 9mm 7mm 9mm'};
+              margin: ${options.margin || '5mm 6mm 5mm 6mm'};
             }
             * {
               -webkit-print-color-adjust: exact !important;
@@ -124,8 +126,8 @@ export const printDocumentDirectly = (elementOrId, documentTitle = 'Documento_Of
             ${options.extraStyles || ''}
           </style>
         </head>
-        <body class="p-2 sm:p-4">
-          <div class="print-wrapper max-w-4xl mx-auto">
+        <body class="p-0 m-0">
+          <div class="print-wrapper w-full max-w-4xl mx-auto">
             ${contentHtml}
           </div>
         </body>
@@ -133,19 +135,33 @@ export const printDocumentDirectly = (elementOrId, documentTitle = 'Documento_Of
     `);
     iDoc.close();
 
+    let cleaned = false;
     const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
       document.title = previousParentTitle;
     };
+
+    // Escuchar el evento afterprint tanto en la ventana principal como en el iframe
+    window.addEventListener('afterprint', cleanup, { once: true });
+    try {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.addEventListener('afterprint', cleanup, { once: true });
+      }
+    } catch {
+      // Ignorar restricciones de origen cruzado si ocurrieran
+    }
 
     setTimeout(() => {
       try {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
-        setTimeout(cleanup, 2500);
+        // Fallback seguro: mantener el título durante 2 minutos mientras el usuario guarda el PDF
+        setTimeout(cleanup, 120000);
       } catch (err) {
         console.warn('Fallo impresión en iframe, usando fallback', err);
         window.print();
-        setTimeout(cleanup, 2500);
+        setTimeout(cleanup, 120000);
       }
     }, 450);
 
