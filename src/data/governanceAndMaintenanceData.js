@@ -315,3 +315,182 @@ export const INITIAL_COMMUNITY_TICKETS = [
     elevateToAssembly: false
   }
 ];
+
+// --- 6. LIBRO OFICIAL DE REUNIONES DE COMITÉ DE ADMINISTRACIÓN (LEY 21.442 ART. 17° Y 20°) ---
+export const INITIAL_COMMITTEE_MEETINGS = [
+  {
+    id: 'com-meet-2026-003',
+    folio: 'SES-COM-2026-003',
+    date: '2026-10-24',
+    time: '19:00 - 20:45 hrs',
+    type: 'Sesión Ordinaria Mensual de Coordinación',
+    modality: 'Mixta (Presencial Sala Multiuso + Google Meet)',
+    place: 'Sala Multiuso Condominio Los Cerezos / Enlace Virtual',
+    legalBasis: 'Ley N° 21.442 Art. 17° (Funciones del Comité) y Art. 20° (Actas y Acuerdos)',
+    status: 'FIRMADA', // 'FIRMADA' | 'BORRADOR' | 'PENDIENTE_FIRMAS'
+    presidentName: 'Carlos Morales Rojas',
+    presidentRut: '15.428.312-4',
+    secretaryName: 'Marcela Castillo Gómez',
+    secretaryRut: '13.784.512-8',
+    adminName: 'Administración General ARANPRO',
+    adminRut: '76.999.888-1',
+    attendees: [
+      { name: 'Carlos Morales Rojas', role: 'Presidente del Comité', unit: 'Casa 1', rut: '15.428.312-4', status: 'PRESENTE' },
+      { name: 'Marcela Castillo Gómez', role: 'Tesorera / Secretaria', unit: 'Casa 4', rut: '13.784.512-8', status: 'PRESENTE' },
+      { name: 'Claudia Herrera Soto', role: 'Vocal Comité', unit: 'Casa 7', rut: '14.225.890-3', status: 'PRESENTE' },
+      { name: 'Administración ARANPRO', role: 'Administrador Titular (RNAC N° 48.912)', unit: 'Administración', rut: '76.999.888-1', status: 'PRESENTE' }
+    ],
+    agendaTopics: [
+      '1. Revisión de balance, rendición de gastos comunes de Septiembre y conciliación bancaria.',
+      '2. Evaluación de cotizaciones técnicas para mantención correctiva y calibración de fotoceldas del portón.',
+      '3. Estado de cobranza prejudicial de morosidades superiores a 3 meses (Casas 3 y 9) según Art. 27° Ley 21.442.',
+      '4. Planificación y propuesta de tabla para la próxima Asamblea Ordinaria de Copropietarios.',
+      '5. Auditoría del Libro de Sugerencias y Reclamos del mes de Octubre.'
+    ],
+    agreements: [
+      'Se aprueba por unanimidad de los miembros presentes del Comité la rendición de cuentas del mes de Septiembre 2026 sin observaciones.',
+      'Se adjudica la mantención correctiva del portón vehicular a Automatizaciones del Norte SpA por un monto de $65.000 + IVA, autorizando el pago contra recepción de informe técnico favorable.',
+      'Se instruye a la Administración ARANPRO enviar carta formal de advertencia y ofrecer convenio de pago en hasta 12 cuotas a las unidades con morosidad superior a 3 cuotas.',
+      'Se acuerda convocar a Asamblea Ordinaria de Copropietarios para la segunda quincena de Noviembre con modalidad mixta.'
+    ],
+    tasks: [
+      { id: 'task-com-1', title: 'Emitir y notificar cartas de propuesta de convenio de pago a Casas 3 y 9', assignee: 'Administración ARANPRO', dueDate: '2026-11-05', priority: 'ALTA', status: 'EN_PROCESO' },
+      { id: 'task-com-2', title: 'Coordinar visita de Automatizaciones del Norte SpA para calibración de portón', assignee: 'Administración ARANPRO', dueDate: '2026-11-03', priority: 'URGENTE', status: 'CUMPLIDA' },
+      { id: 'task-com-3', title: 'Revisar y visar borrador de citación multicanal a asamblea con simulador de quórums', assignee: 'Carlos Morales (Presidente)', dueDate: '2026-11-08', priority: 'MEDIA', status: 'PENDIENTE' }
+    ],
+    notes: 'Acta aprobada por la unanimidad de los miembros en ejercicio del Comité y suscrita conjuntamente con la Administración ARANPRO. Queda foliada correlativamente en el Libro Oficial de Actas del Comité.'
+  },
+  {
+    id: 'com-meet-2026-002',
+    folio: 'SES-COM-2026-002',
+    date: '2026-09-22',
+    time: '19:30 - 21:00 hrs',
+    type: 'Sesión Extraordinaria de Evaluación Presupuestaria',
+    modality: 'Presencial',
+    place: 'Sala Multiuso Condominio Los Cerezos',
+    legalBasis: 'Ley N° 21.442 Art. 17° (Funciones del Comité)',
+    status: 'FIRMADA',
+    presidentName: 'Carlos Morales Rojas',
+    presidentRut: '15.428.312-4',
+    secretaryName: 'Marcela Castillo Gómez',
+    secretaryRut: '13.784.512-8',
+    adminName: 'Administración General ARANPRO',
+    adminRut: '76.999.888-1',
+    attendees: [
+      { name: 'Carlos Morales Rojas', role: 'Presidente del Comité', unit: 'Casa 1', rut: '15.428.312-4', status: 'PRESENTE' },
+      { name: 'Marcela Castillo Gómez', role: 'Tesorera / Secretaria', unit: 'Casa 4', rut: '13.784.512-8', status: 'PRESENTE' },
+      { name: 'Administración ARANPRO', role: 'Administrador Titular (RNAC N° 48.912)', unit: 'Administración', rut: '76.999.888-1', status: 'PRESENTE' }
+    ],
+    agendaTopics: [
+      '1. Planificación de mantención preventiva trimestral de bombas de agua hidroneumáticas.',
+      '2. Revisión de póliza de seguros de áreas comunes contra incendio y sismo (Ley 21.442 Art. 43).',
+      '3. Convivencia: Campaña de tenencia responsable de mascotas y uso de correa en áreas de circulación.'
+    ],
+    agreements: [
+      'Se aprueba presupuesto de $85.000 para revisión técnica de presostatos y bombas de agua.',
+      'Se ratifica la vigencia de la póliza de seguro de incendios y sismos para espacios comunes.',
+      'Se instruye circular informativa a los copropietarios recordando las sanciones reglamentarias por mascotas sin supervisión en pasajes comunes.'
+    ],
+    tasks: [
+      { id: 'task-com-4', title: 'Ejecutar mantención preventiva de bombas de agua con Hidráulica & Bombas del Norte SpA', assignee: 'Administración ARANPRO', dueDate: '2026-09-27', priority: 'ALTA', status: 'CUMPLIDA' },
+      { id: 'task-com-5', title: 'Publicar circular de tenencia responsable en el Mural y portal de copropietarios', assignee: 'Administración ARANPRO', dueDate: '2026-09-25', priority: 'MEDIA', status: 'CUMPLIDA' }
+    ],
+    notes: 'Sesión concluida a las 21:00 hrs. Copia foliada archivada en el libro digital del comité.'
+  }
+];
+
+// --- 7. REGISTRO DE NOVEDADES & BITÁCORA DE COMUNICACIÓN CON EL COMITÉ ---
+export const INITIAL_COMMITTEE_NOVEDADES = [
+  {
+    id: 'nov-2026-001',
+    date: '2026-11-02',
+    time: '09:15 hrs',
+    title: 'Visita técnica y calibración de fotoceldas del portón completada',
+    category: 'Mantención & Accesos',
+    priority: 'ALTA', // 'URGENTE' | 'ALTA' | 'MEDIA' | 'INFORMATIVA'
+    reportedBy: 'Administración ARANPRO',
+    description: 'El técnico de Automatizaciones del Norte SpA realizó la limpieza de sensores y ajuste de torque del motor de corredera. El sistema opera normalmente sin riesgo de atrapamiento. Se adjunta informe de servicio para respaldo de la bitácora Art. 40.',
+    status: 'RESUELTO', // 'INFORMADO' | 'EN_GESTION' | 'RESUELTO' | 'ELEVADO_A_REUNION'
+    committeeNotified: true,
+    elevatedToMeeting: false
+  },
+  {
+    id: 'nov-2026-002',
+    date: '2026-10-31',
+    time: '16:40 hrs',
+    title: 'Abono de $85.000 registrado por Casa 3 e inicio de convenio de repactación',
+    category: 'Finanzas & Cobranza',
+    priority: 'MEDIA',
+    reportedBy: 'Administración ARANPRO',
+    description: 'El copropietario de la Casa 3 se contactó por correo informando abono parcial y solicitando formalizar convenio de repactación en 6 cuotas según lo acordado en la última sesión de comité. Se envió propuesta de firma.',
+    status: 'EN_GESTION',
+    committeeNotified: true,
+    elevatedToMeeting: true
+  },
+  {
+    id: 'nov-2026-003',
+    date: '2026-10-29',
+    time: '11:00 hrs',
+    title: 'Corte preventivo de Aguas del Valle en sector El Milagro (Estanques verificados)',
+    category: 'Servicios Básicos',
+    priority: 'INFORMATIVA',
+    reportedBy: 'Administración ARANPRO',
+    description: 'Se verificó que los estanques de acumulación de agua potable del condominio se encuentran al 100% de capacidad para garantizar autonomía hídrica durante el corte programado de 4 horas.',
+    status: 'RESUELTO',
+    committeeNotified: true,
+    elevatedToMeeting: false
+  },
+  {
+    id: 'nov-2026-004',
+    date: '2026-11-01',
+    time: '20:30 hrs',
+    title: 'Reporte de vecina Casa 14 por sensor de portón y respuesta inmediata',
+    category: 'Seguridad & Convivencia',
+    priority: 'URGENTE',
+    reportedBy: 'Comité (Marcela Castillo)',
+    description: 'Vecina reportó que portón cerró anticipadamente. Se coordinó de inmediato la revisión técnica express y se respondió formalmente a la vecina en el Libro Oficial de Sugerencias y Reclamos.',
+    status: 'RESUELTO',
+    committeeNotified: true,
+    elevatedToMeeting: false
+  }
+];
+
+// --- 8. TAREAS & COMPROMISOS DEL COMITÉ DE ADMINISTRACIÓN ---
+export const INITIAL_COMMITTEE_TASKS = [
+  {
+    id: 'task-com-1',
+    title: 'Emitir y notificar cartas de convenio de pago a Casas 3 y 9',
+    assignee: 'Administración ARANPRO',
+    dueDate: '2026-11-05',
+    priority: 'ALTA',
+    status: 'EN_PROCESO', // 'PENDIENTE' | 'EN_PROCESO' | 'CUMPLIDA'
+    notes: 'Compromiso adoptado en Sesión de Comité Folio SES-COM-2026-003.'
+  },
+  {
+    id: 'task-com-2',
+    title: 'Coordinar visita de Automatizaciones del Norte SpA para calibración de portón',
+    assignee: 'Administración ARANPRO',
+    dueDate: '2026-11-03',
+    priority: 'URGENTE',
+    status: 'CUMPLIDA',
+    notes: 'Completado el 02 de Noviembre. Informe archivado.'
+  },
+  {
+    id: 'task-com-3',
+    title: 'Revisar y visar borrador de citación multicanal a asamblea con simulador de quórums',
+    assignee: 'Carlos Morales (Presidente)',
+    dueDate: '2026-11-08',
+    priority: 'MEDIA',
+    status: 'PENDIENTE',
+    notes: 'Revisión conjunta con la Administración.'
+  },
+  {
+    id: 'task-com-6',
+    title: 'Solicitar cotizaciones para pintura y demarcación de zonas de estacionamiento',
+    assignee: 'Administración ARANPRO',
+    dueDate: '2026-11-15',
+    priority: 'BAJA',
+    status: 'PENDIENTE',
+    notes: 'Para evaluar en la próxima sesión ordinaria de Noviembre.'
+  }
+];

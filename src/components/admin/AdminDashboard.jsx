@@ -5,6 +5,7 @@ import { AranproLogo } from '../common/MauranLogo';
 import { AssemblyQuorumModule } from './AssemblyQuorumModule';
 import { PreventiveMaintenanceModule } from './PreventiveMaintenanceModule';
 import { SuggestionsAndComplaintsModule } from './SuggestionsAndComplaintsModule';
+import { CommitteeMeetingsAndLogModule } from './CommitteeMeetingsAndLogModule';
 import { 
   Building2, Plus, Trash2, Edit3, ExternalLink, Users, 
   DollarSign, FileText, CheckCircle2, AlertCircle, Copy, 
@@ -343,6 +344,7 @@ export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb }) => {
   const [expensesSubTab, setExpensesSubTab] = useState('gastos'); // 'gastos' | 'proveedores' | 'historico' | 'presupuesto' | 'mantenciones'
   const [asambleasSubTab, setAsambleasSubTab] = useState('asamblea'); // 'asamblea' | 'consultas' | 'actas' | 'poderes'
   const [comunicadosSubTab, setComunicadosSubTab] = useState('mural'); // 'mural' | 'reclamos'
+  const [comiteSubTab, setComiteSubTab] = useState('reuniones'); // 'reuniones' | 'novedades' | 'tareas' | 'directorio'
   const [providerSearchQuery, setProviderSearchQuery] = useState('');
   const [providerCategoryFilter, setProviderCategoryFilter] = useState('ALL');
   const [providerContractFilter, setProviderContractFilter] = useState('ALL');
@@ -2478,6 +2480,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
   const pendingPaymentsCount = currentCommunity?.paymentReports?.filter(p => p.status === 'PENDIENTE')?.length || 0;
   const pendingTicketsCount = currentCommunity?.communityTickets?.filter(t => t.status === 'PENDIENTE')?.length || 0;
   const urgentMaintCount = currentCommunity?.preventiveMaintenances?.filter(m => m.status === 'URGENTE' || (m.daysRemaining !== undefined && m.daysRemaining <= 10))?.length || 0;
+  const pendingCommitteeTasksCount = currentCommunity?.committeeTasks?.filter(t => t.status !== 'CUMPLIDA')?.length || 0;
   const totalDocsAndAnnCount = (currentCommunity?.announcements?.length || 0) + (currentCommunity?.documents?.length || 0) + (currentCommunity?.communityTickets?.length || 0);
 
   const navTabs = [
@@ -2486,6 +2489,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
     { id: 'gastos', label: 'Gastos & Respaldos', shortLabel: 'Gastos', icon: FileText, badge: currentCommunity?.expenses?.length || 0, alertBadge: urgentMaintCount > 0 },
     { id: 'emision', label: 'Cierre y Cobro del Mes', shortLabel: 'Cierre Mes', icon: RefreshCw, badge: null },
     { id: 'pagos', label: 'Validar Pagos', shortLabel: 'Pagos', icon: CheckCircle2, badge: pendingPaymentsCount, alertBadge: pendingPaymentsCount > 0 },
+    { id: 'comite', label: 'Comité de Administración', shortLabel: 'Comité', icon: ClipboardList, badge: pendingCommitteeTasksCount > 0 ? `${pendingCommitteeTasksCount} pendientes` : 'Art. 17°', alertBadge: pendingCommitteeTasksCount > 0 },
     { id: 'asambleas', label: 'Asambleas & Quórum', shortLabel: 'Asambleas', icon: Users, badge: 'Ley 21.442' },
     { id: 'comunicados', label: 'Mural & Reclamos', shortLabel: 'Mural & Reclamos', icon: Megaphone, badge: totalDocsAndAnnCount, alertBadge: pendingTicketsCount > 0 },
     { id: 'certificados', label: 'Certificados', shortLabel: 'Certificados', icon: Shield, badge: certificates.length },
@@ -2609,6 +2613,9 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                   }
                   if (tab.id === 'unidades' && !unitsSubTab) {
                     setUnitsSubTab('nomina');
+                  }
+                  if (tab.id === 'comite' && !comiteSubTab) {
+                    setComiteSubTab('reuniones');
                   }
                   if (tab.id === 'asambleas' && !asambleasSubTab) {
                     setAsambleasSubTab('asamblea');
@@ -2853,6 +2860,119 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                         : urgentMaintCount > 0 ? 'bg-rose-500 text-white font-black animate-pulse' : 'bg-emerald-100 text-emerald-800'
                     }`}>
                       {currentCommunity?.preventiveMaintenances?.length || 5}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* SUB-ÍNDICES DE COMITÉ DE ADMINISTRACIÓN EN LA BARRA LATERAL */}
+              {tab.id === 'comite' && (!sidebarCollapsed || isMobile) && (
+                <div className={`ml-3.5 pl-2 border-l-2 border-[#D4B895]/50 space-y-0.5 my-1 ${activeTab === 'comite' ? 'block' : 'hidden'}`}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('comite');
+                      setComiteSubTab('reuniones');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'comite' && comiteSubTab === 'reuniones'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Calendar className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'comite' && comiteSubTab === 'reuniones' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">Libro de Reuniones</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'comite' && comiteSubTab === 'reuniones'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {currentCommunity?.committeeMeetings?.length || 0}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('comite');
+                      setComiteSubTab('novedades');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'comite' && comiteSubTab === 'novedades'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Bell className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'comite' && comiteSubTab === 'novedades' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">Bitácora Novedades</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'comite' && comiteSubTab === 'novedades'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {currentCommunity?.committeeNovedades?.length || 0}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('comite');
+                      setComiteSubTab('tareas');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'comite' && comiteSubTab === 'tareas'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <CheckSquare className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'comite' && comiteSubTab === 'tareas' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">Compromisos & Tareas</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'comite' && comiteSubTab === 'tareas'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : pendingCommitteeTasksCount > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {pendingCommitteeTasksCount}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('comite');
+                      setComiteSubTab('directorio');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'comite' && comiteSubTab === 'directorio'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Users className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'comite' && comiteSubTab === 'directorio' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">Miembros (Art. 17°)</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'comite' && comiteSubTab === 'directorio'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {(currentCommunity?.units || []).filter(u => u.isCommittee).length}
                     </span>
                   </button>
                 </div>
@@ -9445,6 +9565,15 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
               </div>
             </div>
           </div>
+        )}
+
+        {/* PESTAÑA: COMITÉ DE ADMINISTRACIÓN - LIBRO DE REUNIONES, NOVEDADES & TAREAS (LEY 21.442) */}
+        {activeTab === 'comite' && currentCommunity && (
+          <CommitteeMeetingsAndLogModule
+            currentCommunity={currentCommunity}
+            activeSubTab={comiteSubTab}
+            onSubTabChange={setComiteSubTab}
+          />
         )}
 
         {/* PESTAÑA: ASAMBLEAS & QUÓRUM DE ASISTENCIA Y VOTACIÓN (LEY N° 21.442) */}

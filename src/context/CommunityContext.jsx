@@ -5,7 +5,10 @@ import {
   INITIAL_ASSEMBLY_MINUTES, 
   INITIAL_REGISTERED_PROXIES, 
   INITIAL_PREVENTIVE_MAINTENANCES, 
-  INITIAL_COMMUNITY_TICKETS 
+  INITIAL_COMMUNITY_TICKETS,
+  INITIAL_COMMITTEE_MEETINGS,
+  INITIAL_COMMITTEE_NOVEDADES,
+  INITIAL_COMMITTEE_TASKS
 } from '../data/governanceAndMaintenanceData';
 import { cleanRut } from '../utils/formatters';
 
@@ -96,7 +99,16 @@ export const CommunityProvider = ({ children }) => {
               : INITIAL_PREVENTIVE_MAINTENANCES,
             communityTickets: Array.isArray(c.communityTickets) && c.communityTickets.length > 0
               ? c.communityTickets
-              : INITIAL_COMMUNITY_TICKETS
+              : INITIAL_COMMUNITY_TICKETS,
+            committeeMeetings: Array.isArray(c.committeeMeetings) && c.committeeMeetings.length > 0
+              ? c.committeeMeetings
+              : INITIAL_COMMITTEE_MEETINGS,
+            committeeNovedades: Array.isArray(c.committeeNovedades) && c.committeeNovedades.length > 0
+              ? c.committeeNovedades
+              : INITIAL_COMMITTEE_NOVEDADES,
+            committeeTasks: Array.isArray(c.committeeTasks) && c.committeeTasks.length > 0
+              ? c.committeeTasks
+              : INITIAL_COMMITTEE_TASKS
           };
         });
       } catch (e) { console.error(e); }
@@ -107,7 +119,10 @@ export const CommunityProvider = ({ children }) => {
       assemblyMinutes: INITIAL_ASSEMBLY_MINUTES,
       registeredProxies: INITIAL_REGISTERED_PROXIES,
       preventiveMaintenances: INITIAL_PREVENTIVE_MAINTENANCES,
-      communityTickets: INITIAL_COMMUNITY_TICKETS
+      communityTickets: INITIAL_COMMUNITY_TICKETS,
+      committeeMeetings: INITIAL_COMMITTEE_MEETINGS,
+      committeeNovedades: INITIAL_COMMITTEE_NOVEDADES,
+      committeeTasks: INITIAL_COMMITTEE_TASKS
     }));
   });
 
@@ -1508,6 +1523,158 @@ export const CommunityProvider = ({ children }) => {
     }));
   };
 
+  // --- 13. Libro Oficial de Reuniones del Comité de Administración (Ley 21.442 Art. 17° y 20°) ---
+  const addCommitteeMeeting = (communityId, meetingData) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      const nextNum = (c.committeeMeetings?.length || 0) + 1;
+      const year = new Date().getFullYear();
+      const folio = `SES-COM-${year}-${String(nextNum).padStart(3, '0')}`;
+      const newMeeting = {
+        id: `com-meet-${Date.now()}`,
+        folio,
+        date: meetingData.date || new Date().toISOString().split('T')[0],
+        time: meetingData.time || '19:30 hrs',
+        type: meetingData.type || 'Sesión Ordinaria de Coordinación',
+        modality: meetingData.modality || 'Mixta (Presencial + Google Meet)',
+        place: meetingData.place || 'Sala Multiuso / Telemática',
+        legalBasis: 'Ley N° 21.442 Art. 17° y Art. 20°',
+        status: meetingData.status || 'FIRMADA',
+        presidentName: meetingData.presidentName || 'Carlos Morales Rojas',
+        presidentRut: meetingData.presidentRut || '15.428.312-4',
+        secretaryName: meetingData.secretaryName || 'Marcela Castillo Gómez',
+        secretaryRut: meetingData.secretaryRut || '13.784.512-8',
+        adminName: meetingData.adminName || 'Administración General ARANPRO',
+        adminRut: meetingData.adminRut || '76.999.888-1',
+        attendees: meetingData.attendees || [],
+        agendaTopics: meetingData.agendaTopics || [],
+        agreements: meetingData.agreements || [],
+        tasks: meetingData.tasks || [],
+        notes: meetingData.notes || 'Acta aprobada y suscrita en sesión de comité.'
+      };
+
+      // Si la reunión incluyó tareas, agregarlas también al seguimiento global de tareas del comité
+      let updatedTasks = c.committeeTasks || [];
+      if (Array.isArray(meetingData.tasks) && meetingData.tasks.length > 0) {
+        updatedTasks = [...meetingData.tasks, ...updatedTasks];
+      }
+
+      return {
+        ...c,
+        committeeMeetings: [newMeeting, ...(c.committeeMeetings || [])],
+        committeeTasks: updatedTasks
+      };
+    }));
+  };
+
+  const updateCommitteeMeeting = (communityId, meetingId, updatedData) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      return {
+        ...c,
+        committeeMeetings: (c.committeeMeetings || []).map(m => m.id === meetingId ? { ...m, ...updatedData } : m)
+      };
+    }));
+  };
+
+  const deleteCommitteeMeeting = (communityId, meetingId) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      return {
+        ...c,
+        committeeMeetings: (c.committeeMeetings || []).filter(m => m.id !== meetingId)
+      };
+    }));
+  };
+
+  // --- 14. Registro de Novedades & Bitácora de Comunicación con el Comité ---
+  const addCommitteeNovedad = (communityId, novedadData) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      const newNovedad = {
+        id: `nov-${Date.now()}`,
+        date: novedadData.date || new Date().toISOString().split('T')[0],
+        time: novedadData.time || new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) + ' hrs',
+        title: novedadData.title,
+        category: novedadData.category || 'Administrativo General',
+        priority: novedadData.priority || 'MEDIA',
+        reportedBy: novedadData.reportedBy || 'Administración ARANPRO',
+        description: novedadData.description,
+        status: novedadData.status || 'INFORMADO',
+        committeeNotified: novedadData.committeeNotified ?? true,
+        elevatedToMeeting: Boolean(novedadData.elevatedToMeeting)
+      };
+      return {
+        ...c,
+        committeeNovedades: [newNovedad, ...(c.committeeNovedades || [])]
+      };
+    }));
+  };
+
+  const updateCommitteeNovedad = (communityId, novedadId, updatedData) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      return {
+        ...c,
+        committeeNovedades: (c.committeeNovedades || []).map(n => n.id === novedadId ? { ...n, ...updatedData } : n)
+      };
+    }));
+  };
+
+  const deleteCommitteeNovedad = (communityId, novedadId) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      return {
+        ...c,
+        committeeNovedades: (c.committeeNovedades || []).filter(n => n.id !== novedadId)
+      };
+    }));
+  };
+
+  // --- 15. Tareas y Compromisos del Comité de Administración ---
+  const addCommitteeTask = (communityId, taskData) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      const newTask = {
+        id: `task-com-${Date.now()}`,
+        title: taskData.title,
+        assignee: taskData.assignee || 'Administración ARANPRO',
+        dueDate: taskData.dueDate || new Date().toISOString().split('T')[0],
+        priority: taskData.priority || 'MEDIA',
+        status: taskData.status || 'PENDIENTE',
+        notes: taskData.notes || ''
+      };
+      return {
+        ...c,
+        committeeTasks: [newTask, ...(c.committeeTasks || [])]
+      };
+    }));
+  };
+
+  const toggleCommitteeTaskStatus = (communityId, taskId) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      return {
+        ...c,
+        committeeTasks: (c.committeeTasks || []).map(t => {
+          if (t.id !== taskId) return t;
+          const nextStatus = t.status === 'CUMPLIDA' ? 'PENDIENTE' : t.status === 'PENDIENTE' ? 'EN_PROCESO' : 'CUMPLIDA';
+          return { ...t, status: nextStatus };
+        })
+      };
+    }));
+  };
+
+  const deleteCommitteeTask = (communityId, taskId) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      return {
+        ...c,
+        committeeTasks: (c.committeeTasks || []).filter(t => t.id !== taskId)
+      };
+    }));
+  };
+
   // --- Certificados ---
   const requestCertificate = (certData) => {
     const newCert = {
@@ -1653,6 +1820,15 @@ export const CommunityProvider = ({ children }) => {
       addCommunityTicket,
       updateTicketStatus,
       toggleTicketElevate,
+      addCommitteeMeeting,
+      updateCommitteeMeeting,
+      deleteCommitteeMeeting,
+      addCommitteeNovedad,
+      updateCommitteeNovedad,
+      deleteCommitteeNovedad,
+      addCommitteeTask,
+      toggleCommitteeTaskStatus,
+      deleteCommitteeTask,
       requestCertificate,
       updateCertificateStatus,
       setCompanySettings,
