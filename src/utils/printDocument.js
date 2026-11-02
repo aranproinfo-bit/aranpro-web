@@ -26,21 +26,17 @@ export const printDocumentDirectly = (elementOrId, documentTitle = 'Documento_Of
   const sanitizedTitle = sanitizeFileName(documentTitle);
   
   let contentHtml = '';
-  if (typeof elementOrId === 'string') {
+  if (typeof elementOrId === 'string' && (elementOrId.trim().startsWith('<') || elementOrId.trim().startsWith('<!DOCTYPE'))) {
+    contentHtml = elementOrId;
+  } else if (typeof elementOrId === 'string') {
     const el = document.getElementById(elementOrId);
-    if (!el) {
-      console.warn(`[printDocumentDirectly] No se encontró el elemento con ID: ${elementOrId}. Ejecutando fallback.`);
-      const prevTitle = document.title;
-      document.title = sanitizedTitle;
-      window.print();
-      setTimeout(() => { document.title = prevTitle; }, 1000);
-      return;
+    if (el) {
+      contentHtml = el.innerHTML;
+    } else {
+      contentHtml = elementOrId;
     }
-    contentHtml = el.innerHTML;
   } else if (elementOrId && elementOrId.innerHTML) {
     contentHtml = elementOrId.innerHTML;
-  } else if (typeof elementOrId === 'string') {
-    contentHtml = elementOrId;
   }
 
   // Convertir rutas relativas de imágenes a absolutas

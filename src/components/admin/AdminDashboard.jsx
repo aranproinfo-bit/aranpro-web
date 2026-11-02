@@ -18,7 +18,7 @@ import {
   History, Calendar, FilePlus, ArrowUpDown,
   AlertTriangle, Zap, Droplets, Lock, Unlock, CalendarClock,
   TrendingUp, Calculator, CalendarRange, PieChart, Scale, RotateCcw,
-  Smartphone, Activity, TrendingDown, Layers
+  Smartphone, Activity, TrendingDown, Layers, Bell
 } from 'lucide-react';
 
 // Catálogo de Proveedores Habituales en Condominios Chilenos (Autocompletado 1-Click)
