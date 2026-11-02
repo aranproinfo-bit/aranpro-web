@@ -124,7 +124,7 @@ export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb }) => {
 
   // Comunidad seleccionada para gestionar (por defecto la primera)
   const [selectedCommunityId, setSelectedCommunityId] = useState(communities[0]?.id || null);
-  const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'unidades' | 'gastos' | 'emision' | 'pagos' | 'comunicados' | 'certificados' | 'ajustes'
+  const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'unidades' | 'gastos' | 'emision' | 'comite' | 'asambleas' | 'comunicados' | 'certificados' | 'ajustes'
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
@@ -153,7 +153,7 @@ export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb }) => {
   });
 
   // --- Sub-pestaña para Unidades y Registro Rápido de Pagos de Cartola ---
-  const [unitsSubTab, setUnitsSubTab] = useState('nomina'); // 'nomina' | 'registro_pagos'
+  const [unitsSubTab, setUnitsSubTab] = useState('nomina'); // 'nomina' | 'validar_pagos' | 'registro_pagos'
   const [showQuickBankPaymentModal, setShowQuickBankPaymentModal] = useState(false);
   const [quickPaySearchQuery, setQuickPaySearchQuery] = useState('');
   const [quickPaySelectedUnit, setQuickPaySelectedUnit] = useState(null);
@@ -2485,10 +2485,9 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
 
   const navTabs = [
     { id: 'resumen', label: 'Dashboard Financiero', shortLabel: 'Dashboard', icon: BarChart3, badge: null },
-    { id: 'unidades', label: 'Unidades (Casas)', shortLabel: 'Unidades', icon: Home, badge: currentCommunity?.units?.length || 0 },
+    { id: 'unidades', label: 'Unidades (Casas)', shortLabel: 'Unidades', icon: Home, badge: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} por validar` : currentCommunity?.units?.length || 0, alertBadge: pendingPaymentsCount > 0 },
     { id: 'gastos', label: 'Gastos & Respaldos', shortLabel: 'Gastos', icon: FileText, badge: currentCommunity?.expenses?.length || 0, alertBadge: urgentMaintCount > 0 },
     { id: 'emision', label: 'Cierre y Cobro del Mes', shortLabel: 'Cierre Mes', icon: RefreshCw, badge: null },
-    { id: 'pagos', label: 'Validar Pagos', shortLabel: 'Pagos', icon: CheckCircle2, badge: pendingPaymentsCount, alertBadge: pendingPaymentsCount > 0 },
     { id: 'comite', label: 'Comité de Administración', shortLabel: 'Comité', icon: ClipboardList, badge: pendingCommitteeTasksCount > 0 ? `${pendingCommitteeTasksCount} pendientes` : 'Art. 17°', alertBadge: pendingCommitteeTasksCount > 0 },
     { id: 'asambleas', label: 'Asambleas & Quórum', shortLabel: 'Asambleas', icon: Users, badge: 'Ley 21.442' },
     { id: 'comunicados', label: 'Mural & Reclamos', shortLabel: 'Mural & Reclamos', icon: Megaphone, badge: totalDocsAndAnnCount, alertBadge: pendingTicketsCount > 0 },
@@ -2663,6 +2662,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
               {/* SUB-ÍNDICES DE UNIDADES EN LA BARRA LATERAL */}
               {tab.id === 'unidades' && (!sidebarCollapsed || isMobile) && (
                 <div className={`ml-3.5 pl-2 border-l-2 border-[#D4B895]/50 space-y-0.5 my-1 ${activeTab === 'unidades' ? 'block' : 'hidden'}`}>
+                  {/* Sub-índice 1: Nómina de Unidades y Saldos */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -2679,7 +2679,7 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                   >
                     <div className="flex items-center space-x-1.5 min-w-0">
                       <Home className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'unidades' && unitsSubTab === 'nomina' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">Nómina de Unidades</span>
+                      <span className="truncate">Nómina & Saldos</span>
                     </div>
                     <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
                       activeTab === 'unidades' && unitsSubTab === 'nomina'
@@ -2690,6 +2690,41 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                     </span>
                   </button>
 
+                  {/* Sub-índice 2: Validar Pagos Notificados por Vecinos */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('unidades');
+                      setUnitsSubTab('validar_pagos');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'unidades' && unitsSubTab === 'validar_pagos'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'unidades' && unitsSubTab === 'validar_pagos' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">Validar Pagos</span>
+                    </div>
+                    {pendingPaymentsCount > 0 ? (
+                      <span className="text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 bg-amber-500 text-white animate-pulse">
+                        {pendingPaymentsCount} colillas
+                      </span>
+                    ) : (
+                      <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                        activeTab === 'unidades' && unitsSubTab === 'validar_pagos'
+                          ? 'bg-[#0F3D2E] text-white'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {(currentCommunity?.paymentReports || []).filter(p => p.status === 'APROBADO').length}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Sub-índice 3: Conciliación de Pagos con Cartola Bancaria */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -2706,21 +2741,15 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                   >
                     <div className="flex items-center space-x-1.5 min-w-0">
                       <CreditCard className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'unidades' && unitsSubTab === 'registro_pagos' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">Registro de Pagos (Cartola)</span>
+                      <span className="truncate">Cartola (Auto-Match)</span>
                     </div>
-                    {pendingPaymentsCount > 0 ? (
-                      <span className="text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 bg-amber-500 text-white animate-pulse">
-                        {pendingPaymentsCount} colillas
-                      </span>
-                    ) : (
-                      <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
-                        activeTab === 'unidades' && unitsSubTab === 'registro_pagos'
-                          ? 'bg-[#0F3D2E] text-white'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {(currentCommunity?.paymentReports || []).filter(p => p.status === 'APROBADO').length}
-                      </span>
-                    )}
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'unidades' && unitsSubTab === 'registro_pagos'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      Auto
+                    </span>
                   </button>
                 </div>
               )}
@@ -3855,6 +3884,31 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                       </p>
                     </div>
                   </>
+                ) : unitsSubTab === 'validar_pagos' ? (
+                  <>
+                    <div className="p-2.5 bg-gradient-to-br from-[#0F3D2E] to-[#14533d] text-white rounded-2xl shadow-xs shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-[#D4B895]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2 flex-wrap">
+                        <h3 className="text-base font-black text-slate-900 tracking-tight whitespace-nowrap">
+                          Validación de Pagos Notificados por Vecinos
+                        </h3>
+                        {pendingPaymentsCount > 0 ? (
+                          <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full animate-pulse">
+                            {pendingPaymentsCount} por revisar
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full">
+                            Al día
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Cotejo de transferencias y emisión de Recibos de Pago Oficiales Foliados
+                      </p>
+                    </div>
+                  </>
                 ) : (
                   <>
                     <div className="p-2.5 bg-gradient-to-br from-[#0F3D2E] to-[#14533d] text-white rounded-2xl shadow-xs shrink-0">
@@ -3945,7 +3999,23 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                       </button>
                     </div>
 
-                    {/* Enlace elegante a la sub-pestaña de Conciliación de Cartola */}
+                    {/* Enlace elegante a Validar Pagos */}
+                    <button
+                      type="button"
+                      onClick={() => setUnitsSubTab('validar_pagos')}
+                      className={`px-3 py-2 font-black text-xs rounded-xl flex items-center shadow-2xs transition-all cursor-pointer ${
+                        pendingPaymentsCount > 0
+                          ? 'bg-amber-400 text-slate-950 border border-amber-500 animate-pulse'
+                          : 'bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895]'
+                      }`}
+                      title="Ir a Validar Pagos informados por vecinos"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                      <span>Validar Pagos ({pendingPaymentsCount}) →</span>
+                    </button>
+                  </>
+                ) : unitsSubTab === 'validar_pagos' ? (
+                  <>
                     <button
                       type="button"
                       onClick={() => setUnitsSubTab('registro_pagos')}
@@ -3954,6 +4024,15 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                     >
                       <CreditCard className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
                       <span>Conciliar Cartola →</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUnitsSubTab('nomina')}
+                      className="px-3 py-2 bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895] font-black text-xs rounded-xl flex items-center shadow-2xs transition-all cursor-pointer"
+                      title="Volver a la nómina de viviendas"
+                    >
+                      <Home className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
+                      <span>Nómina Casas →</span>
                     </button>
                   </>
                 ) : (
@@ -3983,6 +4062,19 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
                     >
                       <Download className="w-3.5 h-3.5 mr-1" />
                       Exportar (.CSV)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUnitsSubTab('validar_pagos')}
+                      className={`px-3 py-2 font-black text-xs rounded-xl flex items-center shadow-2xs transition-all cursor-pointer ${
+                        pendingPaymentsCount > 0
+                          ? 'bg-amber-400 text-slate-950 border border-amber-500 animate-pulse'
+                          : 'bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895]'
+                      }`}
+                      title="Ir a Validar Pagos informados por vecinos"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                      <span>Validar Pagos ({pendingPaymentsCount}) →</span>
                     </button>
                     <button
                       type="button"
@@ -4640,8 +4732,179 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
               </div>
             </div>
           </>
+        ) : unitsSubTab === 'validar_pagos' ? (
+          /* VISTA SUB-PESTAÑA: VALIDAR PAGOS NOTIFICADOS POR VECINOS */
+          <div className="space-y-4 animate-fade-in">
+            {/* KPIS DE PAGOS INFORMADOS POR VECINOS */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-3.5">
+                <div className={`p-3 rounded-xl border ${pendingPaymentsCount > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200'}`}>
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Abonos Pendientes de Validar</div>
+                  <div className="text-xl font-black text-slate-900 font-mono mt-0.5">
+                    {pendingPaymentsCount} colillas
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    {pendingPaymentsCount > 0 ? 'Requieren cotejo con cartola' : 'Al día, sin transferencias pendientes'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-3.5">
+                <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pagos Aprobados este Mes</div>
+                  <div className="text-xl font-black text-slate-900 font-mono mt-0.5">
+                    {(currentCommunity.paymentReports || []).filter(p => p.status === 'APROBADO').length} validados
+                  </div>
+                  <div className="text-[10px] text-emerald-700 font-bold mt-0.5">
+                    Con Recibo Oficial Foliado
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-3.5">
+                <div className="p-3 bg-[#0F3D2E]/10 text-[#0F3D2E] rounded-xl border border-[#0F3D2E]/20">
+                  <Landmark className="w-5 h-5 text-[#0F3D2E]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Monto Total Recaudado</div>
+                  <div className="text-xl font-black text-slate-900 font-mono mt-0.5">
+                    {formatCLP(
+                      (currentCommunity.paymentReports || [])
+                        .filter(p => p.status === 'APROBADO')
+                        .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                    )}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    Transferencias confirmadas por administración
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TABLA DE TRANSFERENCIAS Y ABONOS NOTIFICADOS */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 tracking-tight">
+                    Comprobantes Notificados por Vecinos desde el Portal
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Soporta pagos totales y parciales. Al aprobar un abono, se rebaja automáticamente el saldo en la Nómina de Unidades y se emite su Recibo Oficial Foliado (REC-2026-...).
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setUnitsSubTab('registro_pagos')}
+                    className="px-3 py-1.5 bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895] font-bold text-xs rounded-xl flex items-center shadow-2xs transition-all cursor-pointer"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 mr-1 text-[#0F3D2E]" />
+                    <span>Ir a Cartola Bancaria →</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                    <tr>
+                      <th className="px-5 py-3">Folio / Fecha</th>
+                      <th className="px-5 py-3">Unidad / Vecino</th>
+                      <th className="px-5 py-3">N° Operación</th>
+                      <th className="px-5 py-3 text-right">Monto Abonado</th>
+                      <th className="px-5 py-3 text-center">Respaldo</th>
+                      <th className="px-5 py-3 text-center">Estado</th>
+                      <th className="px-5 py-3 text-center">Acción / Recibo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {currentCommunity.paymentReports?.map(pay => (
+                      <tr key={pay.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <div className="font-mono font-bold text-[#0F3D2E]">{pay.receiptFolio || 'PENDIENTE'}</div>
+                          <div className="text-[11px] text-slate-400">{formatDate(pay.date)}</div>
+                        </td>
+                        <td className="px-5 py-3.5 font-bold text-slate-900">
+                          {getUnitLabel(currentCommunity.type, false)} {pay.unitNumber} • {pay.owner}
+                        </td>
+                        <td className="px-5 py-3.5 font-mono text-slate-600">
+                          {pay.transferNumber || 'S/N'}
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-black text-emerald-700 text-sm">
+                          {formatCLP(pay.amount)}
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          {pay.receiptImg ? (
+                            <button
+                              type="button"
+                              onClick={() => setActiveReceipt({
+                                documentType: 'Comprobante de Transferencia',
+                                documentNumber: pay.transferNumber || 'S/N',
+                                provider: `${getUnitLabel(currentCommunity.type, false)} ${pay.unitNumber} • ${pay.owner}`,
+                                date: pay.date,
+                                amount: pay.amount,
+                                category: 'Pago Gasto Común',
+                                description: pay.notes || `Transferencia informada por ${getUnitLabel(currentCommunity.type, false)} ${pay.unitNumber}`,
+                                receiptUrl: pay.receiptImg
+                              })}
+                              className="text-xs text-[#0F3D2E] font-bold hover:underline inline-flex items-center cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1" />
+                              Ver Adjunto
+                            </button>
+                          ) : (
+                            <span className="text-slate-400 italic">Sin adjunto</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            pay.status === 'APROBADO'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {pay.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          {pay.status === 'PENDIENTE' ? (
+                            <button
+                              onClick={() => approvePayment(currentCommunity.id, pay.id)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs cursor-pointer"
+                            >
+                              Aprobar Pago / Abono
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setActivePaymentReceipt({ ...pay, communityName: currentCommunity.name })}
+                              className="px-3 py-1 bg-[#F5F4EF] hover:bg-[#D4B895]/30 text-[#0F3D2E] border border-[#D4B895] font-bold text-xs rounded-lg inline-flex items-center cursor-pointer"
+                            >
+                              <Printer className="w-3 h-3 mr-1" />
+                              Recibo Oficial
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {(!currentCommunity.paymentReports || currentCommunity.paymentReports.length === 0) && (
+                      <tr>
+                        <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
+                          No hay transferencias informadas pendientes.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         ) : (
-          /* VISTA SUB-PESTAÑA 2: REGISTRO & CONCILIACIÓN DE PAGOS (CARTOLA BANCARIA) */
+          /* VISTA SUB-PESTAÑA 3: REGISTRO & CONCILIACIÓN DE PAGOS (CARTOLA BANCARIA) */
           <div className="space-y-4 animate-fade-in">
             {/* 1. KPIS DE RECAUDACIÓN Y CONCILIACIÓN DEL MES */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -9461,112 +9724,6 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
           </div>
         )}
 
-        {/* TAB 5: VALIDAR PAGOS INFORMADOS */}
-        {activeTab === 'pagos' && currentCommunity && (
-          <div className="space-y-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <h3 className="text-base font-bold text-slate-900">Transferencias y Abonos Notificados por Vecinos</h3>
-              <p className="text-xs text-slate-500">
-                Soporta pagos totales y abonos parciales. Al aprobar un pago, se emite automáticamente su Recibo de Pago Oficial Foliado (`REC-2026-...`).
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
-                    <tr>
-                      <th className="px-5 py-3">Folio / Fecha</th>
-                      <th className="px-5 py-3">Unidad / Vecino</th>
-                      <th className="px-5 py-3">N° Operación</th>
-                      <th className="px-5 py-3 text-right">Monto Abonado</th>
-                      <th className="px-5 py-3 text-center">Respaldo</th>
-                      <th className="px-5 py-3 text-center">Estado</th>
-                      <th className="px-5 py-3 text-center">Acción / Recibo</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {currentCommunity.paymentReports?.map(pay => (
-                      <tr key={pay.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <div className="font-mono font-bold text-[#0F3D2E]">{pay.receiptFolio || 'PENDIENTE'}</div>
-                          <div className="text-[11px] text-slate-400">{formatDate(pay.date)}</div>
-                        </td>
-                        <td className="px-5 py-3.5 font-bold text-slate-900">
-                          Casa {pay.unitNumber} • {pay.owner}
-                        </td>
-                        <td className="px-5 py-3.5 font-mono text-slate-600">
-                          {pay.transferNumber}
-                        </td>
-                        <td className="px-5 py-3.5 text-right font-black text-emerald-700 text-sm">
-                          {formatCLP(pay.amount)}
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
-                          {pay.receiptImg ? (
-                            <button
-                              type="button"
-                              onClick={() => setActiveReceipt({
-                                documentType: 'Comprobante de Transferencia',
-                                documentNumber: pay.transferNumber || 'S/N',
-                                provider: `Casa ${pay.unitNumber} • ${pay.owner}`,
-                                date: pay.date,
-                                amount: pay.amount,
-                                category: 'Pago Gasto Común',
-                                description: pay.notes || `Transferencia informada por Casa ${pay.unitNumber}`,
-                                receiptUrl: pay.receiptImg
-                              })}
-                              className="text-xs text-[#0F3D2E] font-bold hover:underline inline-flex items-center"
-                            >
-                              <Eye className="w-3.5 h-3.5 mr-1" />
-                              Ver Adjunto
-                            </button>
-                          ) : (
-                            <span className="text-slate-400 italic">Sin adjunto</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                            pay.status === 'APROBADO'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            {pay.status}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
-                          {pay.status === 'PENDIENTE' ? (
-                            <button
-                              onClick={() => approvePayment(currentCommunity.id, pay.id)}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs"
-                            >
-                              Aprobar Pago / Abono
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setActivePaymentReceipt({ ...pay, communityName: currentCommunity.name })}
-                              className="px-3 py-1 bg-[#F5F4EF] hover:bg-[#D4B895]/30 text-[#0F3D2E] border border-[#D4B895] font-bold text-xs rounded-lg inline-flex items-center"
-                            >
-                              <Printer className="w-3 h-3 mr-1" />
-                              Recibo Oficial
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                    {(!currentCommunity.paymentReports || currentCommunity.paymentReports.length === 0) && (
-                      <tr>
-                        <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
-                          No hay transferencias informadas pendientes.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* PESTAÑA: COMITÉ DE ADMINISTRACIÓN - LIBRO DE REUNIONES, NOVEDADES & TAREAS (LEY 21.442) */}
         {activeTab === 'comite' && currentCommunity && (
           <CommitteeMeetingsAndLogModule
@@ -10005,9 +10162,9 @@ _Administración ARANPRO • Gestión Integral y Transparente_`;
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-2 py-1.5 grid grid-cols-5 gap-1 shadow-lg">
         {[
           { id: 'resumen', label: 'Resumen', icon: BarChart3 },
-          { id: 'unidades', label: 'Unidades', icon: Home },
-          { id: 'gastos', label: 'Gastos', icon: FileText },
-          { id: 'pagos', label: 'Pagos', icon: CheckCircle2, badge: pendingPaymentsCount }
+          { id: 'unidades', label: 'Unidades', icon: Home, badge: pendingPaymentsCount },
+          { id: 'gastos', label: 'Gastos', icon: FileText, badge: urgentMaintCount },
+          { id: 'comite', label: 'Comité', icon: ClipboardList, badge: pendingCommitteeTasksCount }
         ].map((item) => {
           const IconComp = item.icon;
           const active = activeTab === item.id;
