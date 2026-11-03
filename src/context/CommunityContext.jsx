@@ -1282,9 +1282,23 @@ export const CommunityProvider = ({ children }) => {
         content: annData.content,
         priority: annData.priority || 'Informativo',
         date: annData.date || new Date().toISOString().split('T')[0],
-        author: annData.author || 'Administración ARANPRO'
+        author: annData.author || 'Administración ARANPRO',
+        isPinned: Boolean(annData.isPinned),
+        expiresAt: annData.expiresAt || null,
+        category: annData.category || 'General',
+        location: annData.location || 'Todo el Condominio'
       };
       return { ...c, announcements: [newAnn, ...(c.announcements || [])] };
+    }));
+  };
+
+  const togglePinAnnouncement = (communityId, annId) => {
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      const updated = (c.announcements || []).map(a => 
+        a.id === annId ? { ...a, isPinned: !a.isPinned } : a
+      );
+      return { ...c, announcements: updated };
     }));
   };
 
@@ -1805,6 +1819,7 @@ export const CommunityProvider = ({ children }) => {
       approvePayment,
       addAnnouncement,
       deleteAnnouncement,
+      togglePinAnnouncement,
       addDocument,
       deleteDocument,
       changeResidentPassword,

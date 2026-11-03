@@ -1080,24 +1080,32 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
                 )}
               </div>
 
-              {(community.announcements || []).map(ann => (
-                <div key={ann.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+              {([...(community.announcements || [])].sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))).map(ann => (
+                <div key={ann.id} className={`bg-white p-5 rounded-2xl border shadow-xs space-y-2 ${ann.isPinned ? 'border-2 border-[#D4B895] bg-amber-50/15' : 'border-slate-200'}`}>
                   <div className="flex items-center justify-between">
-                    <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
-                      ann.priority === 'Urgente'
-                        ? 'bg-rose-100 text-rose-800'
-                        : ann.priority === 'Importante'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-emerald-50 text-emerald-800'
-                    }`}>
-                      {ann.priority}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
+                        ann.priority === 'Urgente'
+                          ? 'bg-rose-100 text-rose-800'
+                          : ann.priority === 'Importante'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-emerald-50 text-emerald-800'
+                      }`}>
+                        {ann.priority}
+                      </span>
+                      {ann.isPinned && (
+                        <span className="px-2 py-0.5 text-[9.5px] font-black rounded-md bg-[#0F3D2E] text-[#D4B895]">
+                          📌 FIJADO
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-slate-400">{formatDate(ann.date)}</span>
                   </div>
                   <h4 className="text-sm font-black text-slate-900">{ann.title}</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">{ann.content}</p>
-                  <div className="pt-1 text-[11px] font-semibold text-[#0F3D2E]">
-                    Publicado por: {ann.author || 'Administración ARANPRO'}
+                  <div className="pt-1 text-[11px] font-semibold text-[#0F3D2E] flex justify-between">
+                    <span>Publicado por: {ann.author || 'Administración ARANPRO'}</span>
+                    {ann.expiresAt && <span className="text-amber-700 font-bold">Vigente hasta: {formatDate(ann.expiresAt)}</span>}
                   </div>
                 </div>
               ))}
