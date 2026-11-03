@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { CommunityProvider, useCommunity } from './context/CommunityContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
-import { PwaPrompt } from './components/layout/PwaPrompt';
 import { LandingPage } from './components/public/LandingPage';
 import { CommunitiesSelector } from './components/public/CommunitiesSelector';
 import { FaqSection } from './components/public/FaqSection';
@@ -141,9 +140,6 @@ function MainApp() {
       />
 
       <ReceiptViewerModal />
-
-      {/* PWA Install Banner (Solo en sitio público o portal vecino, sin tapar la tabla del Administrador) */}
-      {currentView !== 'admin' && <PwaPrompt />}
     </div>
   );
 }

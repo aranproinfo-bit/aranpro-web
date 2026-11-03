@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
+import { DOMAIN_CONFIG } from '../../config/domains';
 import { AranproLogo } from '../common/MauranLogo';
 import {
   Shield, User, LogOut, KeyRound, Menu, X, Award,
@@ -226,25 +227,23 @@ export const Navbar = ({
                   </div>
                 ) : (
                   <div className="flex items-center space-x-2.5">
-                    <button
-                      onClick={() => setCurrentView('communities-selector')}
-                      className={`flex items-center px-4 py-2 text-xs font-bold rounded-xl border whitespace-nowrap transition-all ${
-                        currentView === 'communities-selector' || currentView === 'resident-login'
-                          ? 'bg-[#D4B895]/30 text-[#0F3D2E] border-[#0F3D2E]'
-                          : 'bg-[#F5F4EF] text-[#0F3D2E] border-[#D4B895] hover:bg-[#D4B895]/25'
-                      }`}
+                    <a
+                      href={DOMAIN_CONFIG.APP_URL}
+                      className="flex items-center px-4 py-2 text-xs font-bold rounded-xl border border-[#D4B895] bg-[#F5F4EF] text-[#0F3D2E] hover:bg-[#D4B895]/25 whitespace-nowrap transition-all shadow-xs"
+                      title="Abrir la Aplicación PWA para residentes y propietarios"
                     >
                       <Building2 className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
-                      Portal Vecinos
-                    </button>
+                      Portal Vecinos (App)
+                    </a>
 
-                    <button
-                      onClick={() => setAdminModalOpen(true)}
+                    <a
+                      href={DOMAIN_CONFIG.getAdminLoginUrl()}
                       className="flex items-center px-4 py-2 text-xs font-bold text-[#F5F4EF] bg-[#0F3D2E] hover:bg-[#0A291F] rounded-xl shadow-xs whitespace-nowrap transition-all border border-[#0F3D2E]"
+                      title="Acceso seguro al panel de administración"
                     >
                       <KeyRound className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
                       Admin
-                    </button>
+                    </a>
                   </div>
                 )}
               </div>
@@ -328,18 +327,20 @@ export const Navbar = ({
             </button>
 
             <div className="pt-3 mt-2 border-t border-[#E9EBE8] grid grid-cols-2 gap-2.5">
-              <button
-                onClick={() => { setCurrentView('communities-selector'); setMobileMenuOpen(false); }}
-                className="w-full text-center px-3 py-2.5 text-xs font-bold text-[#0F3D2E] bg-[#F5F4EF] border border-[#D4B895] rounded-xl"
+              <a
+                href={DOMAIN_CONFIG.APP_URL}
+                className="w-full text-center px-3 py-2.5 text-xs font-bold text-[#0F3D2E] bg-[#F5F4EF] border border-[#D4B895] rounded-xl flex items-center justify-center gap-1.5"
               >
-                Portal Vecinos
-              </button>
-              <button
-                onClick={() => { setAdminModalOpen(true); setMobileMenuOpen(false); }}
-                className="w-full text-center px-3 py-2.5 text-xs font-bold bg-[#0F3D2E] text-[#F5F4EF] rounded-xl"
+                <Building2 className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                Portal App
+              </a>
+              <a
+                href={DOMAIN_CONFIG.getAdminLoginUrl()}
+                className="w-full text-center px-3 py-2.5 text-xs font-bold bg-[#0F3D2E] text-[#F5F4EF] rounded-xl flex items-center justify-center gap-1.5"
               >
+                <KeyRound className="w-3.5 h-3.5 text-[#D4B895]" />
                 Acceso Admin
-              </button>
+              </a>
             </div>
           </div>
         )}

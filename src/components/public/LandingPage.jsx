@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
+import { DOMAIN_CONFIG } from '../../config/domains';
 import { AranproLogo } from '../common/MauranLogo';
 import { AboutAndCertifications } from './AboutAndCertifications';
 import {
@@ -92,13 +93,13 @@ export const LandingPage = ({ onSelectCommunity, onOpenCertificates, setCurrentV
                   <span>Coordinar Visita Gratuita a Terreno</span>
                 </a>
 
-                <button
-                  onClick={() => setCurrentView('communities-selector')}
+                <a
+                  href={DOMAIN_CONFIG.APP_URL}
                   className="w-full sm:w-auto px-7 py-3.5 bg-white hover:bg-[#E9EBE8]/60 text-[#0F3D2E] font-bold text-sm rounded-2xl border border-[#D4B895] shadow-xs transition-all flex items-center justify-center"
                 >
-                  <span>Portal Vecinos & Comunidades</span>
+                  <span>Ingresar a la Aplicación (PWA)</span>
                   <ArrowRight className="w-4 h-4 ml-2 text-[#0F3D2E]" />
-                </button>
+                </a>
               </div>
 
               {/* Métricas Clave */}
@@ -327,9 +328,9 @@ export const LandingPage = ({ onSelectCommunity, onOpenCertificates, setCurrentV
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {communities.map((c) => (
-              <div
+              <a
                 key={c.id}
-                onClick={() => onSelectCommunity(c.slug)}
+                href={DOMAIN_CONFIG.getResidentLoginUrl(c.slug)}
                 className="bg-white p-6 rounded-3xl border border-[#E9EBE8] shadow-xs hover:shadow-md hover:border-[#D4B895] transition-all cursor-pointer group flex flex-col justify-between"
               >
                 <div className="space-y-3">
@@ -339,7 +340,7 @@ export const LandingPage = ({ onSelectCommunity, onOpenCertificates, setCurrentV
                     </span>
                     <span className="text-xs text-[#0F3D2E] font-semibold flex items-center">
                       <span className="w-2 h-2 rounded-full bg-emerald-600 mr-1.5 animate-pulse"></span>
-                      Portal Activo
+                      Portal Activo (PWA)
                     </span>
                   </div>
                   <h4 className="text-lg font-bold text-[#0F3D2E] group-hover:underline decoration-[#D4B895] transition-colors">
@@ -351,10 +352,10 @@ export const LandingPage = ({ onSelectCommunity, onOpenCertificates, setCurrentV
                 </div>
 
                 <div className="pt-4 mt-4 border-t border-[#E9EBE8] flex items-center justify-between text-xs font-semibold text-[#0F3D2E]">
-                  <span>Ingreso de Propietarios</span>
+                  <span>Abrir Portal de Vecinos</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform text-[#D4B895]" />
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>

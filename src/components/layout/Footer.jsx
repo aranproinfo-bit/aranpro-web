@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCommunity } from '../../context/CommunityContext';
+import { DOMAIN_CONFIG } from '../../config/domains';
 import { AranproLogo } from '../common/MauranLogo';
 import { Phone, Mail, MapPin, ShieldCheck, FileCheck, ArrowRight } from 'lucide-react';
 
@@ -62,12 +63,12 @@ export const Footer = ({ setCurrentView, setSelectedCommunitySlug, onOpenCertifi
                 </button>
               </li>
               <li>
-                <button
-                  onClick={() => { setCurrentView('communities-selector'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                  className="text-[#F5F4EF]/80 hover:text-[#D4B895] transition-colors"
+                <a
+                  href={DOMAIN_CONFIG.APP_URL}
+                  className="text-[#F5F4EF]/80 hover:text-[#D4B895] transition-colors flex items-center"
                 >
-                  Portal Vecinos
-                </button>
+                  <span>Portal Vecinos (App PWA)</span>
+                </a>
               </li>
               <li>
                 <button
@@ -93,26 +94,22 @@ export const Footer = ({ setCurrentView, setSelectedCommunitySlug, onOpenCertifi
             <ul className="space-y-2 text-sm">
               {communities.map((c) => (
                 <li key={c.id}>
-                  <button
-                    onClick={() => {
-                      setSelectedCommunitySlug(c.slug);
-                      setCurrentView('resident-login');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                  <a
+                    href={DOMAIN_CONFIG.getResidentLoginUrl(c.slug)}
                     className="text-[#F5F4EF]/80 hover:text-[#D4B895] transition-colors flex items-center text-xs group"
                   >
                     <ArrowRight className="w-3 h-3 mr-1 text-[#D4B895] group-hover:translate-x-0.5 transition-transform" />
                     {c.name}
-                  </button>
+                  </a>
                 </li>
               ))}
               <li className="pt-2">
-                <button
-                  onClick={() => setCurrentView('communities-selector')}
-                  className="text-xs text-[#D4B895] hover:underline"
+                <a
+                  href={DOMAIN_CONFIG.APP_URL}
+                  className="text-xs text-[#D4B895] hover:underline inline-flex items-center gap-1"
                 >
-                  Ver todas las comunidades →
-                </button>
+                  Ver todas las comunidades en la App →
+                </a>
               </li>
             </ul>
           </div>
