@@ -9,6 +9,7 @@ import { SuggestionsAndComplaintsModule } from './SuggestionsAndComplaintsModule
 import { MuralAndComplaintsModule } from './MuralAndComplaintsModule';
 import { CommitteeMeetingsAndLogModule } from './CommitteeMeetingsAndLogModule';
 import { OfficialCertificatesModule } from './OfficialCertificatesModule';
+import { CompanySettingsAndBackupModule } from './CompanySettingsAndBackupModule';
 import { ExpenseReportModal } from '../common/ExpenseReportModal';
 import { 
   Building2, Plus, Trash2, Edit3, ExternalLink, Users, 
@@ -10897,113 +10898,9 @@ _Administración ARANPRO_`;
           <OfficialCertificatesModule currentCommunity={currentCommunity} />
         )}
 
-        {/* TAB 7: AJUSTES & PERSONALIZACIÓN DE MARCA ARANPRO */}
+        {/* TAB 7: AJUSTES, EMPRESA & LICITACIONES ARANPRO */}
         {activeTab === 'ajustes' && (
-          <div className="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-slate-200 shadow-md space-y-6">
-            <div className="border-b border-slate-100 pb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#0F3D2E]">
-                Configuración Corporativa ARANPRO
-              </span>
-              <h3 className="text-xl font-black text-slate-900">
-                Datos de Contacto, Seguridad y Respaldo
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Administra los datos de contacto de <strong>ARANPRO — Gestión Integral</strong>, tu PIN de acceso y descarga copias de respaldo de tus comunidades.
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveBranding} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Nombre Comercial / Marca *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={brandingForm.provisionalName}
-                  onChange={(e) => setBrandingForm({ ...brandingForm, provisionalName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Teléfono / WhatsApp *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={brandingForm.phone}
-                    onChange={(e) => setBrandingForm({ ...brandingForm, phone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Email de Contacto *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={brandingForm.email}
-                    onChange={(e) => setBrandingForm({ ...brandingForm, email: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Clave PIN de Administrador (Acceso al Panel)
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={brandingForm.adminPin}
-                  onChange={(e) => setBrandingForm({ ...brandingForm, adminPin: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono"
-                />
-              </div>
-
-              {brandingSaved && (
-                <div className="p-3 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl">
-                  ✓ Configuración actualizada en toda la plataforma.
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-sm rounded-xl shadow-md transition-colors flex items-center justify-center"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Guardar Ajustes de ARANPRO
-              </button>
-            </form>
-
-            {/* Respaldo de Base de Datos (Exportar JSON) */}
-            <div className="pt-6 border-t border-slate-200 space-y-3">
-              <h4 className="text-sm font-bold text-slate-900">Respaldo Local de Comunidades (Backup)</h4>
-              <p className="text-xs text-slate-500">
-                Descarga un archivo de seguridad con todas tus comunidades, unidades, gastos y certificados registrados.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ communities, certificates, companySettings }, null, 2));
-                  const downloadAnchor = document.createElement('a');
-                  downloadAnchor.setAttribute("href", dataStr);
-                  downloadAnchor.setAttribute("download", `ARANPRO_respaldo_${new Date().toISOString().split('T')[0]}.json`);
-                  document.body.appendChild(downloadAnchor);
-                  downloadAnchor.click();
-                  downloadAnchor.remove();
-                }}
-                className="px-4 py-2.5 bg-[#F5F4EF] hover:bg-[#D4B895]/30 text-[#0F3D2E] border border-[#D4B895] font-bold text-xs rounded-xl transition-colors inline-flex items-center"
-              >
-                💾 Descargar Respaldo Completo (.JSON)
-              </button>
-            </div>
-          </div>
+          <CompanySettingsAndBackupModule currentCommunity={currentCommunity} />
         )}
 
         </div>
