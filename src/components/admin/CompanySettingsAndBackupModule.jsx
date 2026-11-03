@@ -10,7 +10,8 @@ import {
   Send, Home, Briefcase, Copy, Sparkles, Check, Key, Shield,
   HardHat, BookOpen, FileCheck, Upload, RefreshCw, PenTool,
   HelpCircle, Settings, Smartphone, Layers, CheckSquare, MessageCircle,
-  Paperclip, FileUp
+  Paperclip, FileUp, QrCode, Presentation, Compass, ClipboardCheck,
+  ArrowRight, Scale, ChevronRight
 } from 'lucide-react';
 
 export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
@@ -171,6 +172,33 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
     targetCity: companySettings?.lastProposalConfig?.targetCity || 'La Serena, Región de Coquimbo',
     proposalDate: companySettings?.lastProposalConfig?.proposalDate || new Date().toISOString().split('T')[0],
     leaveRecipientBlank: companySettings?.lastProposalConfig?.leaveRecipientBlank || false
+  });
+
+  // Sección activa dentro de Postulaciones ('material' | 'inspeccion' | 'comparativa' | 'pitch' | 'demo')
+  const [postulacionSection, setPostulacionSection] = useState('material');
+
+  // Modales de Material de Apoyo, Ventas y Licitación
+  const [previewBrochureModal, setPreviewBrochureModal] = useState(false);
+  const [previewInspectionModal, setPreviewInspectionModal] = useState(false);
+  const [previewComparisonModal, setPreviewComparisonModal] = useState(false);
+  const [showPitchGuideModal, setShowPitchGuideModal] = useState(false);
+  const [showLiveDemoModal, setShowLiveDemoModal] = useState(false);
+
+  // Pestaña en simulador de teléfono interactivo
+  const [demoScreenTab, setDemoScreenTab] = useState('gastoComun'); // 'gastoComun' | 'comprobantes' | 'reclamos' | 'mural'
+
+  // Formulario de Inspección Técnica Inicial de Entrada (Diagnóstico Gratuito)
+  const [inspectionForm, setInspectionForm] = useState({
+    targetCondo: proposalConfig.targetCondo || 'Condominio en Evaluación',
+    inspector: empresaForm.adminName,
+    date: new Date().toISOString().split('T')[0],
+    items: [
+      { id: 'bombas', name: 'Sala de Bombas & Sistema Hidroneumático', status: 'Requiere Mantención', notes: 'Bombas operativas con fuga leve en sello mecánico de Bomba 2. Manómetro principal descalibrado; requiere regulación de presostato.' },
+      { id: 'cubiertas', name: 'Cubiertas, Techumbres & Bajadas de Agua', status: 'Crítico', notes: 'Membrana asfáltica con fisuras en sector poniente; canaletas con acumulación de sedimentos. Riesgo de filtración en temporada de lluvias.' },
+      { id: 'electricidad', name: 'Tableros Eléctricos & Grupo Electrógeno', status: 'Bueno', notes: 'Tablero general rotulado según norma SEC. Generador de emergencia operativo con transferencia automática probada.' },
+      { id: 'incendios', name: 'Red Húmeda, Red Seca & Extintores', status: 'Requiere Mantención', notes: 'Extintores con certificación vencida en pisos 3 y 4. Mangueras de red húmeda operativas con presión adecuada.' },
+      { id: 'contable', name: 'Fondo de Reserva & Estado Contable (Ley 21.442)', status: 'Crítico', notes: 'La comunidad no mantiene el 5% obligatorio de fondo de reserva exigido por Art. 6° de la Ley N° 21.442. Urge regularización.' }
+    ]
   });
 
   // Estado del modal corporativo de confirmación (reemplazo de window.confirm)
@@ -367,6 +395,62 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
       fitPage: false,
       margin: '8mm 10mm 8mm 10mm'
     });
+  };
+
+  // Imprimir Brochure Ejecutivo de la App & Portal Web (PDF Carta)
+  const handlePrintBrochure = () => {
+    printDocumentDirectly('printable-app-brochure', `Brochure_App_ARANPRO_${new Date().getFullYear()}`, {
+      pageSize: 'letter portrait',
+      fitPage: false,
+      margin: '6mm 8mm 6mm 8mm'
+    });
+  };
+
+  // Imprimir Informe de Diagnóstico Técnico Inicial Gratuito
+  const handlePrintInspectionReport = () => {
+    printDocumentDirectly('printable-technical-inspection', `Informe_Diagnostico_Tecnico_${(inspectionForm.targetCondo || 'Condominio').replace(/\s+/g, '_')}`, {
+      pageSize: 'letter portrait',
+      fitPage: false,
+      margin: '8mm 10mm 8mm 10mm'
+    });
+  };
+
+  // Imprimir Cuadro Comparativo (Tradicional vs. ARANPRO)
+  const handlePrintComparisonMatrix = () => {
+    printDocumentDirectly('printable-comparison-matrix', `Comparativa_Gestion_ARANPRO_${new Date().getFullYear()}`, {
+      pageSize: 'letter portrait',
+      fitPage: false,
+      margin: '8mm 10mm 8mm 10mm'
+    });
+  };
+
+  // Compartir Enlace de Demo Interactiva por WhatsApp
+  const handleShareDemoWhatsApp = (targetPhone = '') => {
+    const phoneClean = (targetPhone || '').replace(/[^0-9]/g, '');
+    const currentUrl = window.location.origin;
+    const msg = `*INVITACIÓN DEMO INTERACTIVA • ADMINISTRACIÓN ARANPRO*\n` +
+      `Estimados miembros del Comité de Administración de *${proposalConfig.targetCondo || 'su Condominio'}*:\n\n` +
+      `Junto con saludarles, los invitamos a probar en vivo y en directo la plataforma digital y aplicación móvil que implementamos para su comunidad.\n\n` +
+      `🔗 *Enlace de Demostración para Copropietarios:* ${currentUrl}\n\n` +
+      `Podrán experimentar la transparencia 100% en vivo: colillas con desglose legal, auditoría de facturas y boletas con un solo clic, y el libro oficial de reclamos.\n\n` +
+      `Quedamos a su disposición para coordinar una reunión presencial o telemática.\n` +
+      `*${empresaForm.adminName}* • Fono: ${empresaForm.phone}`;
+
+    const url = phoneClean ? `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  };
+
+  // Copiar Guion de Pitch de 10 Minutos al Portapapeles
+  const handleCopyPitchToClipboard = () => {
+    const pitchText = `GUION MAESTRO ARANPRO (PRESENTACIÓN EN 10 MINUTOS)\n` +
+      `1. MINUTO 1-2 (El Dolor Común): La mayoría de las comunidades cambian de administración por desconfianza en los gastos y demora en resolver problemas. En ARANPRO eliminamos ambos con tecnología y presencia técnica.\n` +
+      `2. MINUTO 3-5 (Ventaja Técnica Constructiva): Administrador con formación de Técnico en Construcción y estudios en Construcción Civil. Auditamos en terreno bombas, techumbres, filtraciones y tableros eléctricos, frenando sobreprecios de contratistas.\n` +
+      `3. MINUTO 6-8 (Demostración de la App): Cada vecino tiene en su celular los gastos comunes y puede auditar con un clic las facturas reales y cartolas bancarias.\n` +
+      `4. MINUTO 9-10 (Cierre y Traspaso): Auditoría inicial de traspaso sin costo y diagnóstico constructivo preventivo.\n` +
+      `Contacto: ${empresaForm.adminName} • ${empresaForm.phone}`;
+
+    navigator.clipboard.writeText(pitchText);
+    showAlert('✓ Guion Copiado', 'El libreto maestro de 10 minutos se ha copiado al portapapeles.', 'success');
   };
 
   // Manejo de Archivo de Diploma (PDF o Imagen en Data URL)
@@ -1386,146 +1470,722 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 </div>
               </div>
 
-              {/* OPCIONES DE GENERACIÓN DE DOSSIER */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* 1. DOSSIER INTEGRAL COMPLETO (RECOMENDADO) */}
-                <div className="bg-gradient-to-br from-[#0F3D2E] to-[#164D3A] text-white p-6 rounded-3xl shadow-lg border border-emerald-900/40 space-y-4 relative overflow-hidden flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-[#D4B895] text-[#0F3D2E] uppercase tracking-wider">
-                      ★ FORMATO LICITACIÓN COMPLETA
-                    </span>
-                    <h4 className="text-lg font-black tracking-tight text-white">
-                      Dossier Integral de Postulación (Multi-Página)
-                    </h4>
-                    <p className="text-xs text-emerald-100/90 leading-relaxed">
-                      Compila en un solo PDF ejecutivo: Portada oficial, Carta de Presentación, Ficha Técnica Constructiva (salas de bombas, filtraciones),
-                      Diplomas seleccionados ({academicRecords.filter(r => r.includeInProposal !== false).length}), y Cartas de Referencia con testimonios.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2.5 pt-2">
+              {/* SELECTOR DE HERRAMIENTAS DE CAPTACIÓN & MATERIAL DE APOYO */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+                {[
+                  { id: 'material', label: '1. Dossier & Cartas', icon: FileText, desc: 'Propuesta y Brochure' },
+                  { id: 'inspeccion', label: '2. Inspección Técnica Inicial', icon: HardHat, desc: 'Diagnóstico gratuito' },
+                  { id: 'comparativa', label: '3. Cuadro Comparativo', icon: Scale, desc: 'Tradicional vs ARANPRO' },
+                  { id: 'pitch', label: '4. Libreto de Pitch (10 Min)', icon: Presentation, desc: 'Guion para asambleas' },
+                  { id: 'demo', label: '5. Demo en Vivo & QR', icon: QrCode, desc: 'Prueba interactiva comité' }
+                ].map((tab) => {
+                  const IconC = tab.icon;
+                  const isAct = postulacionSection === tab.id;
+                  return (
                     <button
+                      key={tab.id}
                       type="button"
-                      onClick={() => setPreviewDossierModal(true)}
-                      className="px-4 py-2.5 bg-[#D4B895] hover:bg-[#c2a37d] text-[#0F3D2E] font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
-                    >
-                      <Eye className="w-4 h-4 text-[#0F3D2E]" />
-                      Ver Dossier Integral
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handlePrintDossier}
-                      className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/20 transition-all flex items-center gap-1.5"
-                    >
-                      <Printer className="w-4 h-4 text-[#D4B895]" />
-                      Imprimir / PDF
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. CARTA SIMPLE DE 1 PÁGINA */}
-                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 uppercase">
-                      Presentación Breve
-                    </span>
-                    <h4 className="text-base font-black text-slate-900">
-                      Carta de Presentación Simple (1 Página)
-                    </h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      Carta formal tamaño Carta lista para imprimir o enviar por correo a administraciones o comités que solicitan una postulación rápida y concisa.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewProposalModal(true)}
-                      className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-[#D4B895]" />
-                      Ver Carta Simple
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handlePrintProposal}
-                      className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      Imprimir
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* DIPLOMAS ADJUNTOS AL DOSSIER */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5 text-[#0F3D2E]" />
-                    Diplomas y Cursos Marcados para el Dossier
-                  </h4>
-                  <span className="text-[11px] font-bold text-[#0F3D2E]">
-                    {academicRecords.filter(r => r.includeInProposal !== false).length} de {academicRecords.length} adjuntos
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {academicRecords.map(item => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleToggleIncludeInProposal(item.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
-                        item.includeInProposal !== false
-                          ? 'bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs'
-                          : 'bg-white text-slate-400 border-slate-200 hover:text-slate-600'
+                      onClick={() => setPostulacionSection(tab.id)}
+                      className={`flex-1 min-w-[155px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs transition-all ${
+                        isAct
+                          ? 'bg-[#0F3D2E] text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
                       }`}
                     >
-                      <span>{item.includeInProposal !== false ? '✓' : '+'}</span>
-                      <span>{item.title}</span>
+                      <IconC className={`w-3.5 h-3.5 ${isAct ? 'text-[#D4B895]' : 'text-slate-400'}`} />
+                      <span>{tab.label}</span>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
 
-              {/* SOLICITUD DE CARTAS DE RECOMENDACIÓN A COMITÉS ACTUALES */}
-              <div className="pt-4 border-t border-slate-100 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <MessageCircle className="w-3.5 h-3.5 text-[#0F3D2E]" />
-                    Cartas de Recomendación & Testimonios de Comités Actuales
-                  </h4>
-                  <span className="text-[10px] font-bold text-slate-500">
-                    Incluidas en el Dossier Integral
-                  </span>
-                </div>
+              {/* SECCIÓN 1: DOSSIER, CARTAS Y BROCHURE COMERCIAL */}
+              {postulacionSection === 'material' && (
+                <div className="space-y-6 animate-in fade-in">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* 1. DOSSIER INTEGRAL COMPLETO (RECOMENDADO) */}
+                    <div className="bg-gradient-to-br from-[#0F3D2E] to-[#164D3A] text-white p-5 rounded-3xl shadow-lg border border-emerald-900/40 space-y-3 relative overflow-hidden flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black bg-[#D4B895] text-[#0F3D2E] uppercase tracking-wider">
+                          ★ LICITACIÓN COMPLETA
+                        </span>
+                        <h4 className="text-base font-black tracking-tight text-white">
+                          Dossier Integral de Postulación
+                        </h4>
+                        <p className="text-[11px] text-emerald-100/90 leading-relaxed">
+                          Compila en un PDF: Portada oficial, Carta de Presentación, Ficha Constructiva, Diplomas seleccionados ({academicRecords.filter(r => r.includeInProposal !== false).length}) y Referencias.
+                        </p>
+                      </div>
 
-                <div className="space-y-3">
-                  {committeeReferences.map(ref => (
-                    <div key={ref.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div>
-                          <div className="font-bold text-xs text-slate-900">
-                            {ref.contactName} • <span className="text-[#0F3D2E]">{ref.role}</span>
-                          </div>
-                          <p className="text-[10px] text-slate-500">{ref.communityName} • Tel: {ref.phone}</p>
-                        </div>
+                      <div className="flex flex-wrap items-center gap-2 pt-2">
                         <button
                           type="button"
-                          onClick={() => handleRequestReferenceWhatsApp(ref)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-xl shadow-xs transition-all flex items-center gap-1.5 self-start sm:self-auto"
+                          onClick={() => setPreviewDossierModal(true)}
+                          className="px-3.5 py-2 bg-[#D4B895] hover:bg-[#c2a37d] text-[#0F3D2E] font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
                         >
-                          <Send className="w-3 h-3" />
-                          Pedir Carta por WhatsApp
+                          <Eye className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                          Ver Dossier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handlePrintDossier}
+                          className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/20 transition-all flex items-center gap-1"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-[#D4B895]" />
+                          Imprimir
                         </button>
                       </div>
-                      <blockquote className="text-xs text-slate-600 italic bg-white p-2.5 rounded-xl border border-slate-200">
-                        "{ref.quote}"
-                      </blockquote>
                     </div>
-                  ))}
+
+                    {/* 2. CARTA SIMPLE DE 1 PÁGINA */}
+                    <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-200 text-slate-700 uppercase">
+                          Presentación Breve
+                        </span>
+                        <h4 className="text-base font-black text-slate-900">
+                          Carta de Presentación Simple (1 Pág.)
+                        </h4>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                          Carta formal tamaño Carta personalizada con membrete oficial, cita legal y firma manuscrita estampada.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewProposalModal(true)}
+                          className="px-3.5 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-[#D4B895]" />
+                          Ver Carta
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handlePrintProposal}
+                          className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition-all flex items-center gap-1"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          Imprimir
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 3. BROCHURE COMERCIAL DE LA APP & WEB (NUEVO) */}
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50/40 p-5 rounded-3xl border border-amber-200/80 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-200 text-amber-900 uppercase">
+                          📱 Tecnología & Transparencia
+                        </span>
+                        <h4 className="text-base font-black text-slate-900">
+                          Brochure de la App & Portal Web
+                        </h4>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                          Ficha comercial ejecutiva ilustrada con capturas de pantalla para mostrar a los copropietarios cómo auditar facturas y pagar en línea.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewBrochureModal(true)}
+                          className="px-3.5 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-[#D4B895]" />
+                          Ver Brochure
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handlePrintBrochure}
+                          className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition-all flex items-center gap-1"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                          Imprimir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DIPLOMAS ADJUNTOS AL DOSSIER */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <Award className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                        Diplomas y Cursos Marcados para el Dossier
+                      </h4>
+                      <span className="text-[11px] font-bold text-[#0F3D2E]">
+                        {academicRecords.filter(r => r.includeInProposal !== false).length} de {academicRecords.length} adjuntos
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {academicRecords.map(item => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleToggleIncludeInProposal(item.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                            item.includeInProposal !== false
+                              ? 'bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs'
+                              : 'bg-white text-slate-400 border-slate-200 hover:text-slate-600'
+                          }`}
+                        >
+                          <span>{item.includeInProposal !== false ? '✓' : '+'}</span>
+                          <span>{item.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* SOLICITUD DE CARTAS DE RECOMENDACIÓN A COMITÉS ACTUALES */}
+                  <div className="pt-2 border-t border-slate-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <MessageCircle className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                        Cartas de Recomendación & Testimonios de Comités Actuales
+                      </h4>
+                      <span className="text-[10px] font-bold text-slate-500">
+                        Incluidas en el Dossier Integral
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {committeeReferences.map(ref => (
+                        <div key={ref.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                              <div className="font-bold text-xs text-slate-900">
+                                {ref.contactName} • <span className="text-[#0F3D2E]">{ref.role}</span>
+                              </div>
+                              <p className="text-[10px] text-slate-500">{ref.communityName} • Tel: {ref.phone}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRequestReferenceWhatsApp(ref)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-xl shadow-xs transition-all flex items-center gap-1.5 self-start sm:self-auto"
+                            >
+                              <Send className="w-3 h-3" />
+                              Pedir Carta por WhatsApp
+                            </button>
+                          </div>
+                          <blockquote className="text-xs text-slate-600 italic bg-white p-2.5 rounded-xl border border-slate-200">
+                            "{ref.quote}"
+                          </blockquote>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* SECCIÓN 2: INSPECCIÓN TÉCNICA INICIAL DE ENTRADA (CHECKLIST GRATUITO) */}
+              {postulacionSection === 'inspeccion' && (
+                <div className="space-y-6 animate-in fade-in">
+                  <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50/40 border border-emerald-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F3D2E] block">
+                        Gancho Comercial de Entrada • Autoridad Constructiva
+                      </span>
+                      <h4 className="text-base font-black text-slate-900">
+                        Informe de Diagnóstico Técnico Inicial Gratuito
+                      </h4>
+                      <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
+                        Ofrece al comité una auditoría visual in situ sin costo de sus instalaciones críticas. Demuestra tu experiencia como
+                        <strong> Técnico en Construcción y estudiante de Construcción Civil</strong> detectando fallas que otros administradores ignoran.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewInspectionModal(true)}
+                        className="px-4 py-2.5 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+                      >
+                        <Eye className="w-4 h-4 text-[#D4B895]" />
+                        Vista Previa Informe
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePrintInspectionReport}
+                        className="px-3.5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5"
+                      >
+                        <Printer className="w-4 h-4 text-[#0F3D2E]" />
+                        Imprimir
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* LISTADO DE PARTIDAS DE INSPECCIÓN TÉCNICA */}
+                  <div className="space-y-3">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Partidas del Diagnóstico Técnico para {proposalConfig.targetCondo || 'el Condominio'}:
+                    </h5>
+
+                    <div className="space-y-3">
+                      {inspectionForm.items.map((item, idx) => (
+                        <div key={item.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-lg bg-[#0F3D2E] text-[#D4B895] flex items-center justify-center font-bold text-xs">
+                                {idx + 1}
+                              </span>
+                              <h6 className="font-black text-xs text-slate-900">{item.name}</h6>
+                            </div>
+
+                            {/* SELECTOR DE ESTADO */}
+                            <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                              {['Bueno', 'Requiere Mantención', 'Crítico'].map(st => {
+                                const isCur = item.status === st;
+                                return (
+                                  <button
+                                    key={st}
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = inspectionForm.items.map(it => it.id === item.id ? { ...it, status: st } : it);
+                                      setInspectionForm({ ...inspectionForm, items: updated });
+                                    }}
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                                      isCur
+                                        ? st === 'Bueno'
+                                          ? 'bg-emerald-600 text-white border-emerald-600'
+                                          : st === 'Requiere Mantención'
+                                          ? 'bg-amber-500 text-white border-amber-500'
+                                          : 'bg-rose-600 text-white border-rose-600'
+                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                    }`}
+                                  >
+                                    {st === 'Bueno' ? '✓ Bueno' : st === 'Requiere Mantención' ? '⚠ Mantención' : '✕ Crítico'}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* NOTAS Y OBSERVACIÓN TÉCNICA */}
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                              Observaciones Técnicas & Recomendación Constructiva:
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={item.notes}
+                              onChange={(e) => {
+                                const updated = inspectionForm.items.map(it => it.id === item.id ? { ...it, notes: e.target.value } : it);
+                                setInspectionForm({ ...inspectionForm, items: updated });
+                              }}
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SECCIÓN 3: CUADRO COMPARATIVO (TRADICIONAL VS ARANPRO) */}
+              {postulacionSection === 'comparativa' && (
+                <div className="space-y-6 animate-in fade-in">
+                  <div className="p-5 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F3D2E] block">
+                        Diferenciador Visual de Alto Impacto
+                      </span>
+                      <h4 className="text-base font-black text-slate-900">
+                        Cuadro Comparativo: Administración Tradicional vs. ARANPRO
+                      </h4>
+                      <p className="text-xs text-slate-600">
+                        Tabla comparativa ideal para proyectar en asambleas o adjuntar al dossier de licitación.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewComparisonModal(true)}
+                        className="px-4 py-2.5 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+                      >
+                        <Eye className="w-4 h-4 text-[#D4B895]" />
+                        Ver Cuadro Completo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePrintComparisonMatrix}
+                        className="px-3.5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5"
+                      >
+                        <Printer className="w-4 h-4 text-[#0F3D2E]" />
+                        Imprimir Ficha
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* MATRIZ DE COMPARACIÓN */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      {
+                        title: '1. Criterio Constructivo & Obras',
+                        trad: 'No distinguen una falla de bombas de una fuga eléctrica. Aceptan presupuestos de contratistas externos a ciegas con sobrecostos.',
+                        aran: 'Administrador con formación de Técnico en Construcción y estudios en Construcción Civil. Audita salas de bombas, cubiertas y techumbres con criterio experto.'
+                      },
+                      {
+                        title: '2. Transparencia en Gastos Comunes',
+                        trad: 'Planillas Excel confusas enviadas a fin de mes. Comprobantes bancarios y facturas ocultos en carpetas inaccesibles para el vecino.',
+                        aran: 'Portal web y App móvil 24/7 donde cada copropietario audita en vivo las facturas reales y cartolas bancarias con 1 clic.'
+                      },
+                      {
+                        title: '3. Asambleas y Votaciones (Ley 21.442)',
+                        trad: 'Falta crónica de quórum presencial. Actas físicas que se pierden o tardan semanas en protocolizarse.',
+                        aran: 'Asambleas telemáticas híbridas con voto digital seguro desde el celular y actas foliadas conforme al Art. 15° de la ley.'
+                      },
+                      {
+                        title: '4. Libro Oficial de Reclamos',
+                        trad: 'Mensajes de WhatsApp y correos que quedan en el olvido sin respuesta formal.',
+                        aran: 'Libro digital oficial con folios correlativos y plazo estricto de respuesta legal garantizada (Art. 20°).'
+                      },
+                      {
+                        title: '5. Cobranzas & Fe Notarial',
+                        trad: 'Cobranzas desordenadas o agresivas sin protocolo notarial.',
+                        aran: 'Certificados oficiales foliados de no deuda, convenios de pago y certificados morosos para compraventas (Art. 36°).'
+                      },
+                      {
+                        title: '6. Traspaso & Auditoría Inicial',
+                        trad: 'Asumen la administración sin auditar deudas anteriores, trasladando problemas históricos.',
+                        aran: 'Auditoría de traspaso formal y diagnóstico preventivo gratuito para blindar la responsabilidad del nuevo comité.'
+                      }
+                    ].map((row, idx) => (
+                      <div key={idx} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+                        <h6 className="font-black text-xs text-slate-900 border-b border-slate-100 pb-1.5 flex items-center justify-between">
+                          <span>{row.title}</span>
+                          <span className="text-[10px] font-bold text-[#0F3D2E] bg-emerald-50 px-2 py-0.5 rounded">
+                            Ventaja ARANPRO
+                          </span>
+                        </h6>
+                        <div className="space-y-2 text-xs">
+                          <div className="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200/60 text-slate-700">
+                            <span className="font-bold text-rose-800 block text-[10px] uppercase">✕ Administración Tradicional:</span>
+                            <p className="text-[11px] mt-0.5 leading-relaxed">{row.trad}</p>
+                          </div>
+                          <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-slate-800">
+                            <span className="font-bold text-[#0F3D2E] block text-[10px] uppercase">✓ Con ARANPRO:</span>
+                            <p className="text-[11px] mt-0.5 leading-relaxed font-medium">{row.aran}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SECCIÓN 4: LIBRETO DE PITCH (10 MINUTOS) */}
+              {postulacionSection === 'pitch' && (
+                <div className="space-y-6 animate-in fade-in">
+                  <div className="p-5 rounded-3xl bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4B895] block">
+                        Estrategia Comercial de Cierre
+                      </span>
+                      <h4 className="text-base font-black text-white">
+                        Guía de Pitch: Cómo Ganar la Licitación en 10 Minutos
+                      </h4>
+                      <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                        Estructura probada para exponer ante comités o asambleas. Aborda los dolores del cliente, resalta tu perfil técnico en construcción y cierra la contratación con solvencia.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleCopyPitchToClipboard}
+                        className="px-4 py-2.5 bg-[#D4B895] hover:bg-[#c2a37d] text-[#0F3D2E] font-black text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+                      >
+                        <Copy className="w-4 h-4 text-[#0F3D2E]" />
+                        Copiar Guion
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowPitchGuideModal(true)}
+                        className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5"
+                      >
+                        <Eye className="w-4 h-4 text-[#D4B895]" />
+                        Ver Ficha Completa
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* BLOQUES DEL PITCH DE 10 MINUTOS */}
+                  <div className="space-y-4">
+                    {[
+                      {
+                        time: 'Minutos 1 - 2',
+                        title: 'Apertura: Conectar con el Dolor del Comité',
+                        what: 'La mayoría de los comités están agotados por dos cosas: falta de respuesta oportuna y desconfianza en los gastos comunes.',
+                        phrase: '"No les pedimos que confíen ciegamente en nosotros. Les entregamos una plataforma donde cada peso gastado tiene su respaldo bancario visible en línea."'
+                      },
+                      {
+                        time: 'Minutos 3 - 5',
+                        title: 'El Diferenciador Técnico en Construcción',
+                        what: 'Explicar que los administradores convencionales son contadores o comerciales sin experiencia en terreno. Tu formación como Técnico en Construcción y estudiante de Construcción Civil ahorra millones a la comunidad.',
+                        phrase: '"Cuando falla una bomba o hay una filtración en cubierta, nosotros diagnosticamos la falla real en terreno antes de llamar a un contratista, evitando que les cobren presupuestos inflados."'
+                      },
+                      {
+                        time: 'Minutos 6 - 8',
+                        title: 'Demostración de la App y Transparencia Radical',
+                        what: 'Abrir el portal en el teléfono o pantalla y mostrar la colilla con el botón de respaldo bancario y el libro digital de reclamos.',
+                        phrase: '"Miren esto: cualquier vecino puede presionar aquí y ver la factura y comprobante de transferencia bancaria de la mantención del ascensor. Cero dudas en la asamblea."'
+                      },
+                      {
+                        time: 'Minutos 9 - 10',
+                        title: 'Cierre y Propuesta de Traspaso Seguro',
+                        what: 'Ofrecer la auditoría de traspaso inicial sin costo y el diagnóstico preventivo de instalaciones bajo la Ley N° 21.442.',
+                        phrase: '"Si eligen a ARANPRO, nosotros nos encargamos del traspaso formal con el administrador saliente, blindando su responsabilidad legal ante la ley."'
+                      }
+                    ].map((step, idx) => (
+                      <div key={idx} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-lg bg-[#0F3D2E] text-[#D4B895] font-black text-xs">
+                              {step.time}
+                            </span>
+                            <h6 className="font-black text-xs text-slate-900">{step.title}</h6>
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-400">Paso {idx + 1} de 4</span>
+                        </div>
+                        <p className="text-xs text-slate-600 leading-relaxed">{step.what}</p>
+                        <blockquote className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs italic text-slate-800 font-medium">
+                          {step.phrase}
+                        </blockquote>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SECCIÓN 5: DEMO EN VIVO & CÓDIGO QR */}
+              {postulacionSection === 'demo' && (
+                <div className="space-y-6 animate-in fade-in">
+                  <div className="p-5 rounded-3xl bg-gradient-to-r from-[#0F3D2E] to-[#165540] text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4B895] block">
+                        Interacción en Tiempo Real
+                      </span>
+                      <h4 className="text-base font-black text-white">
+                        Demostración en Vivo & Código QR para el Comité
+                      </h4>
+                      <p className="text-xs text-emerald-100/90 max-w-2xl leading-relaxed">
+                        Permite que los integrantes del comité escaneen el código QR con sus propios teléfonos para experimentar la plataforma antes de votar.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleShareDemoWhatsApp()}
+                        className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                      >
+                        <Send className="w-4 h-4" />
+                        Enviar Demo por WhatsApp
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* QR Y SIMULADOR DE APP EN PANTALLA */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* PANEL IZQUIERDO: CÓDIGO QR Y ENLACE (COL 5) */}
+                    <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs text-center space-y-4">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase text-[#0F3D2E] block">Escanear con Teléfono</span>
+                        <h5 className="font-black text-sm text-slate-900">Código QR de Demostración</h5>
+                        <p className="text-xs text-slate-500">Apunta la cámara de tu celular para abrir el portal de copropietarios en vivo.</p>
+                      </div>
+
+                      {/* CÓDIGO QR SVG ESTILIZADO */}
+                      <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-[#0F3D2E]/30 inline-block shadow-xs">
+                        <svg className="w-44 h-44 mx-auto" viewBox="0 0 100 100" fill="#0F3D2E">
+                          {/* QR Mockup estilizado */}
+                          <rect x="5" y="5" width="25" height="25" fill="#0F3D2E" rx="3" />
+                          <rect x="10" y="10" width="15" height="15" fill="#ffffff" rx="1" />
+                          <rect x="14" y="14" width="7" height="7" fill="#0F3D2E" />
+
+                          <rect x="70" y="5" width="25" height="25" fill="#0F3D2E" rx="3" />
+                          <rect x="75" y="10" width="15" height="15" fill="#ffffff" rx="1" />
+                          <rect x="79" y="14" width="7" height="7" fill="#0F3D2E" />
+
+                          <rect x="5" y="70" width="25" height="25" fill="#0F3D2E" rx="3" />
+                          <rect x="10" y="75" width="15" height="15" fill="#ffffff" rx="1" />
+                          <rect x="14" y="79" width="7" height="7" fill="#0F3D2E" />
+
+                          {/* Patrón central de datos */}
+                          <rect x="35" y="10" width="6" height="6" />
+                          <rect x="45" y="10" width="6" height="6" />
+                          <rect x="55" y="10" width="6" height="6" />
+                          <rect x="35" y="25" width="6" height="6" />
+                          <rect x="45" y="20" width="6" height="6" />
+                          <rect x="55" y="25" width="6" height="6" />
+                          <rect x="35" y="35" width="10" height="10" />
+                          <rect x="50" y="35" width="10" height="10" />
+                          <rect x="65" y="35" width="6" height="6" />
+                          <rect x="10" y="45" width="6" height="6" />
+                          <rect x="20" y="45" width="6" height="6" />
+                          <rect x="35" y="50" width="6" height="6" />
+                          <rect x="45" y="50" width="6" height="6" />
+                          <rect x="55" y="50" width="6" height="6" />
+                          <rect x="65" y="50" width="6" height="6" />
+                          <rect x="75" y="45" width="10" height="10" />
+                          <rect x="35" y="65" width="6" height="6" />
+                          <rect x="45" y="65" width="6" height="6" />
+                          <rect x="55" y="65" width="6" height="6" />
+                          <rect x="65" y="65" width="15" height="6" />
+                          <rect x="35" y="75" width="15" height="6" />
+                          <rect x="55" y="75" width="6" height="6" />
+                          <rect x="65" y="75" width="6" height="15" />
+                          <rect x="75" y="85" width="15" height="6" />
+                          <rect x="35" y="85" width="6" height="6" />
+                          <rect x="45" y="85" width="6" height="6" />
+                          <rect x="55" y="85" width="6" height="6" />
+                        </svg>
+                      </div>
+
+                      <div className="pt-2 space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(window.location.origin);
+                            showAlert('✓ Enlace Copiado', 'El enlace de la demo se ha copiado al portapapeles.', 'success');
+                          }}
+                          className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-slate-600" />
+                          Copiar Enlace de Demo
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* PANEL DERECHO: SIMULADOR DE APP EN CELULAR (COL 7) */}
+                    <div className="lg:col-span-7 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl text-white space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Smartphone className="w-4 h-4 text-[#D4B895]" />
+                          <span className="font-bold text-xs text-white">Simulador Interactivo de la App</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+                          En Línea • Vista Copropietario
+                        </span>
+                      </div>
+
+                      {/* BOTONES DE PESTAÑAS DEL SIMULADOR */}
+                      <div className="flex items-center gap-1.5 p-1 bg-slate-800 rounded-xl text-[11px] font-bold">
+                        {[
+                          { id: 'gastoComun', label: 'Colilla Digital' },
+                          { id: 'comprobantes', label: 'Auditoría Bancaria' },
+                          { id: 'reclamos', label: 'Libro Reclamos' },
+                          { id: 'mural', label: 'Mural Avisos' }
+                        ].map(t => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => setDemoScreenTab(t.id)}
+                            className={`flex-1 py-1.5 rounded-lg transition-all ${
+                              demoScreenTab === t.id ? 'bg-[#0F3D2E] text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* PANTALLA SIMULADA */}
+                      <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 min-h-[260px] text-xs space-y-3">
+                        {demoScreenTab === 'gastoComun' && (
+                          <div className="space-y-3 animate-in fade-in">
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                              <div>
+                                <span className="text-[10px] text-slate-400 block font-mono">UNIDAD N° 12</span>
+                                <strong className="text-white text-sm">Gasto Común: $48.500</strong>
+                              </div>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-900/60 text-emerald-400 border border-emerald-700">
+                                Al Día
+                              </span>
+                            </div>
+                            <div className="space-y-1.5 text-[11px] text-slate-300">
+                              <div className="flex justify-between"><span>Gasto Operacional Base:</span><span className="font-mono">$38.000</span></div>
+                              <div className="flex justify-between"><span>Fondo de Reserva (5% Ley 21.442):</span><span className="font-mono text-emerald-400">$2.500</span></div>
+                              <div className="flex justify-between"><span>Consumo Agua / Remarcador:</span><span className="font-mono">$8.000</span></div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => showAlert('Simulación de Pago', 'En la versión real, el vecino paga en 1 clic mediante Webpay / Flow integrado.', 'info')}
+                              className="w-full py-2 bg-[#D4B895] hover:bg-[#c2a37d] text-[#0F3D2E] font-black rounded-xl text-xs transition-all"
+                            >
+                              Pagar Gasto Común en Línea
+                            </button>
+                          </div>
+                        )}
+
+                        {demoScreenTab === 'comprobantes' && (
+                          <div className="space-y-2.5 animate-in fade-in">
+                            <span className="text-[10px] font-bold text-[#D4B895] uppercase block">
+                              Transparencia Radical • Clic para ver Comprobante Real:
+                            </span>
+                            <div className="space-y-1.5">
+                              {[
+                                { prov: 'HidroBombas Ltda.', mat: 'Mantención Sala de Bombas', monto: '$180.000', folio: 'FAC-8901' },
+                                { prov: 'Chilquinta Energía', mat: 'Consumo Eléctrico Espacios Comunes', monto: '$245.800', folio: 'BOL-4412' },
+                                { prov: 'Jardines del Valle', mat: 'Mantención Áreas Verdes & Poda', monto: '$95.000', folio: 'FAC-1029' }
+                              ].map((eg, i) => (
+                                <div key={i} className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-[11px]">
+                                  <div>
+                                    <p className="font-bold text-white">{eg.prov}</p>
+                                    <p className="text-[10px] text-slate-400">{eg.mat}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-mono font-bold text-emerald-400">{eg.monto}</p>
+                                    <span className="text-[9px] text-[#D4B895] underline cursor-pointer">Ver Comprobante</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {demoScreenTab === 'reclamos' && (
+                          <div className="space-y-2.5 animate-in fade-in">
+                            <span className="text-[10px] font-bold text-[#D4B895] uppercase block">
+                              Libro Oficial Foliado (Art. 20° Ley N° 21.442)
+                            </span>
+                            <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1.5">
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="font-mono text-emerald-400 font-bold">REC-2026-004</span>
+                                <span className="text-slate-400">Casa 4 • Hace 2 días</span>
+                              </div>
+                              <p className="font-bold text-white text-xs">Ajuste de presión en bomba de piso 3</p>
+                              <p className="text-[10px] text-slate-300">"Se percibe baja presión en horario punta."</p>
+                              <div className="p-1.5 bg-slate-950 rounded border border-slate-800 text-[10px] text-emerald-300 font-medium">
+                                ✓ Respuesta ARANPRO: Técnico inspeccionó presostato ayer a las 16:00 hrs. Falla resuelta.
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {demoScreenTab === 'mural' && (
+                          <div className="space-y-2.5 animate-in fade-in">
+                            <span className="text-[10px] font-bold text-[#D4B895] uppercase block">
+                              Diario Mural Digital Comunitario
+                            </span>
+                            <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-900/60 text-blue-300">
+                                Aviso Importante
+                              </span>
+                              <h6 className="font-bold text-white text-xs">Corte Programado por Limpieza de Estanques</h6>
+                              <p className="text-[10px] text-slate-300 leading-relaxed">
+                                Este jueves entre 10:00 y 13:00 hrs se realizará lavado de estanques conforme a norma sanitaria.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2626,6 +3286,396 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all"
               >
                 Cerrar Visor
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL 1: BROCHURE DE LA APP & PORTAL WEB (PDF CARTA) ==================== */}
+      {previewBrochureModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col relative space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-[#0F3D2E] text-[#D4B895]">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">
+                    Brochure Comercial de la App Móvil & Web para Copropietarios
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    Ficha de Presentación Ejecutiva • Transparencia Radical y Acceso 24/7
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrintBrochure}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs shadow-xs transition-all active:scale-95"
+                >
+                  <Printer className="w-4 h-4 text-[#D4B895]" />
+                  Imprimir / Descargar PDF (Carta)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewBrochureModal(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* CONTENEDOR DEL BROCHURE IMPRIMIBLE */}
+            <div className="overflow-y-auto flex-1 pr-1">
+              <div
+                id="printable-app-brochure"
+                className="bg-white p-8 md:p-10 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-6 text-slate-900"
+                style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+              >
+                {/* Membrete del Brochure */}
+                <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
+                      SUITE DIGITAL PARA CONDOMINIOS • LEY N° 21.442
+                    </span>
+                    <h2 className="text-xl font-black text-[#0F3D2E] tracking-tight uppercase">
+                      Portal Web & App Móvil ARANPRO
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Diseñada para la tranquilidad del Comité y la total transparencia para cada Copropietario
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block px-3 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold font-mono">
+                      ACCESO 24/7 EN LÍNEA
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4 Pilares Tecnológicos */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                    <div className="flex items-center gap-2 text-[#0F3D2E]">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <h5 className="font-black text-xs">1. Auditoría Bancaria con 1 Clic</h5>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Cada factura, boleta de honorarios y comprobante de transferencia bancaria de los gastos comunes está disponible en línea para consulta inmediata de cualquier vecino. Cero suspicacias.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                    <div className="flex items-center gap-2 text-[#0F3D2E]">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <h5 className="font-black text-xs">2. Colilla Digital & Pago Rápido</h5>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Desglose detallado del gasto común del mes, desglose del fondo de reserva obligatorio (Art. 6° Ley 21.442), lecturas de agua y pago en línea con Webpay / Flow.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                    <div className="flex items-center gap-2 text-[#0F3D2E]">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <h5 className="font-black text-xs">3. Asambleas y Voto Telemático</h5>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Participación híbrida conforme al Art. 15° de la Ley 21.442. Los propietarios pueden emitir su voto de manera segura desde el celular con quórums auditados en tiempo real.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                    <div className="flex items-center gap-2 text-[#0F3D2E]">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <h5 className="font-black text-xs">4. Libro Oficial de Reclamos Digital</h5>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Trazabilidad legal con folios correlativos bajo el Art. 20°. Cada reclamo o sugerencia ingresado tiene fecha límite estricta de respuesta formal por parte de la administración.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pie de Página del Brochure */}
+                <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                  <div>ARANPRO Gestión Integral • {empresaForm.website}</div>
+                  <div>Contacto Comercial: {empresaForm.phone}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL 2: INFORME DE DIAGNÓSTICO TÉCNICO INICIAL ==================== */}
+      {previewInspectionModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col relative space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-[#0F3D2E] text-[#D4B895]">
+                  <HardHat className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">
+                    Informe de Diagnóstico Técnico Inicial Gratuito
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    Levantamiento Preventivo de Instalaciones Críticas • Criterio Constructivo
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrintInspectionReport}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs shadow-xs transition-all active:scale-95"
+                >
+                  <Printer className="w-4 h-4 text-[#D4B895]" />
+                  Imprimir / Descargar PDF (Carta)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewInspectionModal(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* CONTENEDOR DEL INFORME IMPRIMIBLE */}
+            <div className="overflow-y-auto flex-1 pr-1">
+              <div
+                id="printable-technical-inspection"
+                className="bg-white p-8 md:p-10 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-6 text-slate-900"
+                style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+              >
+                {/* Membrete Técnico */}
+                <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
+                      DEPARTAMENTO TÉCNICO & AUDITORÍA CONSTRUCTIVA ARANPRO
+                    </span>
+                    <h2 className="text-lg font-black text-[#0F3D2E] tracking-tight uppercase">
+                      Informe de Diagnóstico Técnico Inicial
+                    </h2>
+                    <p className="text-xs text-slate-600 font-semibold">
+                      Comunidad Evaluada: {proposalConfig.targetCondo || 'Condominio en Evaluación'}
+                    </p>
+                  </div>
+                  <div className="text-right text-xs">
+                    <span className="font-bold text-[#0F3D2E] block">Fecha: {inspectionForm.date}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Auditoría Gratuita de Postulación</span>
+                  </div>
+                </div>
+
+                {/* Datos del Inspector Técnico */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex justify-between items-center">
+                  <div>
+                    <span className="text-slate-500 block text-[10px] uppercase font-bold">Profesional a Cargo:</span>
+                    <strong className="text-slate-900">{empresaForm.adminName}</strong>
+                    <span className="text-slate-600 block text-[11px]">Técnico en Construcción • Construcción Civil • RNAC Minvu N° {empresaForm.rnacNumber}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-500 block text-[10px] uppercase font-bold">Contacto Directo:</span>
+                    <span className="font-mono text-[#0F3D2E] font-bold">{empresaForm.phone}</span>
+                  </div>
+                </div>
+
+                {/* Partidas Evaluadas */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1">
+                    Evaluación de Estado de Instalaciones Críticas:
+                  </h4>
+
+                  <div className="space-y-2.5">
+                    {inspectionForm.items.map((item, idx) => (
+                      <div key={item.id} className="p-3 rounded-xl border border-slate-200 bg-white space-y-1 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-black text-slate-900">{idx + 1}. {item.name}</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            item.status === 'Bueno'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : item.status === 'Requiere Mantención'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 leading-relaxed bg-slate-50 p-2 rounded-lg border border-slate-100">
+                          {item.notes}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Firma y Conclusión */}
+                <div className="pt-6 border-t border-slate-200 flex items-center justify-between text-xs">
+                  <div className="space-y-0.5 max-w-sm">
+                    <p className="font-bold text-slate-900">Conclusión de Inspección:</p>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      El presente diagnóstico fue realizado sin costo para orientar al Comité de Administración en la priorización de obras preventivas y evitar emergencias de alto costo.
+                    </p>
+                  </div>
+                  <div className="text-center space-y-1">
+                    {signatureImage ? (
+                      <img src={signatureImage} alt="Firma" className="max-h-12 mx-auto" />
+                    ) : (
+                      <div className="h-10"></div>
+                    )}
+                    <div className="border-t border-slate-400 pt-1 text-[10px]">
+                      <p className="font-bold text-slate-900">{empresaForm.adminName}</p>
+                      <p className="text-slate-500">Técnico en Construcción</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL 3: CUADRO COMPARATIVO (TRADICIONAL VS ARANPRO) ==================== */}
+      {previewComparisonModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col relative space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-[#0F3D2E] text-[#D4B895]">
+                  <Scale className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">
+                    Matriz Comparativa: Administración Tradicional vs. ARANPRO
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    Diferenciadores Clave para Asambleas y Comités de Copropietarios
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrintComparisonMatrix}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs shadow-xs transition-all active:scale-95"
+                >
+                  <Printer className="w-4 h-4 text-[#D4B895]" />
+                  Imprimir / Descargar PDF (Carta)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewComparisonModal(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* CONTENEDOR DE LA MATRIZ IMPRIMIBLE */}
+            <div className="overflow-y-auto flex-1 pr-1">
+              <div
+                id="printable-comparison-matrix"
+                className="bg-white p-8 md:p-10 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-6 text-slate-900"
+                style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+              >
+                <div className="border-b-2 border-[#0F3D2E] pb-3 space-y-1">
+                  <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
+                    ANÁLISIS COMPARATIVO DE VALOR AGREGADO
+                  </span>
+                  <h2 className="text-lg font-black text-[#0F3D2E] uppercase">
+                    ¿Por qué elegir la Gestión Integral de ARANPRO?
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Comparación punto a punto para la decisión informada de la Asamblea de Copropietarios
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    { p: '1. Supervisión Constructiva', t: 'Visitas esporádicas. No saben de construcción ni bombas; dependen a ciegas de técnicos externos con sobrecostos.', a: 'Administrador Técnico en Construcción y estudiante de Construcción Civil. Audita bombas, sellos, filtraciones y fiscaliza a contratistas en terreno.' },
+                    { p: '2. Transparencia en Cuentas', t: 'Planillas Excel confusas enviadas a fin de mes. Comprobantes bancarios ocultos o extraviados.', a: 'Portal y App móvil 24/7 donde cada vecino audita las facturas y comprobantes bancarios reales de cada gasto con 1 solo clic.' },
+                    { p: '3. Asambleas Ley 21.442', t: 'Falta crónica de quórum presencial. Actas en papel que tardan semanas en protocolizarse.', a: 'Asambleas telemáticas e híbridas con voto digital seguro desde el teléfono celular y quórums automatizados (Art. 15°).' },
+                    { p: '4. Atención de Reclamos', t: 'Mensajes de WhatsApp o llamados informales que quedan en el olvido sin respuesta.', a: 'Libro Oficial de Reclamos y Sugerencias digital foliado con plazo legal estricto de respuesta garantizado (Art. 20°).' },
+                    { p: '5. Cobranzas & Fe Notarial', t: 'Cobranza informal sin protocolos legales ni respaldo jurídico.', a: 'Certificados oficiales foliados de no deuda, convenios de pago y certificados morosos para compraventas (Art. 36°).' }
+                  ].map((row, i) => (
+                    <div key={i} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2 text-xs">
+                      <span className="font-black text-slate-900 text-xs block">{row.p}</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                        <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-slate-700">
+                          <strong className="text-rose-800 block text-[10px] uppercase">✕ Administración Tradicional:</strong>
+                          <p className="mt-0.5 leading-relaxed">{row.t}</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-slate-800">
+                          <strong className="text-[#0F3D2E] block text-[10px] uppercase">✓ Con ARANPRO:</strong>
+                          <p className="mt-0.5 leading-relaxed font-medium">{row.a}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                  <div>ARANPRO Gestión Integral • {empresaForm.website}</div>
+                  <div>Contacto: {empresaForm.phone}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL 4: GUÍA INTERNA DE PITCH Y OBJECIONES ==================== */}
+      {showPitchGuideModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col relative space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <Presentation className="w-5 h-5 text-[#0F3D2E]" />
+                <h4 className="text-sm font-black text-slate-900">Ficha Maestra: Respuestas a Objeciones del Comité</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPitchGuideModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 pr-1 space-y-3 text-xs">
+              {[
+                { q: '1. "¿Cuánto cobran de honorarios y qué incluye?"', r: 'Nuestros honorarios son transparentes y acordes a la escala de la comunidad. Incluyen visitas semanales en terreno, la plataforma web y app móvil para todos los copropietarios, y la emisión de colillas y certificados sin cobros ocultos.' },
+                { q: '2. "¿Cómo se realiza el cambio con la administración actual?"', r: 'ARANPRO se encarga de la auditoría de traspaso formal según el Art. 20° de la Ley N° 21.442, levantando un acta formal de conciliación bancaria y revisión de deudas para blindar la responsabilidad del nuevo comité.' },
+                { q: '3. "¿Cómo manejan la morosidad histórica?"', r: 'Aplicamos el Art. 36° de la ley: emisión de convenios de pago formalizados, certificados morosos para notarías y cortes de suministro coordinados conforme al reglamento interno.' },
+                { q: '4. "¿Por qué un administrador con formación en construcción es mejor?"', r: 'Porque las mantenciones representan el 60% del gasto común. Con criterio de Técnico en Construcción y Construcción Civil evitamos que contratistas inflen presupuestos de impermeabilización, bombas o pintura.' }
+              ].map((item, idx) => (
+                <div key={idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                  <span className="font-black text-slate-900 block">{item.q}</span>
+                  <p className="text-slate-700 leading-relaxed text-[11.5px] bg-white p-2.5 rounded-xl border border-slate-200">
+                    <strong className="text-[#0F3D2E]">Respuesta Recomendada:</strong> {item.r}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={handleCopyPitchToClipboard}
+                className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+              >
+                <Copy className="w-3.5 h-3.5 text-[#D4B895]" />
+                Copiar al Portapapeles
               </button>
             </div>
           </div>
