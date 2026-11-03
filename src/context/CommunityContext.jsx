@@ -1692,24 +1692,33 @@ export const CommunityProvider = ({ children }) => {
   // --- Certificados ---
   const requestCertificate = (certData) => {
     const newCert = {
-      id: `cert-${Date.now()}`,
+      id: certData.id || `cert-${Date.now()}`,
       communityName: certData.communityName || 'Comunidad',
-      applicantName: certData.applicantName,
-      rut: certData.rut,
-      unitNumber: certData.unitNumber,
-      email: certData.email,
+      applicantName: certData.applicantName || 'Solicitante',
+      rut: certData.rut || '',
+      unitNumber: certData.unitNumber || '',
+      email: certData.email || '',
       phone: certData.phone || '',
-      type: certData.type || 'Certificado de Residencia',
-      purpose: certData.purpose || 'Trámite General',
-      date: new Date().toISOString().split('T')[0],
-      status: 'SOLICITADO'
+      type: certData.type || 'Certificado de Residencia y Domicilio',
+      purpose: certData.purpose || 'Trámite Notarial / Bancario',
+      date: certData.date || new Date().toISOString().split('T')[0],
+      status: certData.status || 'SOLICITADO',
+      folio: certData.folio || `CERT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
+      verificationCode: certData.verificationCode || Math.random().toString(36).substring(2, 8).toUpperCase(),
+      debtAmount: certData.debtAmount !== undefined ? certData.debtAmount : 0,
+      notes: certData.notes || '',
+      issuedBy: certData.issuedBy || 'Administración ARANPRO'
     };
     setCertificates(prev => [newCert, ...prev]);
     return newCert;
   };
 
-  const updateCertificateStatus = (certId, status) => {
-    setCertificates(prev => prev.map(c => c.id === certId ? { ...c, status } : c));
+  const updateCertificateStatus = (certId, status, extraData = {}) => {
+    setCertificates(prev => prev.map(c => c.id === certId ? { ...c, status, ...extraData } : c));
+  };
+
+  const deleteCertificate = (certId) => {
+    setCertificates(prev => prev.filter(c => c.id !== certId));
   };
 
   // --- Auth / Sesiones ---
@@ -1846,6 +1855,7 @@ export const CommunityProvider = ({ children }) => {
       deleteCommitteeTask,
       requestCertificate,
       updateCertificateStatus,
+      deleteCertificate,
       setCompanySettings,
       loginAdmin,
       loginResident,

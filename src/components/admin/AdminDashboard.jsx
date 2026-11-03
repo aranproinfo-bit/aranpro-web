@@ -8,6 +8,7 @@ import { PreventiveMaintenanceModule } from './PreventiveMaintenanceModule';
 import { SuggestionsAndComplaintsModule } from './SuggestionsAndComplaintsModule';
 import { MuralAndComplaintsModule } from './MuralAndComplaintsModule';
 import { CommitteeMeetingsAndLogModule } from './CommitteeMeetingsAndLogModule';
+import { OfficialCertificatesModule } from './OfficialCertificatesModule';
 import { ExpenseReportModal } from '../common/ExpenseReportModal';
 import { 
   Building2, Plus, Trash2, Edit3, ExternalLink, Users, 
@@ -2911,6 +2912,7 @@ _Administración ARANPRO_`;
   const urgentMaintCount = currentCommunity?.preventiveMaintenances?.filter(m => m.status === 'URGENTE' || (m.daysRemaining !== undefined && m.daysRemaining <= 10))?.length || 0;
   const pendingCommitteeTasksCount = currentCommunity?.committeeTasks?.filter(t => t.status !== 'CUMPLIDA')?.length || 0;
   const totalDocsAndAnnCount = (currentCommunity?.announcements?.length || 0) + (currentCommunity?.documents?.length || 0) + (currentCommunity?.communityTickets?.length || 0);
+  const pendingCertificatesCount = certificates?.filter(c => c.status === 'SOLICITADO')?.length || 0;
 
   const navTabs = [
     { id: 'resumen', label: 'Dashboard Financiero', shortLabel: 'Dashboard', icon: BarChart3, badge: null },
@@ -2920,7 +2922,7 @@ _Administración ARANPRO_`;
     { id: 'comite', label: 'Comité de Administración', shortLabel: 'Comité', icon: ClipboardList, badge: pendingCommitteeTasksCount > 0 ? `${pendingCommitteeTasksCount} pendientes` : 'Art. 17°', alertBadge: pendingCommitteeTasksCount > 0 },
     { id: 'asambleas', label: 'Asambleas & Quórum', shortLabel: 'Asambleas', icon: Users, badge: 'Ley 21.442' },
     { id: 'comunicados', label: 'Mural & Reclamos', shortLabel: 'Mural & Reclamos', icon: Megaphone, badge: totalDocsAndAnnCount, alertBadge: pendingTicketsCount > 0 },
-    { id: 'certificados', label: 'Certificados', shortLabel: 'Certificados', icon: Shield, badge: certificates.length },
+    { id: 'certificados', label: 'Certificados', shortLabel: 'Certificados', icon: ShieldCheck, badge: pendingCertificatesCount > 0 ? `${pendingCertificatesCount} pend.` : certificates.length, alertBadge: pendingCertificatesCount > 0 },
     { id: 'ajustes', label: 'Ajustes & Marca', shortLabel: 'Ajustes', icon: Settings, badge: null }
   ];
 
@@ -10890,84 +10892,9 @@ _Administración ARANPRO_`;
           />
         )}
 
-        {/* TAB 6: BANDEJA DE CERTIFICADOS */}
+        {/* TAB 6: BANDEJA DE CERTIFICADOS OFICIALES (LEY 21.442) */}
         {activeTab === 'certificados' && (
-          <div className="space-y-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <h3 className="text-base font-bold text-slate-900">Bandeja de Solicitudes de Certificados</h3>
-              <p className="text-xs text-slate-500">
-                Peticiones de certificados de residencia o no deuda enviadas por los vecinos a través del portal.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
-                    <tr>
-                      <th className="px-5 py-3">Comunidad / Casa</th>
-                      <th className="px-5 py-3">Solicitante</th>
-                      <th className="px-5 py-3">RUT</th>
-                      <th className="px-5 py-3">Tipo Certificado</th>
-                      <th className="px-5 py-3">Fecha</th>
-                      <th className="px-5 py-3">Finalidad</th>
-                      <th className="px-5 py-3 text-center">Estado</th>
-                      <th className="px-5 py-3 text-center">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {certificates.map(cert => (
-                      <tr key={cert.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-5 py-3.5 font-bold text-slate-900">
-                          {cert.communityName} • Casa {cert.unitNumber}
-                        </td>
-                        <td className="px-5 py-3.5 text-slate-800 font-medium">
-                          {cert.applicantName}
-                          <div className="text-[10px] text-slate-400">{cert.email}</div>
-                        </td>
-                        <td className="px-5 py-3.5 font-mono text-slate-600">
-                          {cert.rut}
-                        </td>
-                        <td className="px-5 py-3.5 font-semibold text-[#0A291F]">
-                          {cert.type}
-                        </td>
-                        <td className="px-5 py-3.5 text-slate-500">
-                          {formatDate(cert.date)}
-                        </td>
-                        <td className="px-5 py-3.5 text-slate-600 max-w-xs truncate">
-                          {cert.purpose}
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                            cert.status === 'EMITIDO'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            {cert.status}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
-                          {cert.status !== 'EMITIDO' ? (
-                            <button
-                              onClick={() => {
-                                updateCertificateStatus(cert.id, 'EMITIDO');
-                                alert(`Certificado para ${cert.applicantName} marcado como EMITIDO.`);
-                              }}
-                              className="px-3 py-1 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-lg"
-                            >
-                              Emitir y Validar
-                            </button>
-                          ) : (
-                            <span className="text-xs text-emerald-600 font-semibold">Listo</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <OfficialCertificatesModule currentCommunity={currentCommunity} />
         )}
 
         {/* TAB 7: AJUSTES & PERSONALIZACIÓN DE MARCA ARANPRO */}
