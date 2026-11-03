@@ -7,7 +7,7 @@ import {
   Plus, Printer, Search, Filter, Shield, FileText, Check,
   MessageCircle, Trash2, Edit3, AlertTriangle, UserCheck,
   BadgeCheck, X, Bell, ChevronRight, Sparkles, CheckSquare,
-  Smartphone, Share2, ArrowRight
+  Smartphone, Share2, ArrowRight, Zap, Megaphone
 } from 'lucide-react';
 
 export const CommitteeMeetingsAndLogModule = ({
@@ -28,7 +28,8 @@ export const CommitteeMeetingsAndLogModule = ({
     deleteCommitteeTask,
     toggleUnitCommittee,
     updateUnit,
-    getUnitFinancials
+    getUnitFinancials,
+    addAnnouncement
   } = useCommunity();
 
   // Control de sub-vista activa ('reuniones' | 'novedades' | 'tareas' | 'directorio')
@@ -104,6 +105,69 @@ export const CommitteeMeetingsAndLogModule = ({
     unitId: '',
     role: 'Miembro del Comité'
   });
+
+  // 1. Estados para Resolución de Suspensión de Suministro Eléctrico (Arts. 20° y 27° Ley 21.442)
+  const [showPowerCutModal, setShowPowerCutModal] = useState(false);
+  const [powerCutForm, setPowerCutForm] = useState({
+    unitId: 'u-12',
+    company: 'CGE Compañía General de Electricidad S.A.',
+    clientNumber: '8842109-2',
+    meterNumber: 'MTR-55419-C12',
+    warningDays: 3,
+    resolutionFolio: 'RES-COM-CORTE-2026-01',
+    notes: 'Habiéndose verificado una morosidad superior a 3 cuotas continuas y reiteradas comunicaciones sin respuesta, el Comité de Administración, conforme a la facultad conferida por el Art. 27° de la Ley N° 21.442, acuerda por unanimidad instruir a la empresa distribuidora la suspensión del suministro eléctrico de la unidad.'
+  });
+  const [powerCutCopiedFeedback, setPowerCutCopiedFeedback] = useState(false);
+
+  // 3. Estados para Generador de Circulares del Comité a la Comunidad (Art. 17° N° 1)
+  const [showCircularModal, setShowCircularModal] = useState(false);
+  const [circularTemplate, setCircularTemplate] = useState('mascotas');
+  const [circularForm, setCircularForm] = useState({
+    folio: 'CIRCULAR-COM-2026-04',
+    date: new Date().toISOString().split('T')[0],
+    title: 'Regulación de Tenencia Responsable de Mascotas en Espacios Comunes',
+    category: 'Convivencia & Tenencia Responsable',
+    legalCitation: 'Ley N° 21.020 ("Ley Cholito") y Arts. 17° y 36° Ley N° 21.442',
+    body: `Estimada comunidad:\n\nSe recuerda a todos los copropietarios y arrendatarios que la tenencia de mascotas en el condominio exige estricta responsabilidad conforme a la ley y al Reglamento de Copropiedad:\n\n1. Toda mascota debe transitar con correa y bajo supervisión de un adulto en pasajes y áreas de juegos infantiles.\n2. Es obligación inmediata el recojo de deposiciones con bolsa higiénica desechable.\n3. Queda prohibido permitir que animales deambulen sueltos o generen ruidos molestos reiterados en horarios de descanso.\n\nLas infracciones serán sancionadas con multas reglamentarias de 1 a 3 UF imputables directamente a la colilla de gastos comunes.\n\nAgradecemos su colaboración activa para una convivencia armónica y segura.`,
+    committeeSigners: 'Carlos Morales Rojas (Presidente) • Marcela Castillo Gómez (Tesorera)'
+  });
+  const [circularPublishedFeedback, setCircularPublishedFeedback] = useState(false);
+  const [circularCopiedFeedback, setCircularCopiedFeedback] = useState(false);
+
+  // 4. Estados para Reloj de Mandato Legal del Comité (Art. 17° Inciso 2)
+  const [mandateInfo, setMandateInfo] = useState({
+    assemblyDate: '2024-11-15',
+    assemblyMinuteRef: 'Acta de Asamblea Ordinaria N° 12-2024',
+    durationYears: 3
+  });
+  const [isEditingMandate, setIsEditingMandate] = useState(false);
+
+  // Métricas del Mandato Legal del Comité (Ley N° 21.442 • Art. 17°)
+  const mandateMetrics = useMemo(() => {
+    const start = new Date(mandateInfo.assemblyDate);
+    const end = new Date(start);
+    end.setFullYear(start.getFullYear() + (mandateInfo.durationYears || 3));
+    
+    const now = new Date();
+    const totalDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+    const daysElapsed = Math.round((now - start) / (1000 * 60 * 60 * 24));
+    const daysRemaining = Math.round((end - now) / (1000 * 60 * 60 * 24));
+    const percent = Math.min(100, Math.max(0, Math.round((daysElapsed / totalDays) * 100)));
+    
+    const isExpired = daysRemaining <= 0;
+    const isNearRenewal = daysRemaining > 0 && daysRemaining <= 180;
+    
+    return {
+      startDate: mandateInfo.assemblyDate,
+      endDate: end.toISOString().split('T')[0],
+      totalDays,
+      daysElapsed,
+      daysRemaining,
+      percent,
+      isExpired,
+      isNearRenewal
+    };
+  }, [mandateInfo]);
 
   // Miembros del Comité Vigente
   const committeeMembers = useMemo(() => {
@@ -397,6 +461,352 @@ export const CommitteeMeetingsAndLogModule = ({
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
+  // Plantillas pre-redactadas para Circulares del Comité
+  const circularTemplates = {
+    mascotas: {
+      folio: 'CIRCULAR-COM-2026-04',
+      title: 'Regulación de Tenencia Responsable de Mascotas en Espacios Comunes',
+      category: 'Convivencia & Tenencia Responsable',
+      legalCitation: 'Ley N° 21.020 ("Ley Cholito") y Arts. 17° y 36° Ley N° 21.442',
+      body: `Estimada comunidad:\n\nSe recuerda a todos los copropietarios y arrendatarios que la tenencia de mascotas en el condominio exige estricta responsabilidad conforme a la ley y al Reglamento de Copropiedad:\n\n1. Toda mascota debe transitar obligatoriamente con correa y bajo supervisión de un adulto en pasajes y áreas de juegos infantiles.\n2. Es deber inexcusable el recojo inmediato de deposiciones mediante bolsa higiénica desechable.\n3. Queda prohibido permitir que animales deambulen sueltos o generen ruidos molestos reiterados en horarios de descanso.\n\nLas infracciones serán sancionadas con multas reglamentarias de 1 a 3 UF imputables directamente a la colilla de gastos comunes.\n\nAgradecemos su colaboración activa para una convivencia armónica y segura.`
+    },
+    ruidos: {
+      folio: 'CIRCULAR-COM-2026-05',
+      title: 'Normas de Convivencia y Horarios de Descanso Obligatorio',
+      category: 'Seguridad & Convivencia',
+      legalCitation: 'Arts. 17° y 20° Ley N° 21.442 y Ordenanza Municipal de Ruidos Molestos',
+      body: `Estimados vecinos y residentes:\n\nCon el objeto de resguardar el descanso, la salud y la tranquilidad de todas las familias de la comunidad, se recuerdan las normas de convivencia:\n\n1. Horario de Silencio: De Domingo a Jueves desde las 22:00 hrs. Viernes, Sábados y vísperas de festivos desde las 00:00 hrs.\n2. Obras ruidosas, taladros y reparaciones: Permitidas exclusivamente de Lunes a Viernes de 09:00 a 18:00 hrs y Sábados de 09:00 a 14:00 hrs.\n3. Fiestas y reuniones sociales deben mantener un volumen moderado sin perturbar el descanso vecinal.\n\nConserjería y la Administración están facultadas para cursar partes e infracciones de acuerdo al Reglamento de Copropiedad.`
+    },
+    estacionamientos: {
+      folio: 'CIRCULAR-COM-2026-06',
+      title: 'Uso Correcto de Estacionamientos de Visitas y Vías de Circulación',
+      category: 'Tránsito y Espacios Comunes',
+      legalCitation: 'Art. 17° Ley N° 21.442 y Ley de Tránsito N° 18.290',
+      body: `Estimados copropietarios y residentes:\n\nSe instruye a la comunidad respecto al correcto uso de estacionamientos de visitas y calzadas:\n\n1. Los estacionamientos de visitas son de uso exclusivo y temporal para invitados (máximo 4 horas continuas sin pernoctar salvo aviso fundado a conserjería).\n2. Queda estrictamente prohibido estacionar sobre veredas, frente a grifos de incendio o bloqueando portones de acceso.\n3. La velocidad máxima de circulación al interior del recinto es de 20 km/h.\n\nVehículos en infracción reiterada serán bloqueados con trabaruedas o derivados al juzgado de policía local.`
+    },
+    obras: {
+      folio: 'CIRCULAR-COM-2026-07',
+      title: 'Protocolo de Obras Menores, Remodelaciones y Mudanzas',
+      category: 'Mantención & Seguridad',
+      legalCitation: 'Arts. 17° y 20° Ley N° 21.442',
+      body: `Estimada comunidad:\n\nTodo copropietario o arrendatario que planifique realizar mudanzas o trabajos de remodelación interior deberá cumplir con el siguiente protocolo:\n\n1. Notificar por escrito a la Administración con al menos 48 horas de anticipación.\n2. Horario autorizado de mudanzas: Lunes a Sábado de 09:00 a 18:00 hrs.\n3. Retiro de escombros: Es obligación del copropietario retirar sus propios escombros; queda estrictamente prohibido depositarlos en los contenedores de basura doméstica.\n4. El copropietario responderá solidariamente por cualquier daño causado a pasajes, luminarias o portones.`
+    },
+    personalizada: {
+      folio: 'CIRCULAR-COM-2026-08',
+      title: 'Comunicado Extraordinario del Comité de Administración',
+      category: 'Administrativo General',
+      legalCitation: 'Art. 17° Ley N° 21.442',
+      body: `Estimada comunidad:\n\nPor medio de la presente, el Comité de Administración informa a los señores copropietarios lo siguiente:\n\n[Escriba aquí el detalle del comunicado oficial...]`
+    }
+  };
+
+  const handleApplyCircularTemplate = (tmplKey) => {
+    setCircularTemplate(tmplKey);
+    const tmpl = circularTemplates[tmplKey];
+    if (tmpl) {
+      setCircularForm(prev => ({
+        ...prev,
+        folio: tmpl.folio,
+        title: tmpl.title,
+        category: tmpl.category,
+        legalCitation: tmpl.legalCitation,
+        body: tmpl.body
+      }));
+    }
+  };
+
+  // Imprimir Circular Oficial del Comité (PDF)
+  const handlePrintCircular = () => {
+    if (!currentCommunity) return;
+    const brandName = companySettings?.brandName || 'ARANPRO';
+    const primaryColor = companySettings?.colors?.primary || '#0F3D2E';
+    const accentGold = companySettings?.colors?.accent || '#D4B895';
+    const communityName = currentCommunity?.name || 'Condominio';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="utf-8">
+        <title>Circular_Comite_${circularForm.folio}_${communityName.replace(/\s+/g, '_')}.pdf</title>
+        <style>
+          @page { size: letter; margin: 15mm 15mm 15mm 15mm; }
+          body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; color: #0F172A; margin: 0; padding: 0; font-size: 11.5px; line-height: 1.5; }
+          .header-table { width: 100%; border-bottom: 2.5px solid ${primaryColor}; padding-bottom: 12px; margin-bottom: 16px; }
+          .brand-title { font-size: 20px; font-weight: 900; color: ${primaryColor}; margin: 0; }
+          .doc-badge { background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 8px 12px; text-align: right; }
+          .title-box { background: #F8FAFC; border-left: 4px solid ${accentGold}; padding: 12px 14px; margin-bottom: 18px; border-radius: 4px; }
+          .body-text { white-space: pre-wrap; font-size: 12px; color: #1E293B; line-height: 1.6; margin-bottom: 30px; text-align: justify; }
+          .signatures-table { width: 100%; margin-top: 45px; page-break-inside: avoid; }
+          .sig-box { width: 50%; text-align: center; vertical-align: top; padding: 0 25px; }
+          .sig-line { border-top: 1.5px solid #334155; margin-bottom: 6px; margin-top: 45px; }
+          .legal-footer { margin-top: 40px; padding-top: 10px; border-top: 1px dashed #CBD5E1; font-size: 9px; color: #64748B; text-align: justify; }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td style="vertical-align: middle;">
+              <h1 class="brand-title">${brandName}</h1>
+              <div style="font-size: 10px; color: #64748B; font-weight: 600; text-transform: uppercase;">Gestión Integral de Condominios y Comunidades</div>
+              <div style="font-size: 11px; font-weight: bold; color: ${primaryColor}; margin-top: 4px;">
+                ${communityName}
+              </div>
+            </td>
+            <td style="vertical-align: middle; text-align: right;">
+              <div class="doc-badge">
+                <div style="font-size: 9px; font-weight: 800; color: #64748B; text-transform: uppercase;">Circular Oficial del Comité</div>
+                <div style="font-size: 14px; font-weight: 900; color: ${primaryColor};">${circularForm.folio}</div>
+                <div style="font-size: 9.5px; color: #334155; font-weight: 600; margin-top: 2px;">
+                  Fecha: ${formatDate(circularForm.date)}
+                </div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="title-box">
+          <div style="font-size: 10px; font-weight: 800; color: ${primaryColor}; text-transform: uppercase; letter-spacing: 0.5px;">
+            ${circularForm.category} • ${circularForm.legalCitation}
+          </div>
+          <h2 style="font-size: 15px; font-weight: 900; color: #0F172A; margin: 4px 0 0 0;">
+            ${circularForm.title}
+          </h2>
+        </div>
+
+        <div class="body-text">${circularForm.body}</div>
+
+        <table class="signatures-table">
+          <tr>
+            <td class="sig-box">
+              <div class="sig-line"></div>
+              <div style="font-weight: bold; color: #0F172A; font-size: 11px;">Comité de Administración</div>
+              <div style="color: #64748B; font-size: 9.5px;">${circularForm.committeeSigners}</div>
+              <div style="font-size: 8.5px; color: #64748B;">Ley N° 21.442 • Art. 17°</div>
+            </td>
+            <td class="sig-box">
+              <div class="sig-line"></div>
+              <div style="font-weight: bold; color: #0F172A; font-size: 11px;">Administración ${brandName}</div>
+              <div style="color: #64748B; font-size: 9.5px;">Administrador Titular (RNAC N° 48.912)</div>
+              <div style="font-size: 8.5px; color: #64748B;">Ejecución y Custodia Legal</div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="legal-footer">
+          <strong>Art. 17° N° 1 Ley N° 21.442:</strong> Las circulares e instrucciones dictadas por el Comité de Administración en el ejercicio de sus facultades de resguardo y convivencia forman parte integrante de la normativa del condominio y son de obligatorio cumplimiento para todos los copropietarios, arrendatarios y residentes.
+        </div>
+      </body>
+      </html>
+    `;
+
+    printDocumentDirectly(htmlContent, `Circular_Comite_${circularForm.folio}_${communityName.replace(/\s+/g, '_')}.pdf`);
+  };
+
+  // Publicar Circular al Mural de Avisos de la Comunidad
+  const handlePublishCircularToMural = () => {
+    if (!currentCommunity) return;
+    addAnnouncement(currentCommunity.id, {
+      title: `${circularForm.folio}: ${circularForm.title}`,
+      content: `${circularForm.legalCitation}\n\n${circularForm.body}\n\n_Comité de Administración & Administración ARANPRO_`,
+      priority: 'Importante'
+    });
+    setCircularPublishedFeedback(true);
+    setTimeout(() => setCircularPublishedFeedback(false), 3500);
+  };
+
+  // Compartir Circular por WhatsApp a la Comunidad
+  const handleShareCircularWhatsApp = () => {
+    if (!currentCommunity) return;
+    const communityName = currentCommunity?.name || 'Condominio';
+    const text = 
+`📢 *CIRCULAR OFICIAL DEL COMITÉ DE ADMINISTRACIÓN*
+🏢 *${communityName.toUpperCase()}*
+📜 *${circularForm.folio}* • _${formatDate(circularForm.date)}_
+
+📌 *${circularForm.title.toUpperCase()}*
+⚖️ _${circularForm.legalCitation}_
+
+${circularForm.body}
+
+_Comité de Administración & Administración ARANPRO_`;
+
+    navigator.clipboard.writeText(text);
+    setCircularCopiedFeedback(true);
+    setTimeout(() => setCircularCopiedFeedback(false), 3000);
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // Imprimir Oficio de Suspensión Eléctrica a la Empresa Distribuidora (PDF)
+  const handlePrintPowerCutOficio = () => {
+    if (!currentCommunity) return;
+    const selectedUnit = (currentCommunity.units || []).find(u => u.id === powerCutForm.unitId) || currentCommunity.units?.[0];
+    if (!selectedUnit) return;
+    const fin = getUnitFinancials ? getUnitFinancials(selectedUnit) : { totalToPay: 0, pendingDebt: 0, currentCharge: 42500 };
+    const monthsDue = Math.max(1, Math.round((fin.totalToPay || fin.pendingDebt || 0) / (selectedUnit.currentCharge || 42500)));
+    const brandName = companySettings?.brandName || 'ARANPRO';
+    const primaryColor = companySettings?.colors?.primary || '#0F3D2E';
+    const communityName = currentCommunity?.name || 'Condominio';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="utf-8">
+        <title>Oficio_Suspension_Electrica_Art27_Casa_${selectedUnit.number}_${communityName.replace(/\s+/g, '_')}.pdf</title>
+        <style>
+          @page { size: letter; margin: 15mm 15mm 15mm 15mm; }
+          body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; color: #0F172A; margin: 0; padding: 0; font-size: 11px; line-height: 1.45; }
+          .header-table { width: 100%; border-bottom: 2.5px solid #991B1B; padding-bottom: 10px; margin-bottom: 14px; }
+          .brand-title { font-size: 18px; font-weight: 900; color: ${primaryColor}; margin: 0; }
+          .doc-badge { background: #FEF2F2; border: 1.5px solid #F87171; border-radius: 8px; padding: 6px 12px; text-align: right; }
+          .data-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10.5px; }
+          .data-table td { padding: 6px 10px; border: 1px solid #CBD5E1; }
+          .data-table td.header { background: #F8FAFC; font-weight: bold; width: 35%; color: #334155; }
+          .legal-box { background: #FEF2F2; border: 1px solid #FCA5A5; border-left: 4px solid #DC2626; padding: 10px 12px; margin: 14px 0; border-radius: 4px; }
+          .signatures-table { width: 100%; margin-top: 30px; page-break-inside: avoid; }
+          .sig-box { width: 33.33%; text-align: center; vertical-align: top; padding: 0 10px; font-size: 9.5px; }
+          .sig-line { border-top: 1.5px solid #334155; margin-bottom: 6px; margin-top: 35px; }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td>
+              <h1 class="brand-title">${brandName}</h1>
+              <div style="font-size: 9.5px; color: #64748B; font-weight: 600; text-transform: uppercase;">Administración y Gestión Inmobiliaria Integral</div>
+              <div style="font-size: 11px; font-weight: bold; color: ${primaryColor}; margin-top: 2px;">
+                Condominio: ${communityName}
+              </div>
+            </td>
+            <td style="text-align: right;">
+              <div class="doc-badge">
+                <div style="font-size: 9px; font-weight: 800; color: #991B1B; text-transform: uppercase;">Procedimiento Especial Ley N° 21.442</div>
+                <div style="font-size: 13px; font-weight: 900; color: #991B1B;">${powerCutForm.resolutionFolio}</div>
+                <div style="font-size: 9px; color: #64748B; margin-top: 2px;">Fecha: ${formatDate(new Date().toISOString().slice(0, 10))}</div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div style="font-size: 11px; line-height: 1.5; margin-bottom: 12px;">
+          <strong>SEÑORES:</strong><br/>
+          GERENCIA COMERCIAL & OPERACIONES DE DISTRIBUCIÓN<br/>
+          <strong>${powerCutForm.company.toUpperCase()}</strong><br/>
+          <u>PRESENTE</u>
+        </div>
+
+        <div style="background: #F1F5F9; padding: 8px 12px; border-left: 4px solid #991B1B; font-weight: 900; font-size: 11px; color: #0F172A; margin-bottom: 14px;">
+          MATERIA: SOLICITUD FORMAL DE SUSPENSIÓN DE SUMINISTRO ELÉCTRICO POR MOROSIDAD SUPERIOR A TRES CUOTAS (ARTÍCULOS 20° Y 27° LEY N° 21.442 DE COPROPIEDAD INMOBILIARIA).
+        </div>
+
+        <div style="text-align: justify; margin-bottom: 10px;">
+          De nuestra consideración:
+          <br/><br/>
+          Por medio de la presente, la Administración del Condominio <strong>${communityName}</strong>, con el acuerdo expreso y fundado del <strong>Comité de Administración</strong> adoptado en sesión de fecha reciente de conformidad a los Artículos 17°, 20° y 27° de la Ley N° 21.442 sobre Copropiedad Inmobiliaria, viene en solicitar a vuestra empresa concesionaria de distribución eléctrica proceder a la <strong>suspensión material del suministro eléctrico</strong> del inmueble que a continuación se individualiza:
+        </div>
+
+        <table class="data-table">
+          <tr>
+            <td class="header">Condominio / Comunidad:</td>
+            <td><strong>${communityName}</strong> (RUT: ${currentCommunity.rut || '76.888.999-K'})</td>
+          </tr>
+          <tr>
+            <td class="header">Dirección del Inmueble:</td>
+            <td>${currentCommunity.address || 'Camino San Ramón 4500'}, ${currentCommunity.city || 'La Serena'}</td>
+          </tr>
+          <tr>
+            <td class="header">Unidad Afectada:</td>
+            <td><strong>Casa N° ${selectedUnit.number}</strong></td>
+          </tr>
+          <tr>
+            <td class="header">Copropietario / Ocupante:</td>
+            <td>${selectedUnit.owner} (RUT: ${selectedUnit.rut ? formatRut(selectedUnit.rut) : '—'})</td>
+          </tr>
+          <tr>
+            <td class="header">N° Cliente / Suministro Distribuidora:</td>
+            <td><strong style="color: #991B1B;">${powerCutForm.clientNumber}</strong></td>
+          </tr>
+          <tr>
+            <td class="header">N° de Medidor Eléctrico:</td>
+            <td><strong style="font-family: monospace;">${powerCutForm.meterNumber}</strong></td>
+          </tr>
+          <tr>
+            <td class="header">Monto Total de Deuda Devengada:</td>
+            <td><strong style="color: #991B1B;">${formatCLP(fin.totalToPay)}</strong> (Correspondiente a ${monthsDue} meses impagos)</td>
+          </tr>
+        </table>
+
+        <div class="legal-box" style="font-size: 10px; text-align: justify;">
+          <strong>FUNDAMENTO LEGAL Y RESOLUCIÓN DEL COMITÉ:</strong><br/>
+          1. El <strong>Artículo 27° de la Ley N° 21.442</strong> prescribe: <em>"Si un copropietario incurriere en mora en el pago de tres o más cuotas, continuas o discontinuas, de los gastos comunes, el administrador, con la autorización del comité de administración, podrá solicitar a las empresas que proporcionan servicios de energía eléctrica, agua potable o telecomunicaciones, la suspensión de los servicios respectivos."</em><br/>
+          2. Consta en los registros de la administración que el copropietario fue debidamente notificado otorgándole plazo legal de ${powerCutForm.warningDays} días hábiles para regularizar o repactar su deuda, sin que se haya obtenido pago ni allanamiento.<br/>
+          3. <em>Resolución del Comité:</em> "${powerCutForm.notes}".
+        </div>
+
+        <div style="margin-top: 10px; font-size: 10.5px;">
+          En virtud de lo expuesto, solicitamos ejecutar la orden de corte a la brevedad conforme a los protocolos establecidos por la Superintendencia de Electricidad y Combustibles (SEC).
+        </div>
+
+        <table class="signatures-table">
+          <tr>
+            <td class="sig-box">
+              <div class="sig-line"></div>
+              <strong>Administración ${brandName}</strong><br/>
+              <span>Administrador Titular (RNAC N° 48.912)</span>
+            </td>
+            <td class="sig-box">
+              <div class="sig-line"></div>
+              <strong>Carlos Morales Rojas</strong><br/>
+              <span>Presidente Comité (Casa 1)</span>
+            </td>
+            <td class="sig-box">
+              <div class="sig-line"></div>
+              <strong>Marcela Castillo Gómez</strong><br/>
+              <span>Tesorera Comité (Casa 4)</span>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    printDocumentDirectly(htmlContent, `Oficio_Suspension_Electrica_Art27_Casa_${selectedUnit.number}_${communityName.replace(/\s+/g, '_')}.pdf`);
+  };
+
+  // Enviar advertencia previa de corte eléctrico por WhatsApp al vecino
+  const handleSendPowerCutWhatsAppWarning = () => {
+    if (!currentCommunity) return;
+    const selectedUnit = (currentCommunity.units || []).find(u => u.id === powerCutForm.unitId) || currentCommunity.units?.[0];
+    if (!selectedUnit) return;
+    const fin = getUnitFinancials ? getUnitFinancials(selectedUnit) : { totalToPay: 0, pendingDebt: 0, currentCharge: 42500 };
+    const monthsDue = Math.max(1, Math.round((fin.totalToPay || fin.pendingDebt || 0) / (selectedUnit.currentCharge || 42500)));
+    const communityName = currentCommunity?.name || 'Condominio';
+
+    const text = 
+`⚡ *ADVERTENCIA FORMAL PREVIA DE SUSPENSIÓN ELÉCTRICA — ${communityName.toUpperCase()}*
+
+Estimado(a) *${selectedUnit.owner}* (Casa N° ${selectedUnit.number}):
+Por encargo formal del Comité de Administración, le notificamos que su unidad registra una morosidad de *${formatCLP(fin.totalToPay)}* correspondiente a *${monthsDue} meses impagos* de gastos comunes.
+
+⚖️ *RESOLUCIÓN DEL COMITÉ DE ADMINISTRACIÓN (ART. 27° LEY N° 21.442):*
+El Comité de Administración, conforme a las atribuciones conferidas por la Ley de Copropiedad Inmobiliaria, ha acordado solicitar a la empresa distribuidora (*${powerCutForm.company}*) la **suspensión del suministro eléctrico** del inmueble.
+
+⏳ *PLAZO FINAL DE REGULARIZACIÓN:*
+Dispone de un plazo perentorio de *${powerCutForm.warningDays} días hábiles* para transferir su saldo o formalizar un convenio de pago en cuotas con la Administración.
+
+📲 Contáctenos a la brevedad para regularizar su situación y evitar el corte del suministro y los costos de reconexión.
+_Comité de Administración & Administración ARANPRO_`;
+
+    navigator.clipboard.writeText(text);
+    setPowerCutCopiedFeedback(true);
+    setTimeout(() => setPowerCutCopiedFeedback(false), 3500);
+
+    const cleanPhone = (selectedUnit.phone || '').replace(/[^0-9]/g, '');
+    const phoneParam = cleanPhone.length >= 8 ? `phone=${cleanPhone.startsWith('56') ? cleanPhone : '56' + cleanPhone}&` : '';
+    window.open(`https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   // Compartir Acta Oficial por WhatsApp
   const handleShareMeetingWhatsApp = (m) => {
     if (!m) return;
@@ -515,6 +925,26 @@ export const CommitteeMeetingsAndLogModule = ({
 
         {/* Acciones principales rápidas a la derecha */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCircularModal(true)}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+            title="Emitir Circular Oficial del Comité a la comunidad (Art. 17° N° 1)"
+          >
+            <Megaphone className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
+            <span>Emitir Circular</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPowerCutModal(true)}
+            className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+            title="Resolución de Comité para Suspensión de Suministro Eléctrico (Art. 27° Ley 21.442)"
+          >
+            <Zap className="w-3.5 h-3.5 mr-1.5 text-rose-600" />
+            <span>Suspensión Eléctrica</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowNewMeetingModal(true)}
@@ -1156,6 +1586,108 @@ export const CommitteeMeetingsAndLogModule = ({
               <Plus className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
               Designar / Agregar Miembro
             </button>
+          </div>
+
+          {/* Reloj de Mandato Legal del Comité & Alerta de Renovación (Art. 17° Inciso 2) */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-[#0F3D2E]/10 rounded-xl text-[#0F3D2E] shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-xs font-black text-slate-900 flex items-center gap-1.5 flex-wrap">
+                    Reloj de Mandato Legal del Comité (Ley N° 21.442 • Art. 17° Inciso 2)
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                      Plazo Legal Máximo: 3 Años
+                    </span>
+                  </h5>
+                  <p className="text-[10.5px] text-slate-500">
+                    Elegido en {mandateInfo.assemblyMinuteRef} el {formatDate(mandateMetrics.startDate)} • Vence el {formatDate(mandateMetrics.endDate)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 shrink-0">
+                {mandateMetrics.isExpired ? (
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-rose-600" />
+                    Mandato Vencido — Requiere Convocatoria a Asamblea
+                  </span>
+                ) : mandateMetrics.isNearRenewal ? (
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 text-amber-600" />
+                    Renovación Próxima ({mandateMetrics.daysRemaining} días)
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                    <BadgeCheck className="w-3 h-3 text-emerald-600" />
+                    Mandato Vigente y Hábil ({mandateMetrics.daysRemaining} días restantes)
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsEditingMandate(!isEditingMandate)}
+                  className="px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  {isEditingMandate ? 'Cerrar Edición' : 'Editar Mandato'}
+                </button>
+              </div>
+            </div>
+
+            {/* Formulario rápido de edición de mandato */}
+            {isEditingMandate && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Fecha de Asamblea de Elección</label>
+                  <input
+                    type="date"
+                    value={mandateInfo.assemblyDate}
+                    onChange={(e) => setMandateInfo({ ...mandateInfo, assemblyDate: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Ref. Acta de Elección</label>
+                  <input
+                    type="text"
+                    value={mandateInfo.assemblyMinuteRef}
+                    onChange={(e) => setMandateInfo({ ...mandateInfo, assemblyMinuteRef: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-medium"
+                    placeholder="Ej. Acta Asamblea N° 12-2024"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Duración Período (Años)</label>
+                  <select
+                    value={mandateInfo.durationYears}
+                    onChange={(e) => setMandateInfo({ ...mandateInfo, durationYears: Number(e.target.value) })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-medium"
+                  >
+                    <option value={1}>1 Año</option>
+                    <option value={2}>2 Años</option>
+                    <option value={3}>3 Años (Máximo Legal Art. 17°)</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Barra de Progreso del Mandato Legal */}
+            <div>
+              <div className="flex justify-between items-center text-[11px] mb-1">
+                <span className="font-bold text-slate-700">Progreso del Período de Mandato: {mandateMetrics.percent}% transcurrido</span>
+                <span className="font-mono text-slate-500 font-bold">{mandateMetrics.daysElapsed} de {mandateMetrics.totalDays} días</span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    mandateMetrics.isExpired ? 'bg-rose-500' : mandateMetrics.isNearRenewal ? 'bg-amber-500' : 'bg-gradient-to-r from-[#0F3D2E] to-emerald-600'
+                  }`}
+                  style={{ width: `${mandateMetrics.percent}%` }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-start space-x-3">
