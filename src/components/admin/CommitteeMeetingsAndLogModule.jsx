@@ -2277,6 +2277,440 @@ _Comité de Administración & Administración ARANPRO_`;
           </div>
         </div>
       )}
+      {/* ========================================================================= */}
+      {/* MODAL 1: PROCEDIMIENTO ESPECIAL DE SUSPENSIÓN ELÉCTRICA (ART. 27°)       */}
+      {/* ========================================================================= */}
+      {showPowerCutModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+            {/* Cabecera */}
+            <div className="px-5 py-4 bg-gradient-to-r from-rose-950 via-rose-900 to-slate-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-rose-500/20 text-rose-300 rounded-xl border border-rose-500/30">
+                  <Zap className="w-5 h-5 text-rose-400" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black flex items-center gap-1.5 flex-wrap">
+                    Suspensión de Suministro Eléctrico por Morosidad
+                    <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-rose-500/30 border border-rose-400/40 text-rose-200 uppercase font-black tracking-wide">
+                      Art. 27° Ley N° 21.442
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-rose-200 mt-0.5">
+                    Generación de Oficio Legal a la Empresa Distribuidora y Notificación Formal previa al Copropietario
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPowerCutModal(false)}
+                className="p-1.5 text-rose-300 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenido scrolleable */}
+            <div className="p-5 space-y-4 overflow-y-auto text-xs flex-1">
+              <div className="p-3 bg-rose-50/80 border border-rose-200 rounded-xl text-rose-950 text-[11.5px] flex items-start space-x-2.5">
+                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong>Requisito Legal Art. 27° Ley N° 21.442:</strong> Si un copropietario incurre en mora de <strong>tres o más cuotas</strong> (continuas o discontinuas), el Administrador con acuerdo y autorización del Comité de Administración puede solicitar a la empresa concesionaria (CGE, Enel, etc.) la suspensión material del servicio.
+                </div>
+              </div>
+
+              {/* Selector de Unidad */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Seleccionar Unidad con Deuda / Morosa
+                </label>
+                <select
+                  value={powerCutForm.unitId}
+                  onChange={(e) => setPowerCutForm({ ...powerCutForm, unitId: e.target.value })}
+                  className="w-full p-2.5 border border-slate-300 rounded-xl bg-white font-bold text-xs"
+                >
+                  {(currentCommunity?.units || []).map(u => {
+                    const fin = getUnitFinancials ? getUnitFinancials(u) : { totalToPay: 0, pendingDebt: 0 };
+                    const debt = fin.totalToPay || fin.pendingDebt || 0;
+                    const months = Math.max(0, Math.round(debt / (u.currentCharge || 42500)));
+                    return (
+                      <option key={u.id} value={u.id}>
+                        {u.tower ? `${u.tower} - ${u.number}` : `Casa ${u.number}`} — {u.owner || 'Copropietario'} | Deuda: {formatCLP(debt)} ({months} cuotas impagas) {months >= 3 ? '🚨 HÁBIL CORTE ART. 27°' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Resumen de la Unidad Seleccionada */}
+              {(() => {
+                const selectedUnit = (currentCommunity?.units || []).find(u => u.id === powerCutForm.unitId);
+                if (!selectedUnit) return null;
+                const fin = getUnitFinancials ? getUnitFinancials(selectedUnit) : { totalToPay: 0, pendingDebt: 0, currentCharge: 42500 };
+                const debt = fin.totalToPay || fin.pendingDebt || 0;
+                const months = Math.max(1, Math.round(debt / (selectedUnit.currentCharge || 42500)));
+                const isLegallyEligible = months >= 3;
+
+                return (
+                  <div className={`p-3 rounded-xl border ${isLegallyEligible ? 'bg-amber-50/70 border-amber-300' : 'bg-slate-50 border-slate-200'} space-y-1.5`}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">Copropietario: {selectedUnit.owner}</span>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isLegallyEligible ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-slate-200 text-slate-700'}`}>
+                        {months} Cuotas Impagas ({formatCLP(debt)})
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-600 flex flex-wrap gap-x-4">
+                      <span>RUT: {selectedUnit.rut ? formatRut(selectedUnit.rut) : '—'}</span>
+                      <span>Teléfono: {selectedUnit.phone || selectedUnit.ownerPhone || '—'}</span>
+                      <span>Email: {selectedUnit.email || selectedUnit.ownerEmail || '—'}</span>
+                    </div>
+                    {isLegallyEligible ? (
+                      <div className="text-[11px] text-emerald-800 font-bold flex items-center gap-1 pt-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        Cumple con el estándar legal de 3 o más cuotas de morosidad para solicitar el corte a la concesionaria.
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-amber-800 font-bold flex items-center gap-1 pt-1">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        Atención: Tiene menos de 3 meses de deuda. La ley exige un mínimo de 3 cuotas impagas.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Empresa Distribuidora Eléctrica</label>
+                  <input
+                    type="text"
+                    value={powerCutForm.company}
+                    onChange={(e) => setPowerCutForm({ ...powerCutForm, company: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-medium"
+                    placeholder="Ej. CGE, Enel Distribución..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">N° Cliente / Suministro</label>
+                  <input
+                    type="text"
+                    value={powerCutForm.clientNumber}
+                    onChange={(e) => setPowerCutForm({ ...powerCutForm, clientNumber: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-medium"
+                    placeholder="Ej. 8842109-2"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">N° de Medidor</label>
+                  <input
+                    type="text"
+                    value={powerCutForm.meterNumber}
+                    onChange={(e) => setPowerCutForm({ ...powerCutForm, meterNumber: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono"
+                    placeholder="Ej. MTR-55419-C12"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Plazo de Advertencia (Días)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="15"
+                    value={powerCutForm.warningDays}
+                    onChange={(e) => setPowerCutForm({ ...powerCutForm, warningDays: Number(e.target.value) })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Folio Resolución</label>
+                  <input
+                    type="text"
+                    value={powerCutForm.resolutionFolio}
+                    onChange={(e) => setPowerCutForm({ ...powerCutForm, resolutionFolio: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Acuerdo y Fundamento del Comité</label>
+                <textarea
+                  rows={3}
+                  value={powerCutForm.notes}
+                  onChange={(e) => setPowerCutForm({ ...powerCutForm, notes: e.target.value })}
+                  className="w-full p-2.5 border border-slate-300 rounded-xl bg-white font-medium text-xs resize-none"
+                />
+              </div>
+
+              {powerCutCopiedFeedback && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl flex items-center space-x-2 text-xs font-bold animate-fadeIn">
+                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>¡Mensaje legal de advertencia copiado al portapapeles y abierto en WhatsApp!</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer de Acciones */}
+            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowPowerCutModal(false)}
+                className="px-3.5 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Cerrar
+              </button>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSendPowerCutWhatsAppWarning}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+                  title="Enviar notificación formal de advertencia por WhatsApp antes del corte material"
+                >
+                  <Smartphone className="w-3.5 h-3.5 mr-1.5" />
+                  WhatsApp Advertencia Previa
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrintPowerCutOficio}
+                  className="px-4 py-2 bg-gradient-to-r from-rose-900 to-rose-950 hover:from-rose-800 hover:to-rose-900 text-white font-black text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer border border-rose-700"
+                  title="Descargar oficio legal para presentar a la concesionaria eléctrica"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1.5 text-rose-300" />
+                  Emitir Oficio Distribuidora (PDF)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: GENERADOR DE CIRCULARES OFICIALES DEL COMITÉ (ART. 17° N° 1)     */}
+      {/* ========================================================================= */}
+      {showCircularModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+            {/* Cabecera */}
+            <div className="px-5 py-4 bg-gradient-to-r from-[#0F3D2E] to-[#14533d] text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-white/10 text-[#D4B895] rounded-xl border border-white/20">
+                  <Megaphone className="w-5 h-5 text-[#D4B895]" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black flex items-center gap-1.5 flex-wrap">
+                    Generador de Circulares Oficiales del Comité
+                    <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-[#D4B895]/20 border border-[#D4B895]/40 text-[#D4B895] uppercase font-black tracking-wide">
+                      Art. 17° N° 1 Ley N° 21.442
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-emerald-100 mt-0.5">
+                    Emisión oficial con firma del comité, descarga en PDF, publicación en Mural y difusión por WhatsApp
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCircularModal(false)}
+                className="p-1.5 text-emerald-200 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenido scrolleable */}
+            <div className="p-5 space-y-4 overflow-y-auto text-xs flex-1">
+              {/* Plantillas Rápidas Pre-Redactadas */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Seleccionar Plantilla Pre-Redactada (Alineada a Ley N° 21.442):
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleApplyCircularTemplate('mascotas')}
+                    className={`p-2 rounded-xl border text-left font-bold text-[11px] transition-all cursor-pointer ${
+                      circularTemplate === 'mascotas' ? 'bg-[#0F3D2E] text-white border-[#0F3D2E] shadow-2xs' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    🐾 Mascotas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyCircularTemplate('ruidos')}
+                    className={`p-2 rounded-xl border text-left font-bold text-[11px] transition-all cursor-pointer ${
+                      circularTemplate === 'ruidos' ? 'bg-[#0F3D2E] text-white border-[#0F3D2E] shadow-2xs' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    🔇 Ruidos & Descanso
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyCircularTemplate('estacionamientos')}
+                    className={`p-2 rounded-xl border text-left font-bold text-[11px] transition-all cursor-pointer ${
+                      circularTemplate === 'estacionamientos' ? 'bg-[#0F3D2E] text-white border-[#0F3D2E] shadow-2xs' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    🚗 Estacionamientos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyCircularTemplate('obras')}
+                    className={`p-2 rounded-xl border text-left font-bold text-[11px] transition-all cursor-pointer ${
+                      circularTemplate === 'obras' ? 'bg-[#0F3D2E] text-white border-[#0F3D2E] shadow-2xs' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    🔨 Obras & Trabajos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyCircularTemplate('personalizada')}
+                    className={`p-2 rounded-xl border text-left font-bold text-[11px] transition-all cursor-pointer ${
+                      circularTemplate === 'personalizada' ? 'bg-[#0F3D2E] text-white border-[#0F3D2E] shadow-2xs' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    ✍️ Personalizada
+                  </button>
+                </div>
+              </div>
+
+              {/* Formulario */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Folio Oficial</label>
+                  <input
+                    type="text"
+                    value={circularForm.folio}
+                    onChange={(e) => setCircularForm({ ...circularForm, folio: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Fecha Emisión</label>
+                  <input
+                    type="date"
+                    value={circularForm.date}
+                    onChange={(e) => setCircularForm({ ...circularForm, date: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-medium text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Categoría / Materia</label>
+                  <input
+                    type="text"
+                    value={circularForm.category}
+                    onChange={(e) => setCircularForm({ ...circularForm, category: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-medium text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Título de la Circular</label>
+                  <input
+                    type="text"
+                    value={circularForm.title}
+                    onChange={(e) => setCircularForm({ ...circularForm, title: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white font-bold text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Fundamento Legal</label>
+                  <input
+                    type="text"
+                    value={circularForm.legalCitation}
+                    onChange={(e) => setCircularForm({ ...circularForm, legalCitation: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white text-slate-700 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Cuerpo / Contenido del Comunicado Oficial</label>
+                <textarea
+                  rows={6}
+                  value={circularForm.body}
+                  onChange={(e) => setCircularForm({ ...circularForm, body: e.target.value })}
+                  className="w-full p-3 border border-slate-300 rounded-xl bg-white font-medium text-xs resize-y leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Firmantes del Comité de Administración</label>
+                <input
+                  type="text"
+                  value={circularForm.committeeSigners}
+                  onChange={(e) => setCircularForm({ ...circularForm, committeeSigners: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg bg-white text-slate-700 text-xs font-medium"
+                />
+              </div>
+
+              {/* Feedback messages */}
+              {circularPublishedFeedback && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl flex items-center space-x-2 text-xs font-bold animate-fadeIn">
+                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>¡Circular publicada con éxito en el Mural de Avisos de la Comunidad! Los vecinos ya pueden visualizarla en su portal.</span>
+                </div>
+              )}
+
+              {circularCopiedFeedback && (
+                <div className="p-2.5 bg-blue-50 border border-blue-300 text-blue-900 rounded-xl flex items-center space-x-2 text-xs font-bold animate-fadeIn">
+                  <Check className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>¡Texto oficial de la circular copiado al portapapeles y abierto en WhatsApp!</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer de Acciones */}
+            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowCircularModal(false)}
+                className="px-3.5 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Cerrar
+              </button>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePublishCircularToMural}
+                  className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+                  title="Publicar en el módulo de Mural & Reclamos de la comunidad"
+                >
+                  <Bell className="w-3.5 h-3.5 mr-1.5 text-amber-700" />
+                  Publicar en Mural Vecinos
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShareCircularWhatsApp}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+                  title="Compartir por WhatsApp al grupo comunitario"
+                >
+                  <Share2 className="w-3.5 h-3.5 mr-1.5" />
+                  WhatsApp Vecinos
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrintCircular}
+                  className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-[#D4B895] border border-[#D4B895] font-black text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+                  title="Generar e imprimir PDF oficial con membrete y firmas"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
+                  Descargar / Imprimir PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
