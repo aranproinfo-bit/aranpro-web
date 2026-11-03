@@ -790,7 +790,7 @@ export const SuggestionsAndComplaintsModule = ({ currentCommunity }) => {
                   <span>Libro Oficial de Sugerencias y Reclamos</span>
                 </h3>
                 <p className="text-xs text-[#D4B895]">
-                  Condominio {currentCommunity.name} • Protocolización Ley N° 21.442
+                  {currentCommunity.name.startsWith('Condominio') ? currentCommunity.name : `Condominio ${currentCommunity.name}`} • Protocolización Ley N° 21.442
                 </p>
               </div>
 
@@ -838,10 +838,10 @@ export const SuggestionsAndComplaintsModule = ({ currentCommunity }) => {
             </div>
 
             {/* CUERPO DEL DOCUMENTO IMPRIMIBLE (ESTILO RENDICIÓN DE GASTOS) */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 flex justify-center">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100">
               <div 
                 id="complaints-official-book-printable"
-                className="bg-white w-full max-w-3xl rounded-2xl shadow-md border border-slate-200 text-slate-800 font-sans p-6 sm:p-8 space-y-4"
+                className="bg-white w-full max-w-3xl mx-auto rounded-2xl shadow-md border border-slate-200 text-slate-800 font-sans p-6 sm:p-8 space-y-4 h-auto min-h-fit mb-8 print:p-0 print:m-0 print:mb-0 print:border-none print:shadow-none print:max-w-none"
               >
                 {/* 1. MEMBRETE OFICIAL ARANPRO */}
                 <div className="flex items-center justify-between border-b-2 border-[#0F3D2E] pb-3">

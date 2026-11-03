@@ -3700,6 +3700,7 @@ _Administración ARANPRO_`;
               {/* SUB-ÍNDICES DE MURAL & RECLAMOS EN LA BARRA LATERAL */}
               {tab.id === 'comunicados' && (!sidebarCollapsed || isMobile) && (
                 <div className={`ml-3.5 pl-2 border-l-2 border-[#D4B895]/50 space-y-0.5 my-1 ${activeTab === 'comunicados' ? 'block' : 'hidden'}`}>
+                  {/* 1. Diario Mural & Avisos */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3716,17 +3717,46 @@ _Administración ARANPRO_`;
                   >
                     <div className="flex items-center space-x-1.5 min-w-0">
                       <Megaphone className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'comunicados' && comunicadosSubTab === 'mural' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">Mural de Avisos & Docs</span>
+                      <span className="truncate">1. Diario Mural & Avisos</span>
                     </div>
                     <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
                       activeTab === 'comunicados' && comunicadosSubTab === 'mural'
                         ? 'bg-[#0F3D2E] text-white'
                         : 'bg-slate-100 text-slate-600'
                     }`}>
-                      {(currentCommunity?.announcements?.length || 0) + (currentCommunity?.documents?.length || 0)}
+                      {currentCommunity?.announcements?.length || 0}
                     </span>
                   </button>
 
+                  {/* 2. Biblioteca Documental */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('comunicados');
+                      setComunicadosSubTab('documentos');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'comunicados' && comunicadosSubTab === 'documentos'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <FolderOpen className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'comunicados' && comunicadosSubTab === 'documentos' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">2. Biblioteca Docs</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'comunicados' && comunicadosSubTab === 'documentos'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {currentCommunity?.documents?.length || 0}
+                    </span>
+                  </button>
+
+                  {/* 3. Libro de Reclamos & Sugerencias */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3743,7 +3773,7 @@ _Administración ARANPRO_`;
                   >
                     <div className="flex items-center space-x-1.5 min-w-0">
                       <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'comunicados' && comunicadosSubTab === 'reclamos' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">Libro de Reclamos & Sug.</span>
+                      <span className="truncate">3. Reclamos & Sug.</span>
                     </div>
                     {pendingTicketsCount > 0 ? (
                       <span className="text-[9.5px] px-1.5 py-0.2 rounded-full font-black shrink-0 bg-amber-400 text-slate-900 animate-pulse">
@@ -3756,6 +3786,40 @@ _Administración ARANPRO_`;
                           : 'bg-slate-100 text-slate-600'
                       }`}>
                         {currentCommunity?.communityTickets?.length || 0}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* 4. Registro de Amonestaciones & Multas */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('comunicados');
+                      setComunicadosSubTab('multas');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'comunicados' && comunicadosSubTab === 'multas'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Scale className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'comunicados' && comunicadosSubTab === 'multas' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">4. Multas & Sanciones</span>
+                    </div>
+                    {((currentCommunity?.units || []).filter(u => (u.extraCharge || 0) > 0).length > 0) ? (
+                      <span className="text-[9.5px] px-1.5 py-0.2 rounded-full font-black shrink-0 bg-rose-100 text-rose-800">
+                        {(currentCommunity?.units || []).filter(u => (u.extraCharge || 0) > 0).length}
+                      </span>
+                    ) : (
+                      <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                        activeTab === 'comunicados' && comunicadosSubTab === 'multas'
+                          ? 'bg-[#0F3D2E] text-white'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        0
                       </span>
                     )}
                   </button>
