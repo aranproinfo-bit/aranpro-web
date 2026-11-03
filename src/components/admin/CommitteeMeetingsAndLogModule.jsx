@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
 import { formatDate, formatRut, formatCLP } from '../../utils/formatters';
 import { printDocumentDirectly } from '../../utils/printDocument';
+import { AranproConfirmModal } from '../common/AranproConfirmModal';
 import {
   ClipboardList, Users, Calendar, Clock, CheckCircle2, AlertCircle,
   Plus, Printer, Search, Filter, Shield, FileText, Check,
@@ -133,6 +134,19 @@ export const CommitteeMeetingsAndLogModule = ({
   });
   const [circularPublishedFeedback, setCircularPublishedFeedback] = useState(false);
   const [circularCopiedFeedback, setCircularCopiedFeedback] = useState(false);
+
+  // Modal de confirmación corporativo ARANPRO (reemplaza popups nativos del navegador)
+  const [modalDialog, setModalDialog] = useState({
+    isOpen: false,
+    type: 'warning',
+    title: '',
+    message: '',
+    confirmText: 'Aceptar',
+    cancelText: 'Cancelar',
+    isAlert: false,
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
 
   // 4. Estados para Reloj de Mandato Legal del Comité (Art. 17° Inciso 2)
   const [mandateInfo, setMandateInfo] = useState({
@@ -1206,9 +1220,20 @@ _Comité de Administración & Administración ARANPRO_`;
                     <button
                       type="button"
                       onClick={() => {
-                        if (confirm(`¿Eliminar el acta de sesión folio ${selectedMeeting.folio}?`)) {
-                          deleteCommitteeMeeting(currentCommunity.id, selectedMeeting.id);
-                        }
+                        setModalDialog({
+                          isOpen: true,
+                          type: 'danger',
+                          title: '¿Eliminar Acta de Sesión?',
+                          message: `¿Está seguro de eliminar el acta de sesión folio ${selectedMeeting.folio}?\n\nEsta acción borrará los acuerdos y registros asociados a esta reunión.`,
+                          confirmText: 'Sí, Eliminar Acta',
+                          cancelText: 'Cancelar',
+                          isAlert: false,
+                          onConfirm: () => {
+                            setModalDialog(prev => ({ ...prev, isOpen: false }));
+                            deleteCommitteeMeeting(currentCommunity.id, selectedMeeting.id);
+                          },
+                          onCancel: () => setModalDialog(prev => ({ ...prev, isOpen: false }))
+                        });
                       }}
                       className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                       title="Eliminar sesión del libro"
@@ -1417,9 +1442,20 @@ _Comité de Administración & Administración ARANPRO_`;
                       <button
                         type="button"
                         onClick={() => {
-                          if (confirm(`¿Eliminar la novedad "${nov.title}" de la bitácora?`)) {
-                            deleteCommitteeNovedad(currentCommunity.id, nov.id);
-                          }
+                          setModalDialog({
+                            isOpen: true,
+                            type: 'danger',
+                            title: '¿Eliminar Novedad de Bitácora?',
+                            message: `¿Está seguro de eliminar la novedad "${nov.title}" de la bitácora del comité?`,
+                            confirmText: 'Sí, Eliminar Novedad',
+                            cancelText: 'Cancelar',
+                            isAlert: false,
+                            onConfirm: () => {
+                              setModalDialog(prev => ({ ...prev, isOpen: false }));
+                              deleteCommitteeNovedad(currentCommunity.id, nov.id);
+                            },
+                            onCancel: () => setModalDialog(prev => ({ ...prev, isOpen: false }))
+                          });
                         }}
                         className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
                         title="Eliminar novedad"
@@ -1541,9 +1577,20 @@ _Comité de Administración & Administración ARANPRO_`;
                       <button
                         type="button"
                         onClick={() => {
-                          if (confirm(`¿Eliminar la tarea "${task.title}"?`)) {
-                            deleteCommitteeTask(currentCommunity.id, task.id);
-                          }
+                          setModalDialog({
+                            isOpen: true,
+                            type: 'danger',
+                            title: '¿Eliminar Tarea?',
+                            message: `¿Está seguro de eliminar la tarea "${task.title}" del registro de compromisos?`,
+                            confirmText: 'Sí, Eliminar Tarea',
+                            cancelText: 'Cancelar',
+                            isAlert: false,
+                            onConfirm: () => {
+                              setModalDialog(prev => ({ ...prev, isOpen: false }));
+                              deleteCommitteeTask(currentCommunity.id, task.id);
+                            },
+                            onCancel: () => setModalDialog(prev => ({ ...prev, isOpen: false }))
+                          });
                         }}
                         className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer"
                         title="Eliminar tarea"
@@ -1767,9 +1814,20 @@ _Comité de Administración & Administración ARANPRO_`;
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm(`¿Remover a ${m.name} (Casa ${m.unitNumber}) del Comité de Administración?`)) {
-                        updateUnit(currentCommunity.id, m.unitId, { isCommittee: false, committeeRole: '' });
-                      }
+                      setModalDialog({
+                        isOpen: true,
+                        type: 'danger',
+                        title: '¿Remover del Comité de Administración?',
+                        message: `¿Está seguro de remover a ${m.name} (Casa ${m.unitNumber}) de su cargo en el Comité de Administración?\n\nLa unidad permanecerá como copropietario regular conforme a la Ley N° 21.442.`,
+                        confirmText: 'Sí, Remover del Cargo',
+                        cancelText: 'Cancelar',
+                        isAlert: false,
+                        onConfirm: () => {
+                          setModalDialog(prev => ({ ...prev, isOpen: false }));
+                          updateUnit(currentCommunity.id, m.unitId, { isCommittee: false, committeeRole: '' });
+                        },
+                        onCancel: () => setModalDialog(prev => ({ ...prev, isOpen: false }))
+                      });
                     }}
                     className="text-[11px] font-bold text-rose-600 hover:text-rose-800 cursor-pointer"
                   >
@@ -2711,6 +2769,18 @@ _Comité de Administración & Administración ARANPRO_`;
           </div>
         </div>
       )}
+      {/* Modal de confirmación corporativo ARANPRO (elimina popups nativos) */}
+      <AranproConfirmModal
+        isOpen={modalDialog.isOpen}
+        type={modalDialog.type}
+        title={modalDialog.title}
+        message={modalDialog.message}
+        confirmText={modalDialog.confirmText}
+        cancelText={modalDialog.cancelText}
+        isAlert={modalDialog.isAlert}
+        onConfirm={modalDialog.onConfirm}
+        onCancel={modalDialog.onCancel}
+      />
     </div>
   );
 };

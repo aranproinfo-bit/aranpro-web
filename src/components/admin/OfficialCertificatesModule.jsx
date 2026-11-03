@@ -2,11 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
 import { formatDate, formatRut, formatCLP } from '../../utils/formatters';
 import { printDocumentDirectly, downloadHtmlDocument } from '../../utils/printDocument';
+import { AranproConfirmModal } from '../common/AranproConfirmModal';
 import {
   ShieldCheck, FileText, CheckCircle2, AlertTriangle, Printer,
   Download, Share2, Search, Filter, Plus, X, ExternalLink,
   Clock, UserCheck, Building2, Calendar, DollarSign, AlertCircle,
-  Trash2, Eye, Send, Home, Briefcase, Award, Check
+  Trash2, Eye, Send, Home, Briefcase, Award, Check, FileSpreadsheet,
+  QrCode, Scale, HelpCircle, Layers
 } from 'lucide-react';
 
 export const OfficialCertificatesModule = ({ currentCommunity }) => {
@@ -28,6 +30,99 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
   const [showNewModal, setShowNewModal] = useState(false);
   const [previewCert, setPreviewCert] = useState(null);
 
+  // Estado del modal de confirmación personalizado (reemplazo de window.confirm / alert)
+  const [modalDialog, setModalDialog] = useState({
+    isOpen: false,
+    type: 'warning',
+    title: '',
+    message: '',
+    confirmText: 'Aceptar',
+    cancelText: 'Cancelar',
+    isAlert: false,
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
+
+  const closeConfirmModal = () => {
+    setModalDialog(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const showAlert = (title, message, type = 'warning') => {
+    setModalDialog({
+      isOpen: true,
+      type,
+      title,
+      message,
+      confirmText: 'Entendido',
+      isAlert: true,
+      onConfirm: closeConfirmModal,
+      onCancel: closeConfirmModal
+    });
+  };
+
+  const showConfirm = ({ title, message, type = 'warning', confirmText = 'Aceptar', cancelText = 'Cancelar', onConfirm }) => {
+    setModalDialog({
+      isOpen: true,
+      type,
+      title,
+      message,
+      confirmText,
+      cancelText,
+      isAlert: false,
+      onConfirm: () => {
+        closeConfirmModal();
+        if (onConfirm) onConfirm();
+      },
+      onCancel: closeConfirmModal
+    });
+  };
+
+  // Tipos oficiales de certificados según Ley 21.442
+  const CERTIFICATE_TYPES = [
+    {
+      id: 'Certificado de Gastos Comunes al Día (No Deuda)',
+      label: 'Certificado de Gastos Comunes al Día (No Deuda)',
+      shortName: 'Al Día (No Deuda)',
+      legalRef: 'Ley N° 21.442 • Arts. 17°, 20° y 36°',
+      useCase: 'Compraventas notariales, CBR, bancos, estudios de títulos sin mora',
+      requiresNoDebt: true,
+      badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200'
+    },
+    {
+      id: 'Certificado de Estado de Deuda y Liquidación Morosa',
+      label: 'Certificado Oficial de Estado de Deuda y Liquidación Morosa',
+      shortName: 'Estado de Deuda',
+      legalRef: 'Ley N° 21.442 • Arts. 20° y 36° (Responsabilidad real del nuevo adquirente / Retención Notarial)',
+      useCase: 'Compraventas con deuda, asunción por nuevo adquirente, retención bancaria en vale vista, remates y juicios',
+      isDebtCertificate: true,
+      badgeColor: 'bg-rose-50 text-rose-800 border-rose-200'
+    },
+    {
+      id: 'Certificado de Residencia y Domicilio',
+      label: 'Certificado de Residencia y Domicilio',
+      shortName: 'Residencia',
+      legalRef: 'Ley N° 21.442 • Art. 17° inc. 2 (Registro de Copropietarios y Ocupantes)',
+      useCase: 'Bancos, Dirección de Tránsito (licencia de conducir), trámites escolares y subsidios',
+      badgeColor: 'bg-blue-50 text-blue-800 border-blue-200'
+    },
+    {
+      id: 'Certificado de Vigencia de Miembro del Comité',
+      label: 'Certificado de Vigencia de Miembro del Comité de Administración',
+      shortName: 'Vigencia Comité',
+      legalRef: 'Ley N° 21.442 • Art. 17°',
+      useCase: 'Apertura y firma en cuentas corrientes bancarias, trámites ante el SII y juzgados',
+      badgeColor: 'bg-amber-50 text-amber-800 border-amber-200'
+    },
+    {
+      id: 'Certificado de Buena Convivencia y No Infracciones',
+      label: 'Certificado de Buena Convivencia y No Infracciones Reglamentarias',
+      shortName: 'Buena Convivencia',
+      legalRef: 'Ley N° 21.442 • Título IV y Reglamento de Copropiedad',
+      useCase: 'Arrendamientos habitacionales, mediación vecinal y antecedentes comunitarios',
+      badgeColor: 'bg-purple-50 text-purple-800 border-purple-200'
+    }
+  ];
+
   // Estado del formulario de emisión directa
   const [formData, setFormData] = useState({
     type: 'Certificado de Gastos Comunes al Día (No Deuda)',
@@ -38,7 +133,15 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
     phone: '',
     purpose: '',
     notes: '',
-    status: 'EMITIDO'
+    status: 'EMITIDO',
+    debtAmount: 0,
+    retentionAmount: 0,
+    debtBreakdown: {
+      currentCharge: 0,
+      previousDebt: 0,
+      extraCharge: 0,
+      repactedInstallment: 0
+    }
   });
 
   // Filtrar los certificados correspondientes a la comunidad actual o generales
@@ -63,7 +166,11 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
         owner: u.owner,
         rut: u.rut,
         email: u.email,
-        phone: u.phone
+        phone: u.phone,
+        currentCharge: fin.currentCharge || 0,
+        previousDebt: fin.previousDebt || 0,
+        extraCharge: fin.extraCharge || 0,
+        repactedInstallment: fin.repactedInstallment || 0
       };
     });
     return map;
@@ -78,7 +185,13 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
     // Unidades al día en la comunidad
     const totalUnits = currentCommunity?.units?.length || 0;
     const upToDateUnits = Object.values(financialAuditMap).filter(u => u.isFullyPaid).length;
+    const unitsWithDebt = Object.values(financialAuditMap).filter(u => !u.isFullyPaid).length;
     const upToDatePercent = totalUnits > 0 ? Math.round((upToDateUnits / totalUnits) * 100) : 100;
+
+    // Certificados de deuda emitidos
+    const debtCertsCount = communityCertificates.filter(c => 
+      c.type.includes('Estado de Deuda') || (c.debtAmount > 0 && c.type.includes('Deuda'))
+    ).length;
 
     // Trámites notariales y bancarios
     const notarialCount = communityCertificates.filter(c => 
@@ -87,10 +200,11 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
       (c.purpose || '').toLowerCase().includes('banco') ||
       (c.purpose || '').toLowerCase().includes('crédito') ||
       (c.purpose || '').toLowerCase().includes('compraventa') ||
-      c.type.includes('No Deuda')
+      c.type.includes('No Deuda') ||
+      c.type.includes('Estado de Deuda')
     ).length;
 
-    return { total, pending, issued, upToDateUnits, totalUnits, upToDatePercent, notarialCount };
+    return { total, pending, issued, upToDateUnits, unitsWithDebt, totalUnits, upToDatePercent, debtCertsCount, notarialCount };
   }, [communityCertificates, currentCommunity, financialAuditMap]);
 
   // Filtrado reactivo de la tabla
@@ -110,52 +224,33 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
     });
   }, [communityCertificates, searchTerm, filterType, filterStatus]);
 
-  // Tipos oficiales de certificados según Ley 21.442
-  const CERTIFICATE_TYPES = [
-    {
-      id: 'Certificado de Gastos Comunes al Día (No Deuda)',
-      label: 'Certificado de Gastos Comunes al Día (No Deuda)',
-      legalRef: 'Ley N° 21.442 • Arts. 17°, 20° y 36°',
-      useCase: 'Compraventas notariales, CBR, bancos, estudios de títulos',
-      requiresNoDebt: true
-    },
-    {
-      id: 'Certificado de Residencia y Domicilio',
-      label: 'Certificado de Residencia y Domicilio',
-      legalRef: 'Ley N° 21.442 • Art. 17° inc. 2 (Registro de Copropietarios)',
-      useCase: 'Bancos, Dirección de Tránsito, trámites escolares y subsidios',
-      requiresNoDebt: false
-    },
-    {
-      id: 'Certificado de Vigencia de Miembro del Comité',
-      label: 'Certificado de Vigencia de Miembro del Comité de Administración',
-      legalRef: 'Ley N° 21.442 • Art. 17°',
-      useCase: 'Apertura/firma cuentas corrientes bancarias, SII, juzgados',
-      requiresNoDebt: false
-    },
-    {
-      id: 'Certificado de Buena Convivencia y No Infracciones',
-      label: 'Certificado de Buena Convivencia y No Infracciones Reglamentarias',
-      legalRef: 'Ley N° 21.442 • Título IV y Reglamento de Copropiedad',
-      useCase: 'Arrendamientos, mediación vecinal y antecedentes comunitarios',
-      requiresNoDebt: false
-    }
-  ];
-
   // Sincronizar datos al seleccionar unidad en el modal
   const handleSelectUnit = (unitNum) => {
     const audit = financialAuditMap[unitNum];
     if (audit) {
+      const defaultType = audit.pendingDebt > 0 
+        ? 'Certificado de Estado de Deuda y Liquidación Morosa'
+        : 'Certificado de Gastos Comunes al Día (No Deuda)';
+
       setFormData(prev => ({
         ...prev,
         unitNumber: unitNum,
         applicantName: audit.owner || prev.applicantName,
         rut: audit.rut || prev.rut,
         email: audit.email || prev.email,
-        phone: audit.phone || prev.phone
+        phone: audit.phone || prev.phone,
+        type: prev.type === 'Certificado de Gastos Comunes al Día (No Deuda)' && audit.pendingDebt > 0 ? defaultType : prev.type,
+        debtAmount: audit.pendingDebt || 0,
+        retentionAmount: audit.pendingDebt || 0,
+        debtBreakdown: {
+          currentCharge: audit.currentCharge,
+          previousDebt: audit.previousDebt,
+          extraCharge: audit.extraCharge,
+          repactedInstallment: audit.repactedInstallment
+        }
       }));
     } else {
-      setFormData(prev => ({ ...prev, unitNumber: unitNum }));
+      setFormData(prev => ({ ...prev, unitNumber: unitNum, debtAmount: 0, retentionAmount: 0 }));
     }
   };
 
@@ -163,21 +258,41 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
   const handleCreateCertificate = (e) => {
     e.preventDefault();
     if (!formData.applicantName || !formData.unitNumber) {
-      alert('Por favor ingrese el nombre del solicitante y el número de casa/unidad.');
+      showAlert(
+        'Datos Incompletos',
+        'Por favor ingrese el nombre del solicitante y el número de casa/unidad para emitir el certificado.',
+        'warning'
+      );
       return;
     }
 
     const audit = financialAuditMap[formData.unitNumber];
-    const debtAmount = audit ? audit.pendingDebt : 0;
+    const debtAmount = audit ? audit.pendingDebt : formData.debtAmount || 0;
 
-    // Validación preventiva de no deuda
+    // Validación preventiva si intenta emitir "No Deuda" para una unidad con deuda
     if (formData.type.includes('No Deuda') && debtAmount > 0) {
-      const confirmForce = window.confirm(
-        `⚠️ ADVERTENCIA LEGAL (Ley 21.442 • Art. 20°):\n\nLa Casa ${formData.unitNumber} registra una deuda activa de $${debtAmount.toLocaleString('es-CL')} en gastos comunes.\n\n¿Desea emitir el certificado de todos modos consignando expresamente la deuda?`
-      );
-      if (!confirmForce) return;
+      showConfirm({
+        title: 'Advertencia Legal • Art. 20° Ley 21.442',
+        message: `La Casa ${formData.unitNumber} registra una deuda activa de $${debtAmount.toLocaleString('es-CL')} en gastos comunes.\n\nEmitir una constancia de "No Deuda" incurre en falta reglamentaria salvo que se emita como "Certificado de Estado de Deuda y Liquidación Morosa".\n\n¿Desea cambiarlo automáticamente a Certificado de Estado de Deuda?`,
+        type: 'danger',
+        confirmText: 'Sí, cambiar a Certificado de Deuda',
+        cancelText: 'Continuar de todos modos',
+        onConfirm: () => {
+          // Cambiar a certificado de deuda y emitir
+          proceedIssuing({
+            ...formData,
+            type: 'Certificado de Estado de Deuda y Liquidación Morosa',
+            debtAmount
+          });
+        }
+      });
+      return;
     }
 
+    proceedIssuing({ ...formData, debtAmount });
+  };
+
+  const proceedIssuing = (certDataToSave) => {
     const year = new Date().getFullYear();
     const nextFolioNumber = communityCertificates.length + 1;
     const folio = `CERT-${year}-${String(nextFolioNumber).padStart(3, '0')}`;
@@ -185,19 +300,21 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
 
     const newCert = requestCertificate({
       communityName: currentCommunity?.name || 'Condominio',
-      applicantName: formData.applicantName.trim(),
-      rut: formData.rut.trim(),
-      unitNumber: formData.unitNumber.toString(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      type: formData.type,
-      purpose: formData.purpose.trim() || 'Trámite Notarial / Bancario',
+      applicantName: certDataToSave.applicantName.trim(),
+      rut: certDataToSave.rut.trim(),
+      unitNumber: certDataToSave.unitNumber.toString(),
+      email: certDataToSave.email.trim(),
+      phone: certDataToSave.phone.trim(),
+      type: certDataToSave.type,
+      purpose: certDataToSave.purpose.trim() || 'Trámite Notarial / Bancario',
       date: new Date().toISOString().split('T')[0],
-      status: formData.status,
+      status: certDataToSave.status,
       folio,
       verificationCode,
-      debtAmount,
-      notes: formData.notes.trim(),
+      debtAmount: certDataToSave.debtAmount || 0,
+      retentionAmount: certDataToSave.retentionAmount || certDataToSave.debtAmount || 0,
+      debtBreakdown: certDataToSave.debtBreakdown,
+      notes: certDataToSave.notes.trim(),
       issuedBy: `${companySettings?.adminName || 'Administración ARANPRO'} (RNAC N° ${companySettings?.rnacNumber || '48.912'})`
     });
 
@@ -211,10 +328,12 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
       phone: '',
       purpose: '',
       notes: '',
-      status: 'EMITIDO'
+      status: 'EMITIDO',
+      debtAmount: 0,
+      retentionAmount: 0,
+      debtBreakdown: { currentCharge: 0, previousDebt: 0, extraCharge: 0, repactedInstallment: 0 }
     });
 
-    // Abrir vista previa directa
     if (newCert) {
       setPreviewCert(newCert);
     }
@@ -224,7 +343,9 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
   const handleSendWhatsApp = (cert) => {
     const phoneClean = (cert.phone || '').replace(/[^0-9]/g, '');
     const communityName = cert.communityName || currentCommunity?.name || 'Comunidad';
-    const msg = `*ADMINISTRACIÓN ARANPRO • CERTIFICADO OFICIAL*\n` +
+    const isDebtCert = cert.type.includes('Deuda') && !cert.type.includes('No Deuda');
+    
+    let msg = `*ADMINISTRACIÓN ARANPRO • CERTIFICADO OFICIAL*\n` +
       `Estimado(a) *${cert.applicantName}*,\n\n` +
       `Cumplimos con informar la emisión de su documento oficial:\n\n` +
       `📄 *Tipo:* ${cert.type}\n` +
@@ -233,9 +354,14 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
       `🔑 *Cód. Verificación:* ${cert.verificationCode || 'VRF-OK'}\n` +
       `📅 *Fecha de Emisión:* ${formatDate(cert.date)}\n` +
       `🏛️ *Finalidad:* ${cert.purpose || 'Trámite Notarial / Bancario'}\n` +
-      `⚖️ *Base Legal:* Ley N° 21.442 • Arts. 17°, 20° y 36°\n` +
-      `🏢 *Emitido por:* ${companySettings?.companyName || 'ARANPRO SpA'} (RNAC N° ${companySettings?.rnacNumber || '48.912'})\n\n` +
-      `Su certificado ya cuenta con timbre digital y se encuentra validado para presentación notarial, bancaria o municipal.`;
+      `⚖️ *Base Legal:* Ley N° 21.442 • Arts. 17°, 20° y 36°\n`;
+
+    if (isDebtCert && cert.debtAmount > 0) {
+      msg += `💰 *Deuda Liquidada:* $${Number(cert.debtAmount).toLocaleString('es-CL')} (Instrucción de retención en Notaría según Art. 36°)\n`;
+    }
+
+    msg += `🏢 *Emitido por:* ${companySettings?.companyName || 'ARANPRO SpA'} (RNAC N° ${companySettings?.rnacNumber || '48.912'})\n\n` +
+      `El documento cuenta con timbre digital y se encuentra debidamente validado para su presentación.`;
 
     const url = phoneClean ? `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
@@ -249,6 +375,39 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
       fitPage: true,
       margin: '8mm 10mm 8mm 10mm'
     });
+  };
+
+  // Exportar el registro a CSV para cuenta documentada
+  const handleExportCSV = () => {
+    if (communityCertificates.length === 0) {
+      showAlert('Sin Registros', 'No existen certificados registrados para exportar.', 'info');
+      return;
+    }
+
+    const headers = ['Folio', 'Fecha', 'Tipo de Certificado', 'Casa/Unidad', 'Solicitante', 'RUT', 'Monto Deuda', 'Finalidad', 'Estado', 'Cod_Verificacion'];
+    const rows = communityCertificates.map(c => [
+      `"${c.folio || c.id}"`,
+      `"${c.date || ''}"`,
+      `"${c.type || ''}"`,
+      `"Casa ${c.unitNumber || ''}"`,
+      `"${c.applicantName || ''}"`,
+      `"${c.rut || ''}"`,
+      `"${c.debtAmount || 0}"`,
+      `"${(c.purpose || '').replace(/"/g, '""')}"`,
+      `"${c.status || ''}"`,
+      `"${c.verificationCode || ''}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Registro_Certificados_${currentCommunity?.name || 'Condominio'}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -271,12 +430,20 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
               Certificados & Acreditaciones Comunitarias
             </h2>
             <p className="text-xs md:text-sm text-emerald-100/90 max-w-2xl leading-relaxed">
-              Emisión de certificados oficiales con membrete formal ARANPRO, timbre digital notarial,
-              auditoría financiera de deuda en vivo y entrega instantánea por WhatsApp o PDF Carta.
+              Emisión formal de certificados de <strong>No Deuda</strong> y <strong>Estado de Deuda Morosa (Art. 36°)</strong> para notarías,
+              bancos y nuevos adquirentes, con auditoría contable en tiempo real, timbre digital ARANPRO y folios correlativos.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 active:scale-95 transition-all"
+              title="Descargar libro foliado de certificados en formato CSV / Excel"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-[#D4B895]" />
+              Exportar Registro
+            </button>
             <button
               onClick={() => setShowNewModal(true)}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-[#D4B895] to-[#C2A37D] text-[#0F3D2E] font-bold text-sm shadow-md hover:brightness-105 active:scale-95 transition-all"
@@ -336,7 +503,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
             {stats.upToDatePercent}% <span className="text-xs font-semibold text-slate-400">({stats.upToDateUnits}/{stats.totalUnits})</span>
           </div>
           <p className="text-[11px] text-blue-700 font-medium mt-1">
-            Aptas para certificar No Deuda
+            {stats.unitsWithDebt > 0 ? `${stats.unitsWithDebt} con deuda para liquidar` : '100% al día'}
           </p>
         </div>
 
@@ -352,18 +519,53 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
           </div>
           <div className="text-2xl font-black text-slate-900">{stats.notarialCount}</div>
           <p className="text-[11px] text-purple-700 font-medium mt-1">
-            Fines legales y escrituración
+            Compraventas y créditos hipotecarios
           </p>
         </div>
       </div>
 
-      {/* 3. BARRA DE BÚSQUEDA Y FILTROS */}
+      {/* 3. FILTROS RÁPIDOS (PILLS) */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <button
+          onClick={() => setFilterType('all')}
+          className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
+            filterType === 'all'
+              ? 'bg-[#0F3D2E] text-white shadow-xs'
+              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          Todos ({communityCertificates.length})
+        </button>
+
+        {CERTIFICATE_TYPES.map(t => {
+          const count = communityCertificates.filter(c => c.type === t.id).length;
+          const isActive = filterType === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setFilterType(t.id)}
+              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                isActive
+                  ? 'bg-[#0F3D2E] text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <span>{t.shortName}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 4. BARRA DE BÚSQUEDA Y FILTROS */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="relative w-full md:w-96">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar por solicitante, RUT, casa o folio..."
+            placeholder="Buscar por solicitante, RUT, casa, folio o finalidad..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E] focus:border-transparent transition-all"
@@ -371,18 +573,6 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {/* Filtro por Tipo */}
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
-          >
-            <option value="all">Todos los Tipos de Certificados</option>
-            {CERTIFICATE_TYPES.map(t => (
-              <option key={t.id} value={t.id}>{t.label}</option>
-            ))}
-          </select>
-
           {/* Filtro por Estado */}
           <select
             value={filterStatus}
@@ -390,13 +580,13 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
           >
             <option value="all">Todos los Estados</option>
-            <option value="SOLICITADO">Pendientes (Solicitado)</option>
-            <option value="EMITIDO">Emitidos (Válidos)</option>
+            <option value="SOLICITADO">Pendientes de Firma ({stats.pending})</option>
+            <option value="EMITIDO">Emitidos y Válidos ({stats.issued})</option>
           </select>
         </div>
       </div>
 
-      {/* 4. TABLA CORPORATIVA DE CERTIFICADOS */}
+      {/* 5. TABLA CORPORATIVA DE CERTIFICADOS */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
@@ -407,7 +597,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                 <th className="px-5 py-3.5">Tipo de Certificado</th>
                 <th className="px-5 py-3.5">Finalidad / Trámite</th>
                 <th className="px-5 py-3.5">Fecha</th>
-                <th className="px-5 py-3.5 text-center">Solvencia (Art. 20°)</th>
+                <th className="px-5 py-3.5 text-center">Estado Financiero (Art. 20°/36°)</th>
                 <th className="px-5 py-3.5 text-right">Acciones</th>
               </tr>
             </thead>
@@ -424,7 +614,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                 filteredCertificates.map((cert) => {
                   const audit = financialAuditMap[cert.unitNumber];
                   const hasDebt = audit && audit.pendingDebt > 0;
-                  const isNoDebtCert = cert.type.includes('No Deuda');
+                  const isDebtCert = cert.type.includes('Deuda') && !cert.type.includes('No Deuda');
 
                   return (
                     <tr key={cert.id} className="hover:bg-slate-50/80 transition-colors">
@@ -475,11 +665,15 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                       {/* Tipo de Certificado */}
                       <td className="px-5 py-4 max-w-xs">
                         <div className="font-bold text-[#0F3D2E] flex items-center gap-1.5">
-                          <ShieldCheck className="w-3.5 h-3.5 text-[#D4B895] shrink-0" />
+                          {isDebtCert ? (
+                            <Scale className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          ) : (
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#D4B895] shrink-0" />
+                          )}
                           <span>{cert.type}</span>
                         </div>
                         <div className="text-[10px] text-slate-400 mt-0.5">
-                          {cert.type.includes('No Deuda') ? 'Ley 21.442 • Arts. 17°, 20° y 36°' : 'Ley 21.442 • Copropiedad Inmobiliaria'}
+                          {isDebtCert ? 'Ley 21.442 • Arts. 20° y 36° (Responsabilidad Nuevo Dueño)' : 'Ley 21.442 • Copropiedad Inmobiliaria'}
                         </div>
                       </td>
 
@@ -495,22 +689,23 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                         {formatDate(cert.date)}
                       </td>
 
-                      {/* Solvencia (Art. 20°) */}
+                      {/* Estado Financiero */}
                       <td className="px-5 py-4 text-center">
-                        {audit ? (
-                          hasDebt ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200" title={`Deuda registrada: $${audit.pendingDebt.toLocaleString('es-CL')}`}>
+                        {isDebtCert || (cert.debtAmount && cert.debtAmount > 0) ? (
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                               <AlertTriangle className="w-3 h-3 text-rose-600" />
-                              Debe ${audit.pendingDebt.toLocaleString('es-CL')}
+                              Deuda: ${Number(cert.debtAmount || 0).toLocaleString('es-CL')}
                             </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <Check className="w-3 h-3 text-emerald-600" />
-                              Al Día (Sin deuda)
+                            <span className="block text-[9px] text-slate-400">
+                              A retener en Notaría
                             </span>
-                          )
+                          </div>
                         ) : (
-                          <span className="text-[10px] text-slate-400 italic">No auditada</span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            Al Día (Sin deuda)
+                          </span>
                         )}
                       </td>
 
@@ -537,7 +732,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                           <button
                             onClick={() => setPreviewCert(cert)}
                             className="p-1.5 bg-slate-100 hover:bg-[#0F3D2E] hover:text-white text-slate-700 rounded-xl transition-all"
-                            title="Vista Previa e Impresión Notarial PDF"
+                            title="Vista Previa e Impresión Notarial PDF (Carta)"
                           >
                             <Printer className="w-4 h-4" />
                           </button>
@@ -551,12 +746,19 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                             <Send className="w-4 h-4" />
                           </button>
 
-                          {/* Eliminar */}
+                          {/* Eliminar (con modal propio elegante ARANPRO, sin popup nativo) */}
                           <button
                             onClick={() => {
-                              if (window.confirm(`¿Eliminar del registro el certificado ${cert.folio || cert.id}?`)) {
-                                deleteCertificate(cert.id);
-                              }
+                              showConfirm({
+                                title: '¿Eliminar Certificado Oficial?',
+                                message: `¿Está seguro de eliminar del registro el certificado folio ${cert.folio || cert.id} emitido a don(a) ${cert.applicantName}?\n\nEsta acción es irreversible y quedará registrada en la bitácora de administración.`,
+                                type: 'danger',
+                                confirmText: 'Sí, Eliminar Certificado',
+                                cancelText: 'Conservar',
+                                onConfirm: () => {
+                                  deleteCertificate(cert.id);
+                                }
+                              });
                             }}
                             className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
                             title="Eliminar del Registro"
@@ -574,7 +776,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
         </div>
       </div>
 
-      {/* 5. MODAL DE EMISIÓN ASISTIDA / DIRECTA */}
+      {/* 6. MODAL DE EMISIÓN ASISTIDA / DIRECTA */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150">
@@ -656,16 +858,65 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                 </select>
               </div>
 
+              {/* Banner Asistido si la unidad tiene deuda y seleccionó certificado de deuda */}
+              {formData.type.includes('Estado de Deuda') && (
+                <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-2">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                    <Scale className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>Liquidación de Deuda para Notaría y Nuevo Dueño (Art. 36°)</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    Este certificado individualiza el saldo moroso exacto para que el Notario o Banco realice la
+                    <strong> retención mediante Vale Vista</strong> en la compraventa, o para que el nuevo propietario
+                    asuma formalmente la deuda según la ley.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-amber-700 block">Deuda Morosa Total</span>
+                      <input
+                        type="number"
+                        value={formData.debtAmount}
+                        onChange={(e) => setFormData(prev => ({ ...prev, debtAmount: Number(e.target.value), retentionAmount: Number(e.target.value) }))}
+                        className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-900 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-amber-700 block">Monto a Retener (Vale Vista)</span>
+                      <input
+                        type="number"
+                        value={formData.retentionAmount}
+                        onChange={(e) => setFormData(prev => ({ ...prev, retentionAmount: Number(e.target.value) }))}
+                        className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-900 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Advertencia preventiva si tiene deuda y es cert no deuda */}
               {formData.type.includes('No Deuda') && formData.unitNumber && financialAuditMap[formData.unitNumber]?.pendingDebt > 0 && (
-                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-1">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                    Advertencia Ley N° 21.442 • Art. 20°
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-2">
+                  <div className="font-bold flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      Advertencia Ley N° 21.442 • Art. 20°
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        type: 'Certificado de Estado de Deuda y Liquidación Morosa',
+                        debtAmount: financialAuditMap[formData.unitNumber].pendingDebt,
+                        retentionAmount: financialAuditMap[formData.unitNumber].pendingDebt
+                      }))}
+                      className="px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] shadow-xs transition-all"
+                    >
+                      Cambiar a Certificado de Deuda
+                    </button>
                   </div>
                   <p className="leading-relaxed">
                     La Casa {formData.unitNumber} mantiene una deuda activa de <strong>${financialAuditMap[formData.unitNumber].pendingDebt.toLocaleString('es-CL')}</strong>.
-                    Para fines notariales y de compraventa, el certificado debe reflejar fehacientemente este saldo deudor.
+                    Para compraventas y estudios de títulos con deuda, la ley exige emitir el Certificado de Estado de Deuda.
                   </p>
                 </div>
               )}
@@ -737,7 +988,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                   type="text"
                   value={formData.purpose}
                   onChange={(e) => setFormData(prev => ({ ...prev, purpose: e.target.value }))}
-                  placeholder="Ej: Notaría de La Serena / Estudio de Título Compraventa / Banco de Chile"
+                  placeholder="Ej: Notaría de La Serena / Estudio de Título Compraventa / Banco Santander"
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
                 />
               </div>
@@ -745,13 +996,13 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
               {/* Observaciones Legales Adicionales */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Notas / Observaciones del Certificado (Opcional)
+                  Notas / Cláusula Adicional (Opcional)
                 </label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                   rows={2}
-                  placeholder="Observaciones de liquidación o antecedentes de la asamblea..."
+                  placeholder="Instrucción de retención bancaria o antecedentes de asamblea..."
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
                 />
               </div>
@@ -777,7 +1028,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
         </div>
       )}
 
-      {/* 6. MODAL DE VISTA PREVIA E IMPRESIÓN OFICIAL NOTARIAL (TAMAÑO CARTA) */}
+      {/* 7. MODAL DE VISTA PREVIA E IMPRESIÓN OFICIAL NOTARIAL (TAMAÑO CARTA) */}
       {previewCert && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col relative">
@@ -920,23 +1171,79 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                       DECLARA Y CERTIFICA SOLEMNEMENTE:
                     </p>
 
+                    {/* Caso 1: Certificado de No Deuda (Al Día) */}
                     {previewCert.type.includes('No Deuda') && (
                       <p>
                         Que revisados los registros contables, la cuenta bancaria de la comunidad y la última liquidación de gastos comunes
                         aprobada, el inmueble correspondiente a la <strong>Casa / Departamento N° {previewCert.unitNumber}</strong>, de propiedad o
                         ocupación de don(a) <strong>{previewCert.applicantName}</strong> (RUT {formatRut(previewCert.rut)}),
-                        {previewCert.debtAmount > 0 ? (
-                          <span className="text-rose-700 font-bold">
-                            {' '}mantiene una deuda acumulada por concepto de gastos comunes ordinarios de ${previewCert.debtAmount.toLocaleString('es-CL')}, encontrándose en proceso de regularización.
-                          </span>
-                        ) : (
-                          <span className="text-[#0F3D2E] font-bold">
-                            {' '}se encuentra ÍNTEGRAMENTE AL DÍA en el pago de los gastos comunes ordinarios, gastos comunes extraordinarios y fondo de reserva devengados a la fecha, no registrando multas, intereses ni saldos deudores pendientes de cobro conforme a la Ley N° 21.442.
-                          </span>
-                        )}
+                        <span className="text-[#0F3D2E] font-bold">
+                          {' '}se encuentra ÍNTEGRAMENTE AL DÍA en el pago de los gastos comunes ordinarios, gastos comunes extraordinarios y fondo de reserva devengados a la fecha, no registrando multas, intereses ni saldos deudores pendientes de cobro conforme a la Ley N° 21.442.
+                        </span>
                       </p>
                     )}
 
+                    {/* Caso 2: Certificado de Deuda y Liquidación Morosa (Art. 36°) */}
+                    {previewCert.type.includes('Estado de Deuda') && (
+                      <div className="space-y-3">
+                        <p>
+                          Que revisados los estados contables oficiales de la copropiedad, el inmueble individualizado como
+                          <strong> Casa / Departamento N° {previewCert.unitNumber}</strong>, a nombre de don(a)
+                          <strong> {previewCert.applicantName}</strong> (RUT {formatRut(previewCert.rut)}),
+                          <span className="text-rose-700 font-bold">
+                            {' '}REGISTRA A LA FECHA UNA DEUDA ACTIVA Y EXIGIBLE POR CONCEPTO DE GASTOS COMUNES que asciende a la suma total de ${Number(previewCert.debtAmount || 0).toLocaleString('es-CL')} pesos chilenos.
+                          </span>
+                        </p>
+
+                        {/* Cuadro de Desglose de Deuda Notarial */}
+                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                          <span className="text-[10px] font-bold uppercase text-slate-500 block mb-1.5">
+                            Liquidación Oficial de Saldos Deudores Exigibles (Art. 20° Ley 21.442)
+                          </span>
+                          <table className="w-full text-xs">
+                            <tbody>
+                              <tr className="border-b border-slate-100">
+                                <td className="py-1 text-slate-600">Gastos Comunes Ordinarios y Fondo de Reserva:</td>
+                                <td className="py-1 text-right font-mono font-bold text-slate-900">
+                                  ${Number(previewCert.debtAmount || 0).toLocaleString('es-CL')}
+                                </td>
+                              </tr>
+                              <tr className="border-b border-slate-100">
+                                <td className="py-1 text-slate-600">Intereses y Recargos Legales (Art. 27°):</td>
+                                <td className="py-1 text-right font-mono text-slate-600">$0</td>
+                              </tr>
+                              <tr className="font-bold text-slate-900 bg-slate-50">
+                                <td className="py-1.5 px-2">TOTAL MOROSO EXIGIBLE A LA FECHA:</td>
+                                <td className="py-1.5 px-2 text-right font-mono text-rose-700 text-sm">
+                                  ${Number(previewCert.debtAmount || 0).toLocaleString('es-CL')}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Advertencia Legal Expresa al Nuevo Dueño Art. 36° */}
+                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-amber-900 text-xs space-y-1">
+                          <p className="font-bold">
+                            ⚠️ ADVERTENCIA LEGAL AL ADQUIRENTE, BANCO Y NOTARÍA (ART. 36° LEY N° 21.442):
+                          </p>
+                          <p className="leading-relaxed text-[11px]">
+                            "La obligación del propietario por los gastos comunes sigue siempre al dominio de su unidad, aun respecto de los devengados antes de su adquisición."
+                            En caso de compraventa o cesión, si el saldo deudor no es retenido ni cancelado oportunamente,
+                            <strong> el nuevo adquirente responderá íntegra y solidariamente de la deuda precedente ante la comunidad.</strong>
+                          </p>
+                        </div>
+
+                        {/* Instrucción de Retención Notarial */}
+                        <p className="text-xs font-semibold text-slate-900">
+                          📌 INSTRUCCIÓN DE RETENCIÓN NOTARIAL: Se instruye formalmente a la Notaría y entidad otorgante del crédito hipotecario retener la suma de 
+                          <span className="font-mono font-bold text-rose-700"> ${Number(previewCert.debtAmount || 0).toLocaleString('es-CL')} </span> 
+                          mediante Vale Vista Bancario a nombre de "{previewCert.communityName || currentCommunity?.name}" al momento de suscribir la escritura pública.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Caso 3: Residencia */}
                     {previewCert.type.includes('Residencia') && (
                       <p>
                         Que conforme al <strong>Registro Oficial de Copropietarios y Residentes</strong> establecido en el Artículo 17° inciso 2
@@ -946,6 +1253,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                       </p>
                     )}
 
+                    {/* Caso 4: Comité */}
                     {previewCert.type.includes('Comité') && (
                       <p>
                         Que de conformidad con el Artículo 17° de la Ley N° 21.442 y el acta de Asamblea General de Copropietarios debidamente protocolizada,
@@ -955,6 +1263,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                       </p>
                     )}
 
+                    {/* Caso 5: Buena Convivencia */}
                     {previewCert.type.includes('Buena Convivencia') && (
                       <p>
                         Que revisado el Libro Oficial de Sugerencias y Reclamos y el registro de sanciones de la copropiedad,
@@ -982,7 +1291,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                   </p>
                 </div>
 
-                {/* Sección de Firmas y Timbre Notarial */}
+                {/* Sección de Firmas, Timbre y Validación Notarial */}
                 <div className="pt-8 border-t border-slate-200 grid grid-cols-2 gap-8 items-end">
                   {/* Firma de la Administración */}
                   <div className="text-center space-y-2">
@@ -1026,13 +1335,21 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                   </div>
                 </div>
 
-                {/* Pie de Página de Validación con Cód. de Verificación */}
+                {/* Pie de Página de Validación con Cód. de Verificación y Código QR Notarial */}
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                  <div>
-                    Verificación en línea: aranpro.cl/verificar • Cód: {previewCert.verificationCode || 'VRF-OK'}
+                  <div className="flex items-center gap-2">
+                    {/* QR SVG Notarial */}
+                    <svg className="w-8 h-8 text-slate-700 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm10-2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14 0h-4v2h2v4h2v-2h2v-2h-2v-2zm-4 4h2v2h-2v-2zm6-4h2v2h-2v-2zm0 4h2v2h-2v-2zM6 6h2v2H6V6zm12 0h2v2h-2V6zM6 18h2v2H6v-2z"/>
+                    </svg>
+                    <div>
+                      <div>Verificación en línea: aranpro.cl/verificar</div>
+                      <div className="text-[#0F3D2E] font-bold">Cód. Hash: {previewCert.verificationCode || 'VRF-OK'}</div>
+                    </div>
                   </div>
-                  <div>
-                    Pág 1 de 1 • Sistema Oficial ARANPRO Ley 21.442
+                  <div className="text-right">
+                    <div>Pág 1 de 1 • Documento Oficial Foliado</div>
+                    <div className="text-slate-500">Protocolizado Ley N° 21.442</div>
                   </div>
                 </div>
               </div>
@@ -1040,6 +1357,19 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
           </div>
         </div>
       )}
+
+      {/* 8. MODAL DE CONFIRMACIÓN CORPORATIVO ARANPRO (Elimina popups nativos del navegador) */}
+      <AranproConfirmModal
+        isOpen={modalDialog.isOpen}
+        type={modalDialog.type}
+        title={modalDialog.title}
+        message={modalDialog.message}
+        confirmText={modalDialog.confirmText}
+        cancelText={modalDialog.cancelText}
+        isAlert={modalDialog.isAlert}
+        onConfirm={modalDialog.onConfirm}
+        onCancel={modalDialog.onCancel}
+      />
     </div>
   );
 };

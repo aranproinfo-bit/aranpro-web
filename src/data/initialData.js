@@ -1149,6 +1149,24 @@ export const initialCertificates = [
     debtAmount: 0,
     issuedBy: 'Administración ARANPRO (RNAC N° 48.912)',
     notes: 'Solicitud ingresada por portal de residentes pendiente de firma.'
+  },
+  {
+    id: 'cert-5',
+    folio: 'CERT-2026-005',
+    verificationCode: 'VRF-77D82',
+    communityName: 'Condominio Los Cerezos',
+    applicantName: 'Felipe Valenzuela Silva',
+    rut: '14.992.418-2',
+    unitNumber: '9',
+    email: 'felipe.valenzuela@gmail.com',
+    phone: '+56944332211',
+    type: 'Certificado de Estado de Deuda y Liquidación Morosa',
+    purpose: 'Banco Santander / Notaría • Retención en Compraventa e Inscripción CBR',
+    date: '2026-12-02',
+    status: 'EMITIDO',
+    debtAmount: 245000,
+    issuedBy: 'Administración ARANPRO (RNAC N° 48.912)',
+    notes: 'Liquidación morosa con instrucción de Vale Vista para retención notarial según Art. 36° Ley 21.442.'
   }
 ];
 

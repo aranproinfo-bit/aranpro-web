@@ -3,6 +3,7 @@ import { useCommunity } from '../../context/CommunityContext';
 import { formatDate, formatRut, formatCLP } from '../../utils/formatters';
 import { printDocumentDirectly } from '../../utils/printDocument';
 import { SuggestionsAndComplaintsModule } from './SuggestionsAndComplaintsModule';
+import { AranproConfirmModal } from '../common/AranproConfirmModal';
 import {
   Megaphone, FolderOpen, MessageSquare, AlertTriangle, ShieldCheck,
   Plus, Printer, Share2, Trash2, CheckCircle2, Clock, Pin,
@@ -46,6 +47,19 @@ export const MuralAndComplaintsModule = ({
   const [showNewDocModal, setShowNewDocModal] = useState(false);
   const [showFineModal, setShowFineModal] = useState(false);
   const [activeDocPreview, setActiveDocPreview] = useState(null);
+
+  // Modal de confirmación corporativo ARANPRO (reemplaza popups nativos)
+  const [modalDialog, setModalDialog] = useState({
+    isOpen: false,
+    type: 'warning',
+    title: '',
+    message: '',
+    confirmText: 'Aceptar',
+    cancelText: 'Cancelar',
+    isAlert: false,
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
 
   // Feedbacks de copiado
   const [copiedAnnId, setCopiedAnnId] = useState(null);
@@ -1156,7 +1170,16 @@ _Administración ARANPRO • Gestión Integral de Condominios_`;
                         if (doc.fileUrl) {
                           setActiveDocPreview(doc);
                         } else {
-                          alert(`Documento "${doc.title}" custodiado formalmente en el servidor.`);
+                          setModalDialog({
+                            isOpen: true,
+                            type: 'info',
+                            title: 'Custodia Documental',
+                            message: `El documento "${doc.title}" se encuentra custodiado formalmente en el servidor seguro de la copropiedad.`,
+                            confirmText: 'Entendido',
+                            isAlert: true,
+                            onConfirm: () => setModalDialog(prev => ({ ...prev, isOpen: false })),
+                            onCancel: () => setModalDialog(prev => ({ ...prev, isOpen: false }))
+                          });
                         }
                       }}
                       className="text-xs font-bold text-[#0F3D2E] hover:text-[#0A291F] flex items-center gap-1 cursor-pointer"
@@ -1280,9 +1303,20 @@ _Administración ARANPRO • Gestión Integral de Condominios_`;
                             <button
                               type="button"
                               onClick={() => {
-                                if (window.confirm(`¿Estás seguro de anular el cargo de multa de ${formatCLP(u.extraCharge)} para Casa ${u.number}?`)) {
-                                  handleReverseFine(u.id);
-                                }
+                                setModalDialog({
+                                  isOpen: true,
+                                  type: 'danger',
+                                  title: '¿Anular Cargo de Multa?',
+                                  message: `¿Estás seguro de anular el cargo de multa de ${formatCLP(u.extraCharge)} para la Casa ${u.number}?\n\nEsta acción reversará el recargo en la colilla del mes del copropietario.`,
+                                  confirmText: 'Sí, Anular Multa',
+                                  cancelText: 'Cancelar',
+                                  isAlert: false,
+                                  onConfirm: () => {
+                                    setModalDialog(prev => ({ ...prev, isOpen: false }));
+                                    handleReverseFine(u.id);
+                                  },
+                                  onCancel: () => setModalDialog(prev => ({ ...prev, isOpen: false }))
+                                });
                               }}
                               className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-[11px] border border-rose-200 cursor-pointer"
                               title="Anular / Reversar cargo de multa"
@@ -1756,6 +1790,18 @@ _Administración ARANPRO • Gestión Integral de Condominios_`;
           </div>
         </div>
       )}
+      {/* Modal de confirmación corporativo ARANPRO (elimina popups nativos) */}
+      <AranproConfirmModal
+        isOpen={modalDialog.isOpen}
+        type={modalDialog.type}
+        title={modalDialog.title}
+        message={modalDialog.message}
+        confirmText={modalDialog.confirmText}
+        cancelText={modalDialog.cancelText}
+        isAlert={modalDialog.isAlert}
+        onConfirm={modalDialog.onConfirm}
+        onCancel={modalDialog.onCancel}
+      />
     </div>
   );
 };
