@@ -12206,7 +12206,7 @@ _Administración ARANPRO_`;
                       Administración Profesional de Condominios • Ley N° 21.442
                     </div>
                     <div className="text-[9px] text-slate-400">
-                      RUT: 76.999.888-1 • Fono: {companySettings.phone || '+56 9 8899 7766'}
+                      RUT: 76.999.888-1 • Fono: {companySettings.phone || '+56 9 5811 8504'}
                     </div>
                   </div>
                 </div>

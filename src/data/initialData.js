@@ -961,7 +961,7 @@ export const initialCompanySettings = {
   experienceSince: '2019',
   slogan: 'Comunidades bien gestionadas, mayor tranquilidad',
   tagline: 'Comunidades bien gestionadas, mayor tranquilidad',
-  phone: '+56 9 4183 2711',
+  phone: '+56 9 5811 8504',
   email: 'contacto@aranpro.cl',
   region: 'Región de Coquimbo y todo Chile',
   adminPin: 'admin123',

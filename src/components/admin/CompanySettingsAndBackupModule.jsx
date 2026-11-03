@@ -9,7 +9,8 @@ import {
   X, ExternalLink, Clock, DollarSign, AlertCircle, Trash2, Eye,
   Send, Home, Briefcase, Copy, Sparkles, Check, Key, Shield,
   HardHat, BookOpen, FileCheck, Upload, RefreshCw, PenTool,
-  HelpCircle, Settings, Smartphone, Layers, CheckSquare, MessageCircle
+  HelpCircle, Settings, Smartphone, Layers, CheckSquare, MessageCircle,
+  Paperclip, FileUp
 } from 'lucide-react';
 
 export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
@@ -31,7 +32,7 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
     address: companySettings?.address || 'Av. Cuatro Esquinas 1520, Of. 402',
     city: companySettings?.city || 'La Serena, Coquimbo',
     country: 'Chile',
-    phone: companySettings?.phone || '+56 9 4183 2711',
+    phone: companySettings?.phone || '+56 9 5811 8504',
     email: companySettings?.email || 'contacto@aranpro.cl',
     website: companySettings?.website || 'https://aranpro.cl',
     // Representante Legal / Firmante
@@ -61,25 +62,46 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
       id: 'acad-1',
       title: 'Técnico en Construcción (Titulado)',
       institution: 'Instituto Profesional AIEP / Santo Tomás',
+      category: 'Título Técnico Profesional',
       status: 'Titulado',
       year: '2018',
-      relevance: 'Inspección técnica de obras, análisis de fallas constructivas, cubicación de mantenciones, control de calidad y supervisión de contratistas en terreno.'
+      relevance: 'Inspección técnica de obras, análisis de fallas constructivas, cubicación de mantenciones, control de calidad y supervisión de contratistas en terreno.',
+      fileName: 'Certificado_Titulo_Tecnico_Construccion.pdf',
+      fileType: 'application/pdf',
+      fileData: null,
+      fileSize: '1.2 MB',
+      uploadDate: '2024-01-10',
+      includeInProposal: true
     },
     {
       id: 'acad-2',
       title: 'Construcción Civil (Estudios en Curso)',
       institution: 'Universidad / Instituto Profesional',
+      category: 'Formación Superior / Universitaria',
       status: 'En curso (Nivel Superior)',
       year: '2024 - Presente',
-      relevance: 'Gestión integral de proyectos de edificación, patologías del hormigón, redes hidráulicas y sanitarias, impermeabilizaciones complejas y planes de mantenimiento preventivo.'
+      relevance: 'Gestión integral de proyectos de edificación, patologías del hormigón, redes hidráulicas y sanitarias, impermeabilizaciones complejas y planes de mantenimiento preventivo.',
+      fileName: 'Certificado_Alumno_Regular_Construccion_Civil.pdf',
+      fileType: 'application/pdf',
+      fileData: null,
+      fileSize: '840 KB',
+      uploadDate: '2026-03-01',
+      includeInProposal: true
     },
     {
       id: 'acad-3',
       title: 'Curso Oficial de Administración de Copropiedades (Ley 21.442)',
       institution: 'Learning Group / OTEC Acreditada Sence',
+      category: 'Certificación Minvu Ley 21.442',
       status: 'Aprobado y Certificado',
       year: '2022',
-      relevance: 'Habilitación oficial obligatoria para inscripción y ejercicio profesional en el Registro Nacional de Administradores Minvu (RNAC).'
+      relevance: 'Habilitación oficial obligatoria para inscripción y ejercicio profesional en el Registro Nacional de Administradores Minvu (RNAC).',
+      fileName: 'Certificado_Aprobacion_Curso_Ley_21442.pdf',
+      fileType: 'application/pdf',
+      fileData: null,
+      fileSize: '1.5 MB',
+      uploadDate: '2024-02-15',
+      includeInProposal: true
     }
   ]);
 
@@ -117,10 +139,30 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
   const [adminPin, setAdminPin] = useState(companySettings?.adminPin || 'admin123');
   const [showPin, setShowPin] = useState(false);
 
-  // Estados de Notificación / Modal
+  // Estados de Notificación / Modales
   const [saveFeedback, setSaveFeedback] = useState(false);
   const [copiedLicitacionFeedback, setCopiedLicitacionFeedback] = useState(false);
   const [previewProposalModal, setPreviewProposalModal] = useState(false);
+  const [previewDossierModal, setPreviewDossierModal] = useState(false);
+  const [showUploadDiplomaModal, setShowUploadDiplomaModal] = useState(false);
+  const [editingDiplomaId, setEditingDiplomaId] = useState(null);
+  const [activeDiplomaPreview, setActiveDiplomaPreview] = useState(null);
+
+  const initialNewDiplomaState = {
+    title: '',
+    institution: '',
+    category: 'Título Técnico Profesional',
+    status: 'Titulado',
+    year: new Date().getFullYear().toString(),
+    relevance: '',
+    fileName: '',
+    fileType: '',
+    fileData: null,
+    fileSize: '',
+    includeInProposal: true
+  };
+
+  const [newDiplomaForm, setNewDiplomaForm] = useState(initialNewDiplomaState);
 
   // Estado del modal corporativo de confirmación (reemplazo de window.confirm)
   const [modalDialog, setModalDialog] = useState({
@@ -306,6 +348,161 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
       fitPage: false,
       margin: '8mm 10mm 8mm 10mm'
     });
+  };
+
+  // Imprimir Dossier Integral de Licitación (Carta + Ficha Técnica Constructiva + Diplomas + Cartas Recomendación)
+  const handlePrintDossier = () => {
+    printDocumentDirectly('printable-full-dossier', `Dossier_Integral_Licitacion_ARANPRO_${new Date().getFullYear()}`, {
+      pageSize: 'letter portrait',
+      fitPage: false,
+      margin: '8mm 10mm 8mm 10mm'
+    });
+  };
+
+  // Manejo de Archivo de Diploma (PDF o Imagen en Data URL)
+  const handleDiplomaFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 8 * 1024 * 1024) {
+      showAlert('Archivo demasiado grande', 'El archivo no debe exceder los 8 MB para garantizar el respaldo ágil en el sistema.', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result;
+      if (typeof dataUrl === 'string') {
+        const sizeStr = file.size > 1024 * 1024
+          ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+          : `${Math.round(file.size / 1024)} KB`;
+
+        setNewDiplomaForm(prev => ({
+          ...prev,
+          fileName: file.name,
+          fileType: file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+          fileData: dataUrl,
+          fileSize: sizeStr
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Guardar / Actualizar Diploma o Certificado de Curso
+  const handleSaveDiploma = (e) => {
+    if (e) e.preventDefault();
+    if (!newDiplomaForm.title.trim() || !newDiplomaForm.institution.trim()) {
+      showAlert('Campos Obligatorios', 'Por favor ingresa al menos el Nombre del Título/Curso y la Institución emisora.', 'warning');
+      return;
+    }
+
+    if (editingDiplomaId) {
+      setAcademicRecords(prev => prev.map(item => {
+        if (item.id === editingDiplomaId) {
+          return {
+            ...item,
+            title: newDiplomaForm.title.trim(),
+            institution: newDiplomaForm.institution.trim(),
+            category: newDiplomaForm.category,
+            status: newDiplomaForm.status,
+            year: newDiplomaForm.year.trim() || new Date().getFullYear().toString(),
+            relevance: newDiplomaForm.relevance.trim() || 'Aporte técnico para la supervisión y mantenimiento de instalaciones.',
+            fileName: newDiplomaForm.fileName || item.fileName || 'Diploma_Acreditado.pdf',
+            fileType: newDiplomaForm.fileType || item.fileType || 'application/pdf',
+            fileData: newDiplomaForm.fileData !== undefined ? newDiplomaForm.fileData : item.fileData,
+            fileSize: newDiplomaForm.fileSize || item.fileSize || '1.1 MB',
+            includeInProposal: newDiplomaForm.includeInProposal !== false
+          };
+        }
+        return item;
+      }));
+      showAlert('✓ Certificado Actualizado', 'El registro y respaldo del diploma se actualizaron correctamente.', 'success');
+    } else {
+      const newRecord = {
+        id: `acad-${Date.now()}`,
+        title: newDiplomaForm.title.trim(),
+        institution: newDiplomaForm.institution.trim(),
+        category: newDiplomaForm.category,
+        status: newDiplomaForm.status,
+        year: newDiplomaForm.year.trim() || new Date().getFullYear().toString(),
+        relevance: newDiplomaForm.relevance.trim() || 'Aporte técnico fundamental para la inspección y mantenimiento de las instalaciones comunes.',
+        fileName: newDiplomaForm.fileName || 'Diploma_Acreditado.pdf',
+        fileType: newDiplomaForm.fileType || 'application/pdf',
+        fileData: newDiplomaForm.fileData || null,
+        fileSize: newDiplomaForm.fileSize || '980 KB',
+        uploadDate: new Date().toISOString().split('T')[0],
+        includeInProposal: newDiplomaForm.includeInProposal !== false
+      };
+      setAcademicRecords(prev => [newRecord, ...prev]);
+      showAlert('✓ Diploma / Curso Guardado', 'El respaldo digital ha sido incorporado y custodiado en el sistema con éxito.', 'success');
+    }
+
+    setShowUploadDiplomaModal(false);
+    setEditingDiplomaId(null);
+    setNewDiplomaForm(initialNewDiplomaState);
+  };
+
+  // Abrir Modal para Editar Diploma Existente
+  const handleEditDiploma = (item) => {
+    setEditingDiplomaId(item.id);
+    setNewDiplomaForm({
+      title: item.title,
+      institution: item.institution,
+      category: item.category || 'Título Técnico Profesional',
+      status: item.status || 'Titulado',
+      year: item.year || '',
+      relevance: item.relevance || '',
+      fileName: item.fileName || '',
+      fileType: item.fileType || '',
+      fileData: item.fileData || null,
+      fileSize: item.fileSize || '',
+      includeInProposal: item.includeInProposal !== false
+    });
+    setShowUploadDiplomaModal(true);
+  };
+
+  // Eliminar Diploma con Diálogo Corporativo Seguro
+  const handleDeleteDiploma = (item) => {
+    showConfirm({
+      title: '¿Eliminar Diploma o Acreditación?',
+      message: `¿Estás seguro de eliminar "${item.title}"?\n\nSe desvinculará el archivo de respaldo y ya no se adjuntará al dossier de licitación.`,
+      type: 'danger',
+      confirmText: 'Sí, Eliminar Registro',
+      cancelText: 'Conservar',
+      onConfirm: () => {
+        setAcademicRecords(prev => prev.filter(r => r.id !== item.id));
+        showAlert('Registro Eliminado', 'El diploma ha sido quitado de los registros de la empresa.', 'info');
+      }
+    });
+  };
+
+  // Alternar Inclusión en el Dossier de Postulación
+  const handleToggleIncludeInProposal = (id) => {
+    setAcademicRecords(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, includeInProposal: !item.includeInProposal };
+      }
+      return item;
+    }));
+  };
+
+  // Descargar Archivo de Respaldo Original del Diploma
+  const handleDownloadDiplomaFile = (item) => {
+    if (item.fileData) {
+      const link = document.createElement('a');
+      link.href = item.fileData;
+      link.download = item.fileName || `${item.title.replace(/\s+/g, '_')}_ARANPRO.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } else {
+      printDocumentDirectly('diploma-certificate-preview-card', `Acreditacion_${item.title.replace(/\s+/g, '_')}_ARANPRO`, {
+        pageSize: 'letter portrait',
+        fitPage: false,
+        margin: '10mm'
+      });
+    }
   };
 
   // Menú de Navegación Lateral (Estilo ECP)
@@ -815,62 +1012,168 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
           {/* ==================== SUB-PESTAÑA 3: ACREDITACIONES & PERFIL TÉCNICO ==================== */}
           {activeSubTab === 'acreditacion' && (
             <div className="space-y-6">
-              <div className="border-b border-slate-100 pb-4">
-                <span className="text-[10px] font-bold text-[#D4B895] uppercase tracking-wider block">
-                  Ventaja Competitiva Diferencial
-                </span>
-                <h3 className="text-lg font-black text-slate-900">
-                  Formación Técnica en Construcción & Acreditación Minvu
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  La experiencia y formación técnica en construcción es uno de los mayores valores para un condominio:
-                  permite fiscalizar obras, salas de bombas, filtraciones y techumbres con solvencia y autoridad profesional.
-                </p>
+              <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[10px] font-bold text-[#D4B895] uppercase tracking-wider block">
+                    Ventaja Competitiva Diferencial
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900">
+                    Diplomas, Títulos & Respaldo Técnico en Construcción
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Custodia y respaldo digital de títulos profesionales, certificaciones Minvu y cursos para certificar tu experiencia y adjuntarlos a licitaciones.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingDiplomaId(null);
+                    setNewDiplomaForm(initialNewDiplomaState);
+                    setShowUploadDiplomaModal(true);
+                  }}
+                  className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#0F3D2E] to-[#165540] hover:brightness-110 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 shrink-0 self-start sm:self-auto"
+                >
+                  <Plus className="w-4 h-4 text-[#D4B895]" />
+                  Subir Diploma o Curso
+                </button>
               </div>
 
-              {/* FORMACIÓN TÉCNICA Y UNIVERSITARIA */}
+              {/* BANNER INFORMATIVO DE VALOR CONSTRUCTIVO */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-amber-50/30 border border-emerald-200/80 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-[#0F3D2E] text-[#D4B895] shrink-0 mt-0.5">
+                  <HardHat className="w-4 h-4" />
+                </div>
+                <div className="space-y-1 text-xs">
+                  <h4 className="font-bold text-slate-900">
+                    Ventaja Técnica Exclusiva: Formación Constructiva al Servicio del Condominio
+                  </h4>
+                  <p className="text-slate-600 leading-relaxed">
+                    Ser <strong>Técnico en Construcción</strong> y encontrarse cursando estudios superiores de <strong>Construcción Civil</strong> es un activo de incalculable valor para una comunidad:
+                    permite auditar con autoridad salas de bombas, cubiertas, filtraciones y fiscalizar a contratistas externos evitando sobrecostos y presupuestos inflados.
+                  </p>
+                </div>
+              </div>
+
+              {/* LISTADO DE DIPLOMAS, TÍTULOS Y CURSOS */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <HardHat className="w-3.5 h-3.5 text-[#0F3D2E]" />
-                    Títulos Profesionales & Formación Superior en Construcción
+                    <Award className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                    Títulos y Certificaciones Custodiadas ({academicRecords.length})
                   </h4>
                   <span className="text-[10px] font-bold text-[#0F3D2E] bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                    Capacitación Técnica Continua
+                    Respaldos Digitales Activos
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-4">
                   {academicRecords.map((item) => (
-                    <div key={item.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#D4B895] transition-all space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-slate-900">{item.title}</span>
+                    <div
+                      key={item.id}
+                      className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-[#D4B895] transition-all space-y-3 shadow-xs"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-black text-sm text-slate-900">{item.title}</span>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               item.status.includes('Titulado')
                                 ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-blue-100 text-blue-800'
+                                : item.status.includes('curso')
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
                             }`}>
                               {item.status}
                             </span>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                              {item.category || 'Acreditación Técnica'}
+                            </span>
                           </div>
-                          <p className="text-xs text-slate-500 font-medium mt-0.5">{item.institution} • {item.year}</p>
+                          <p className="text-xs text-slate-500 font-medium">
+                            {item.institution} • {item.year}
+                          </p>
+                        </div>
+
+                        {/* ACCIONES DEL DIPLOMA */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setActiveDiplomaPreview(item)}
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1"
+                            title="Ver documento o constancia digital"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-slate-600" />
+                            <span>Ver</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadDiplomaFile(item)}
+                            className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-all flex items-center gap-1"
+                            title="Descargar archivo original"
+                          >
+                            <Download className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>Descargar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEditDiploma(item)}
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
+                            title="Editar información"
+                          >
+                            <PenTool className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDiploma(item)}
+                            className="p-1.5 rounded-xl text-rose-400 hover:text-rose-700 hover:bg-rose-50 transition-all"
+                            title="Eliminar diploma"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200/80 leading-relaxed">
-                        <strong className="text-[#0F3D2E]">Aporte a la Administración:</strong> {item.relevance}
+
+                      {/* APORTE TÉCNICO A LA ADMINISTRACIÓN */}
+                      <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200/80 leading-relaxed">
+                        <strong className="text-[#0F3D2E]">Aporte Práctico a la Gestión:</strong> {item.relevance}
                       </p>
+
+                      {/* ARCHIVO ADJUNTO & TOGGLE PARA LICITACIÓN */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono">
+                          <Paperclip className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                          <span>{item.fileName || 'Documento_Respaldado.pdf'}</span>
+                          <span className="text-slate-400">({item.fileSize || 'Digital'})</span>
+                          {item.fileData && (
+                            <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[9.5px]">
+                              ✓ Archivo Cargado
+                            </span>
+                          )}
+                        </div>
+
+                        {/* TOGGLE INCLUIR EN LICITACIONES */}
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={item.includeInProposal !== false}
+                            onChange={() => handleToggleIncludeInProposal(item.id)}
+                            className="w-4 h-4 rounded text-[#0F3D2E] focus:ring-[#0F3D2E] border-slate-300"
+                          />
+                          <span className={`text-xs font-bold ${item.includeInProposal !== false ? 'text-[#0F3D2E]' : 'text-slate-400'}`}>
+                            {item.includeInProposal !== false ? '✓ Adjuntar a Dossier de Licitación' : 'Omitir en Dossier'}
+                          </span>
+                        </label>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* DOCUMENTOS Y RESPALDOS DE ACREDITACIÓN */}
+              {/* DOCUMENTOS Y RESPALDOS LEGALES DE ACREDITACIÓN */}
               <div className="pt-6 border-t border-slate-100 space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                   <FileCheck className="w-3.5 h-3.5 text-[#0F3D2E]" />
-                  Respaldos y Documentación Custodiada para Licitaciones
+                  Acreditaciones Institucionales y Antecedentes Legales
                 </h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -896,7 +1199,7 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                   className="px-6 py-2.5 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
                 >
                   <Check className="w-4 h-4 text-[#D4B895]" />
-                  Guardar Perfil Técnico
+                  Guardar Perfil y Diplomas
                 </button>
               </div>
             </div>
@@ -913,8 +1216,8 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                   Dossier de Postulación & Licitaciones de Condominios
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Genera cartas de presentación formal, propuestas comerciales y dossier con estadísticas reales
-                  rescatadas del software para postular a la administración de nuevos condominios y edificios.
+                  Genera cartas de presentación formal, propuestas comerciales y dossier con estadísticas reales y diplomas
+                  rescatados del software para postular a la administración de nuevos condominios y edificios.
                 </p>
               </div>
 
@@ -942,32 +1245,106 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 </div>
               </div>
 
-              {/* GENERADOR DE CARTA DE POSTULACIÓN */}
-              <div className="bg-gradient-to-r from-emerald-50 to-amber-50/40 p-5 rounded-2xl border border-emerald-200/80 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase text-[#0F3D2E] tracking-wider block">
-                      Carta de Presentación & Propuesta Comercial
+              {/* OPCIONES DE GENERACIÓN DE DOSSIER */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. DOSSIER INTEGRAL COMPLETO (RECOMENDADO) */}
+                <div className="bg-gradient-to-br from-[#0F3D2E] to-[#164D3A] text-white p-6 rounded-3xl shadow-lg border border-emerald-900/40 space-y-4 relative overflow-hidden flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-[#D4B895] text-[#0F3D2E] uppercase tracking-wider">
+                      ★ FORMATO LICITACIÓN COMPLETA
                     </span>
-                    <h4 className="font-black text-sm text-slate-900">
-                      Carta Oficial de Postulación para Asambleas y Comités
+                    <h4 className="text-lg font-black tracking-tight text-white">
+                      Dossier Integral de Postulación (Multi-Página)
                     </h4>
+                    <p className="text-xs text-emerald-100/90 leading-relaxed">
+                      Compila en un solo PDF ejecutivo: Portada oficial, Carta de Presentación, Ficha Técnica Constructiva (salas de bombas, filtraciones),
+                      Diplomas seleccionados ({academicRecords.filter(r => r.includeInProposal !== false).length}), y Cartas de Referencia con testimonios.
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex flex-wrap items-center gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDossierModal(true)}
+                      className="px-4 py-2.5 bg-[#D4B895] hover:bg-[#c2a37d] text-[#0F3D2E] font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                    >
+                      <Eye className="w-4 h-4 text-[#0F3D2E]" />
+                      Ver Dossier Integral
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePrintDossier}
+                      className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/20 transition-all flex items-center gap-1.5"
+                    >
+                      <Printer className="w-4 h-4 text-[#D4B895]" />
+                      Imprimir / PDF
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. CARTA SIMPLE DE 1 PÁGINA */}
+                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 uppercase">
+                      Presentación Breve
+                    </span>
+                    <h4 className="text-base font-black text-slate-900">
+                      Carta de Presentación Simple (1 Página)
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Carta formal tamaño Carta lista para imprimir o enviar por correo a administraciones o comités que solicitan una postulación rápida y concisa.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
                     <button
                       type="button"
                       onClick={() => setPreviewProposalModal(true)}
                       className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
                     >
                       <Eye className="w-3.5 h-3.5 text-[#D4B895]" />
-                      Vista Previa & PDF Carta
+                      Ver Carta Simple
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePrintProposal}
+                      className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Imprimir
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Documento formal timbrado con membrete oficial, cita de la Ley N° 21.442, perfil técnico en construcción,
-                  ventajas competitivas, plataforma digital incluida y firma manuscrita digitalizada.
-                </p>
+              </div>
+
+              {/* DIPLOMAS ADJUNTOS AL DOSSIER */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                    Diplomas y Cursos Marcados para el Dossier
+                  </h4>
+                  <span className="text-[11px] font-bold text-[#0F3D2E]">
+                    {academicRecords.filter(r => r.includeInProposal !== false).length} de {academicRecords.length} adjuntos
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {academicRecords.map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleToggleIncludeInProposal(item.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                        item.includeInProposal !== false
+                          ? 'bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs'
+                          : 'bg-white text-slate-400 border-slate-200 hover:text-slate-600'
+                      }`}
+                    >
+                      <span>{item.includeInProposal !== false ? '✓' : '+'}</span>
+                      <span>{item.title}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* SOLICITUD DE CARTAS DE RECOMENDACIÓN A COMITÉS ACTUALES */}
@@ -978,7 +1355,7 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                     Cartas de Recomendación & Testimonios de Comités Actuales
                   </h4>
                   <span className="text-[10px] font-bold text-slate-500">
-                    Para adjuntar a licitaciones
+                    Incluidas en el Dossier Integral
                   </span>
                 </div>
 
@@ -1348,10 +1725,633 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
 
                 {/* Pie de Página */}
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                  <div>ARANPRO Gestión Integral • aramproweb.cl</div>
-                  <div>Región de Coquimbo, Chile</div>
+                  <div>ARANPRO Gestión Integral • {empresaForm.website}</div>
+                  <div>Contacto Directo: {empresaForm.phone}</div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL DE VISTA PREVIA DEL DOSSIER INTEGRAL DE LICITACIÓN (MULTI-PÁGINA) ==================== */}
+      {previewDossierModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-5xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 max-h-[94vh] flex flex-col relative">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200 mb-6">
+              <div className="flex items-center gap-2">
+                <span className="w-9 h-9 rounded-2xl bg-[#0F3D2E] text-[#D4B895] flex items-center justify-center font-bold text-base shadow-sm">
+                  📚
+                </span>
+                <div>
+                  <h4 className="text-base font-black text-slate-900">
+                    Dossier Integral de Postulación a Licitaciones de Condominios
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    Compilación Ejecutiva • Carta + Ficha Constructiva + Diplomas + Referencias
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrintDossier}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs shadow-md transition-all active:scale-95"
+                >
+                  <Printer className="w-4 h-4 text-[#D4B895]" />
+                  Imprimir / Descargar Dossier PDF
+                </button>
+                <button
+                  onClick={() => setPreviewDossierModal(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* CONTENEDOR DEL DOSSIER INTEGRAL IMPRIMIBLE */}
+            <div className="overflow-y-auto flex-1 pr-1 space-y-6">
+              <div
+                id="printable-full-dossier"
+                className="bg-white p-8 md:p-12 border border-slate-300 rounded-2xl shadow-xs max-w-4xl mx-auto space-y-10 text-slate-900"
+                style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+              >
+                {/* SECCIÓN 1: PORTADA Y CARTA DE PRESENTACIÓN */}
+                <div className="space-y-6">
+                  {/* Membrete Corporativo */}
+                  <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-5">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-[#0F3D2E] text-[#D4B895] flex items-center justify-center font-black text-base">
+                          A
+                        </div>
+                        <span className="text-xl font-black tracking-tight text-[#0F3D2E]">
+                          {empresaForm.provisionalName}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+                        Administración Profesional & Mantención de Condominios • RUT {empresaForm.companyRut}
+                      </p>
+                      <p className="text-[10px] text-slate-600 font-medium">
+                        Registro Nacional de Administradores Minvu (RNAC) N° {empresaForm.rnacNumber}
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        {empresaForm.email} • {empresaForm.phone} • {empresaForm.city}
+                      </p>
+                    </div>
+
+                    <div className="text-right space-y-1">
+                      <span className="inline-block px-3 py-1 bg-[#0F3D2E] text-[#D4B895] text-[10px] font-mono font-bold rounded-md">
+                        DOSSIER OFICIAL {new Date().getFullYear()}
+                      </span>
+                      <p className="text-xs font-bold text-slate-800">
+                        Propuesta Integral de Gestión
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        Ley N° 21.442 de Copropiedad
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Encabezado Formal */}
+                  <div className="text-xs text-slate-700 space-y-1 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <p><strong>A:</strong> Señores Miembros del Comité de Administración y Asamblea de Copropietarios</p>
+                    <p><strong>De:</strong> {empresaForm.adminName} — {empresaForm.adminRole}</p>
+                    <p><strong>Fecha:</strong> {new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    <p><strong>Materia:</strong> Postulación Integral a la Administración y Custodia Técnica del Condominio</p>
+                  </div>
+
+                  {/* Título */}
+                  <div className="text-center py-2">
+                    <h1 className="text-xl md:text-2xl font-black text-[#0F3D2E] uppercase tracking-tight">
+                      Dossier de Presentación & Propuesta de Administración
+                    </h1>
+                    <p className="text-xs text-slate-500 font-semibold mt-1">
+                      Solvencia Técnica en Construcción • Transparencia Digital • Acreditación Minvu
+                    </p>
+                    <div className="w-24 h-1.5 bg-[#D4B895] mx-auto mt-2 rounded-full"></div>
+                  </div>
+
+                  {/* Carta de Presentación */}
+                  <div className="text-justify text-xs md:text-sm text-slate-800 leading-relaxed space-y-3">
+                    <p>
+                      Estimados miembros del Comité y vecinos copropietarios:
+                    </p>
+                    <p>
+                      Junto con saludarles muy cordialmente, nos es muy grato presentar a su distinguida comunidad el dossier de postulación
+                      de <strong>{empresaForm.provisionalName}</strong> para asumir la administración profesional bajo las exigencias de la
+                      <strong> Ley N° 21.442 de Copropiedad Inmobiliaria</strong>.
+                    </p>
+                    <p>
+                      {empresaForm.presentationText}
+                    </p>
+                  </div>
+                </div>
+
+                {/* SECCIÓN 2: FICHA TÉCNICA Y AUDITORÍA CONSTRUCTIVA */}
+                <div className="pt-8 border-t-2 border-slate-200 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-[#0F3D2E] text-[#D4B895] rounded-xl font-bold text-xs">
+                      1
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm uppercase text-[#0F3D2E]">
+                        Ficha Técnica Constructiva: Auditoría & Prevención de Daños
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        La ventaja diferencial del perfil de Técnico en Construcción y estudios en Construcción Civil
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                      <h5 className="font-black text-slate-900 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Salas de Bombas e Hidroneumáticos
+                      </h5>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Verificación experta de presión de impulsión, estanques de acumulación, tableros de alternancia, sellos mecánicos y válvulas de retención sin depender de diagnósticos falsos de terceros.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                      <h5 className="font-black text-slate-900 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Cubiertas, Techumbres y Filtraciones
+                      </h5>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Detección precoz del origen de filtraciones (juntas de dilatación, bajadas de aguas lluvia, membranas asfálticas), garantizando que las reparaciones sean definitivas.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                      <h5 className="font-black text-slate-900 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Fiscalización Experta de Contratistas
+                      </h5>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Revisión rigurosa de especificaciones técnicas y cubicaciones de presupuestos externos, frenando sobreprecios en pinturas, pavimentos y mantención de ascensores.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                      <h5 className="font-black text-slate-900 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Portal & Aplicación Móvil 100% Transparente
+                      </h5>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Cada factura, boleta, cartola bancaria y comprobante de egreso queda publicado en línea con respaldo digital para libre auditoría de los copropietarios las 24 horas.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Resumen de Experiencia en Cifras */}
+                  <div className="grid grid-cols-4 gap-2 pt-2 text-center">
+                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Trayectoria</span>
+                      <strong className="text-base font-black text-[#0F3D2E]">{portfolioStats.yearsExp} Años</strong>
+                    </div>
+                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Comunidades</span>
+                      <strong className="text-base font-black text-[#0F3D2E]">{portfolioStats.totalComms} Activa(s)</strong>
+                    </div>
+                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Unidades</span>
+                      <strong className="text-base font-black text-[#0F3D2E]">{portfolioStats.totalUnits} Casas/Deptos</strong>
+                    </div>
+                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Fe Notarial</span>
+                      <strong className="text-base font-black text-[#0F3D2E]">{portfolioStats.totalIssuedCerts} Certificados</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECCIÓN 3: ANEXO DE DIPLOMAS Y ACREDITACIONES SELECCIONADAS */}
+                <div className="pt-8 border-t-2 border-slate-200 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-[#0F3D2E] text-[#D4B895] rounded-xl font-bold text-xs">
+                      2
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm uppercase text-[#0F3D2E]">
+                        Anexo de Títulos Profesionales, Diplomas & Certificaciones
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Respaldos acreditados del Administrador Titular ({empresaForm.adminName})
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {academicRecords.filter(r => r.includeInProposal !== false).map(item => (
+                      <div key={item.id} className="p-4 rounded-xl border border-slate-300 bg-slate-50 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-black text-slate-900 text-sm">{item.title}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#0F3D2E] text-[#D4B895]">
+                            {item.status}
+                          </span>
+                        </div>
+                        <p className="text-slate-500 font-medium">
+                          Institución: <strong>{item.institution}</strong> • Periodo: <strong>{item.year}</strong> • Tipo: <strong>{item.category}</strong>
+                        </p>
+                        <p className="text-slate-700 bg-white p-2 rounded-lg border border-slate-200 leading-relaxed text-[11px]">
+                          <strong>Aporte Técnico:</strong> {item.relevance}
+                        </p>
+                        <div className="text-[10px] text-emerald-800 font-mono font-bold flex items-center gap-1.5">
+                          <span>✓ Documento Acreditado y Custodiado en Plataforma Central ARANPRO</span>
+                          <span>• Folio Archivo: {item.fileName || 'Diploma_Acreditado.pdf'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SECCIÓN 4: CARTAS DE RECOMENDACIÓN Y FIRMAS */}
+                <div className="pt-8 border-t-2 border-slate-200 space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-[#0F3D2E] text-[#D4B895] rounded-xl font-bold text-xs">
+                      3
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm uppercase text-[#0F3D2E]">
+                        Referencias Comprobables de Comités de Administración
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Testimonios directos de dirigentes comunitarios que avalan nuestra gestión
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {committeeReferences.map(ref => (
+                      <div key={ref.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-black text-slate-900">{ref.contactName}</span>
+                          <span className="text-[11px] font-bold text-[#0F3D2E]">{ref.role} — {ref.communityName}</span>
+                        </div>
+                        <p className="text-slate-500 text-[10px] font-mono">Teléfono de Contacto: {ref.phone}</p>
+                        <blockquote className="text-slate-700 italic bg-white p-2.5 rounded-lg border border-slate-200 mt-1">
+                          "{ref.quote}"
+                        </blockquote>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Firma Manuscrita Estampada */}
+                  <div className="pt-6 border-t border-slate-200 text-center space-y-2 max-w-sm mx-auto">
+                    <div className="h-20 flex items-center justify-center">
+                      {signatureImage ? (
+                        <img src={signatureImage} alt="Firma Administrador" className="max-h-16 object-contain mx-auto" />
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Firma del Representante Legal</span>
+                      )}
+                    </div>
+                    <div className="border-t border-slate-400 pt-2">
+                      <p className="font-bold text-xs text-slate-900">{empresaForm.adminName}</p>
+                      <p className="text-[10px] text-slate-500 font-mono">RUT: {empresaForm.adminRut}</p>
+                      <p className="text-[10px] text-[#0F3D2E] font-semibold">
+                        {empresaForm.adminRole} (RNAC Minvu N° {empresaForm.rnacNumber})
+                      </p>
+                      <p className="text-[9px] text-slate-500">
+                        Técnico en Construcción • Construcción Civil
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Pie de Página */}
+                  <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                    <div>ARANPRO Gestión Integral • {empresaForm.website}</div>
+                    <div>Fono Directo: {empresaForm.phone}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL PARA SUBIR / EDITAR DIPLOMA O CURSO ==================== */}
+      {showUploadDiplomaModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in fade-in max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-[#0F3D2E] text-[#D4B895]">
+                  <HardHat className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900">
+                    {editingDiplomaId ? 'Editar Diploma o Certificado' : 'Subir Respaldo de Diploma o Curso'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Acredita tu formación técnica en construcción y certificaciones para la gestión y licitaciones.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUploadDiplomaModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDiploma} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Nombre del Título / Curso / Certificación *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Técnico en Construcción, Construcción Civil, Curso Ley 21.442"
+                  value={newDiplomaForm.title}
+                  onChange={(e) => setNewDiplomaForm({ ...newDiplomaForm, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Institución Otorgante *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej: AIEP, Universidad, Sence, Learning Group"
+                    value={newDiplomaForm.institution}
+                    onChange={(e) => setNewDiplomaForm({ ...newDiplomaForm, institution: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Categoría del Documento
+                  </label>
+                  <select
+                    value={newDiplomaForm.category}
+                    onChange={(e) => setNewDiplomaForm({ ...newDiplomaForm, category: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
+                  >
+                    <option value="Título Técnico Profesional">Título Técnico Profesional</option>
+                    <option value="Formación Superior / Universitaria">Formación Superior / Universitaria</option>
+                    <option value="Certificación Minvu Ley 21.442">Certificación Minvu Ley 21.442</option>
+                    <option value="Curso de Especialización Técnica">Curso de Especialización Técnica</option>
+                    <option value="Prevención y Seguridad Edilicia">Prevención y Seguridad Edilicia</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Estado de Avance
+                  </label>
+                  <select
+                    value={newDiplomaForm.status}
+                    onChange={(e) => setNewDiplomaForm({ ...newDiplomaForm, status: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
+                  >
+                    <option value="Titulado">Titulado</option>
+                    <option value="En curso (Nivel Superior)">En curso (Nivel Superior)</option>
+                    <option value="Aprobado y Certificado">Aprobado y Certificado</option>
+                    <option value="Egresado">Egresado</option>
+                    <option value="Vigente">Vigente</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Año / Periodo
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 2018 o 2024 - Presente"
+                    value={newDiplomaForm.year}
+                    onChange={(e) => setNewDiplomaForm({ ...newDiplomaForm, year: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Aporte Técnico para la Administración de Condominios
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe cómo este conocimiento técnico beneficia a la comunidad (ej: detección de filtraciones, auditoría de salas de bombas, inspección de cubiertas, supervisión de contratistas sin sobreprecios)..."
+                  value={newDiplomaForm.relevance}
+                  onChange={(e) => setNewDiplomaForm({ ...newDiplomaForm, relevance: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
+                />
+              </div>
+
+              {/* CARGA DE ARCHIVO DIGITAL (PDF / IMAGEN) */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Archivo de Respaldo Digital (PDF o Imagen)
+                </label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <label className="cursor-pointer px-4 py-2 bg-white hover:bg-slate-100 text-[#0F3D2E] border border-slate-300 rounded-xl font-bold text-xs transition-all flex items-center gap-2 shadow-xs shrink-0">
+                    <FileUp className="w-4 h-4 text-[#0F3D2E]" />
+                    <span>Seleccionar Archivo (PDF / JPG / PNG)</span>
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      onChange={handleDiplomaFileChange}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <div className="text-xs text-slate-500 font-mono truncate">
+                    {newDiplomaForm.fileName ? (
+                      <span className="text-emerald-700 font-bold flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" />
+                        {newDiplomaForm.fileName} ({newDiplomaForm.fileSize})
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic">Ningún archivo nuevo seleccionado</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* TOGGLE DOSSIER */}
+              <label className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={newDiplomaForm.includeInProposal}
+                  onChange={(e) => setNewDiplomaForm({ ...newDiplomaForm, includeInProposal: e.target.checked })}
+                  className="w-4 h-4 rounded text-[#0F3D2E] focus:ring-[#0F3D2E] border-slate-300"
+                />
+                <div>
+                  <span className="text-xs font-bold text-slate-800 block">
+                    Incluir automáticamente este diploma en el Dossier de Postulación a Licitaciones
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Aparecerá en el anexo técnico del PDF para comités y asambleas.
+                  </span>
+                </div>
+              </label>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowUploadDiplomaModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4 text-[#D4B895]" />
+                  <span>{editingDiplomaId ? 'Guardar Cambios' : 'Registrar y Custodiar Diploma'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL DE PREVISUALIZACIÓN DE DIPLOMA / CERTIFICADO ==================== */}
+      {activeDiplomaPreview && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col relative space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-[#0F3D2E] text-[#D4B895]">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">
+                    {activeDiplomaPreview.title}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    {activeDiplomaPreview.institution} • {activeDiplomaPreview.year} • {activeDiplomaPreview.status}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadDiplomaFile(activeDiplomaPreview)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs shadow-xs transition-all active:scale-95"
+                >
+                  <Download className="w-4 h-4 text-[#D4B895]" />
+                  Descargar Archivo de Respaldo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDiplomaPreview(null)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* CONTENEDOR DEL DOCUMENTO */}
+            <div className="overflow-y-auto flex-1 pr-1 flex items-center justify-center min-h-[350px]">
+              {activeDiplomaPreview.fileData ? (
+                activeDiplomaPreview.fileType === 'application/pdf' ? (
+                  <iframe
+                    src={activeDiplomaPreview.fileData}
+                    className="w-full h-[65vh] rounded-2xl border border-slate-200"
+                    title="Visor de Diploma PDF"
+                  />
+                ) : (
+                  <img
+                    src={activeDiplomaPreview.fileData}
+                    alt={activeDiplomaPreview.title}
+                    className="max-h-[65vh] max-w-full object-contain rounded-2xl border border-slate-200 shadow-sm"
+                  />
+                )
+              ) : (
+                /* CREDENCIAL OFICIAL DE ACREDITACIÓN DIGITAL SI NO HAY ARCHIVO BINARIO AÚN */
+                <div
+                  id="diploma-certificate-preview-card"
+                  className="w-full max-w-2xl bg-gradient-to-b from-white via-slate-50 to-white p-8 md:p-10 rounded-3xl border-4 border-[#0F3D2E] shadow-lg text-center space-y-5 relative"
+                >
+                  <div className="absolute top-4 right-4 text-[10px] font-mono text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                    Acreditación Verificada
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
+                      ARANPRO • GESTIÓN & MANTENCIÓN INTEGRAL DE CONDOMINIOS
+                    </span>
+                    <h2 className="text-xl font-black text-[#0F3D2E] tracking-tight uppercase">
+                      Certificado de Respaldo Profesional & Competencia Técnica
+                    </h2>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Conforme al marco legal de la Ley N° 21.442 sobre Copropiedad Inmobiliaria
+                    </p>
+                  </div>
+
+                  <div className="py-4 border-y-2 border-[#D4B895]/40 space-y-2">
+                    <p className="text-xs text-slate-600">
+                      Se certifica que el Administrador Titular y Representante Legal:
+                    </p>
+                    <h3 className="text-base font-black text-slate-900">
+                      {empresaForm.adminName}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-mono">
+                      RUT: {empresaForm.adminRut} • RNAC Minvu N° {empresaForm.rnacNumber}
+                    </p>
+                    <div className="pt-2">
+                      <span className="text-xs text-slate-600">
+                        Cuenta con formación y acreditación en:
+                      </span>
+                      <p className="text-base font-black text-[#0F3D2E] mt-0.5">
+                        {activeDiplomaPreview.title}
+                      </p>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {activeDiplomaPreview.institution} • Año {activeDiplomaPreview.year} • Estado: {activeDiplomaPreview.status}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-left bg-white p-3.5 rounded-xl border border-slate-200 space-y-1 text-xs">
+                    <strong className="text-[#0F3D2E] block">Aporte a la Administración Comunitaria:</strong>
+                    <p className="text-slate-600 leading-relaxed text-[11px]">
+                      {activeDiplomaPreview.relevance}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 flex items-center justify-between text-left border-t border-slate-200 text-[10px] text-slate-400 font-mono">
+                    <div>
+                      <p className="font-bold text-slate-700">Firma Autorizada ARANPRO</p>
+                      <p>Registro Central de Custodia Digital</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-[#0F3D2E]">Fono Directo: {empresaForm.phone}</p>
+                      <p>{empresaForm.city}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                Archivo: <strong className="text-slate-700">{activeDiplomaPreview.fileName || 'Diploma_Acreditado.pdf'}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveDiplomaPreview(null)}
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all"
+              >
+                Cerrar Visor
+              </button>
             </div>
           </div>
         </div>

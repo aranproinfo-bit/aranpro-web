@@ -1277,7 +1277,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                       Registro Nacional de Administradores Minvu (RNAC) N° {companySettings?.rnacNumber || '48.912'}
                     </p>
                     <p className="text-[10px] text-slate-500">
-                      {companySettings?.email || 'contacto@aranpro.cl'} • {companySettings?.phone || '+56 9 8765 4321'}
+                      {companySettings?.email || 'contacto@aranpro.cl'} • {companySettings?.phone || '+56 9 5811 8504'}
                     </p>
                   </div>
 
