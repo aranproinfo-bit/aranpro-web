@@ -1390,14 +1390,12 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
             className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden p-8 space-y-6"
           >
             
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-[#0F3D2E] text-white flex items-center justify-center font-bold">
-                  <Building2 className="w-5 h-5" />
-                </div>
+            <div className="flex items-center justify-between pb-4 border-b-2 border-[#0F3D2E]">
+              <div className="flex items-center space-x-3.5">
+                <AranproLogo className="h-10 w-auto" />
                 <div>
                   <h3 className="text-base font-black text-slate-900">{community.name}</h3>
-                  <p className="text-xs text-slate-500">Cobro de Gasto Común Oficial • ARANPRO</p>
+                  <p className="text-xs text-slate-500">Cobro de Gasto Común Oficial • Ley N° 21.442</p>
                 </div>
               </div>
               <button
@@ -1539,15 +1537,18 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
             id="resident-payment-receipt-printable-doc"
             className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#D4B895] overflow-hidden p-7 space-y-5"
           >
-            <div className="flex justify-between items-start border-b border-slate-200 pb-4">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#0F3D2E] block">
-                  ARANPRO • Gestión Integral
-                </span>
-                <h3 className="text-lg font-black text-slate-900">Comprobante Oficial de Pago</h3>
-                <p className="text-xs font-mono font-bold text-emerald-700">
-                  Folio: {activePaymentReceipt.receiptFolio || 'REC-OFICIAL'}
-                </p>
+            <div className="flex justify-between items-start border-b-2 border-[#0F3D2E] pb-4">
+              <div className="flex items-center space-x-3">
+                <AranproLogo className="h-9 w-auto" />
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#0F3D2E] block">
+                    ARANPRO • Gestión Integral
+                  </span>
+                  <h3 className="text-base font-black text-slate-900">Comprobante Oficial de Pago</h3>
+                  <p className="text-xs font-mono font-bold text-emerald-700">
+                    Folio: {activePaymentReceipt.receiptFolio || 'REC-OFICIAL'}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setActivePaymentReceipt(null)}

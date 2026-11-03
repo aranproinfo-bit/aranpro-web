@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { formatCLP, formatDate, formatRut } from '../../utils/formatters';
 import { printDocumentDirectly } from '../../utils/printDocument';
+import { AranproLogo } from '../common/MauranLogo';
 import { WrittenConsultationsSubTab } from './assembly/WrittenConsultationsSubTab';
 import { AssemblyMinutesSubTab } from './assembly/AssemblyMinutesSubTab';
 import { RegisteredProxiesSubTab } from './assembly/RegisteredProxiesSubTab';
@@ -2020,18 +2021,34 @@ RUT: ______________________                 RUT: ______________________`;
                   {/* Hoja Formal Imprimible */}
                   <div 
                     id="assembly-citation-printable-doc"
-                    className="p-6 bg-white rounded-2xl border-2 border-slate-300 shadow-sm space-y-4 text-xs font-serif leading-relaxed text-slate-800"
+                    className="p-6 sm:p-8 bg-white rounded-2xl border-2 border-slate-300 shadow-sm space-y-4 text-xs font-serif leading-relaxed text-slate-800"
                   >
-                    <div className="text-center pb-3 border-b-2 border-slate-800">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">
-                        ADMINISTRACIÓN ARANPRO • GESTIÓN INTEGRAL DE CONDOMINIOS
+                    {/* Membrete Oficial Maestro ARANPRO */}
+                    <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-4 font-sans">
+                      <div className="flex items-center space-x-3.5">
+                        <AranproLogo className="h-10 w-auto" />
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-black text-[#0F3D2E] uppercase">
+                            ARANPRO • GESTIÓN INTEGRAL INMOBILIARIA
+                          </div>
+                          <div className="text-[9px] text-slate-500 font-mono">
+                            RUT: 76.999.888-1 • RNAC MINVU N° 48.912 • Fono: +56 9 5811 8504
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right text-xs">
+                        <div className="font-bold text-slate-900">{currentCommunity?.name?.toUpperCase()}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">RUT: {currentCommunity?.bankInfo?.rut || '76.890.123-4'}</div>
+                      </div>
+                    </div>
+
+                    <div className="text-center py-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#D4B895] block font-sans">
+                        LEY N° 21.442 DE COPROPIEDAD INMOBILIARIA
                       </span>
-                      <h2 className="text-lg font-black text-slate-900 mt-1 uppercase">
+                      <h2 className="text-lg font-black text-slate-900 mt-0.5 uppercase">
                         CITACIÓN Y CONVOCATORIA OFICIAL A {selectedTopic.assemblyType.toUpperCase()}
                       </h2>
-                      <h3 className="text-sm font-bold text-slate-700">
-                        {currentCommunity?.name?.toUpperCase()} • RUT: {currentCommunity?.bankInfo?.rut || '76.890.123-4'}
-                      </h3>
                     </div>
 
                     <p className="text-justify text-xs">

@@ -3,6 +3,7 @@ import { useCommunity } from '../../context/CommunityContext';
 import { formatDate, formatRut, formatCLP } from '../../utils/formatters';
 import { printDocumentDirectly, downloadHtmlDocument } from '../../utils/printDocument';
 import { AranproConfirmModal } from '../common/AranproConfirmModal';
+import { AranproLogo } from '../common/MauranLogo';
 import {
   Building2, UserCheck, ShieldCheck, Award, FileText, CheckCircle2,
   AlertTriangle, Printer, Download, Share2, Search, Filter, Plus,
@@ -381,7 +382,10 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
 
   // Imprimir Carta de Postulación en PDF Carta
   const handlePrintProposal = () => {
-    printDocumentDirectly('printable-commercial-proposal', `Propuesta_Administracion_ARANPRO_${new Date().getFullYear()}`, {
+    const targetClean = (proposalConfig.targetCondo || 'Comunidad').replace(/[^a-zA-Z0-9]/g, '_');
+    const dateClean = (proposalConfig.date || new Date().toISOString().slice(0, 10)).replace(/[^0-9]/g, '');
+    const filename = `ARANPRO_Carta_Presentacion_${targetClean}_${dateClean}`;
+    printDocumentDirectly('printable-commercial-proposal', filename, {
       pageSize: 'letter portrait',
       fitPage: false,
       margin: '8mm 10mm 8mm 10mm'
@@ -390,7 +394,10 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
 
   // Imprimir Dossier Integral de Licitación (Carta + Ficha Técnica Constructiva + Diplomas + Cartas Recomendación)
   const handlePrintDossier = () => {
-    printDocumentDirectly('printable-full-dossier', `Dossier_Integral_Licitacion_ARANPRO_${new Date().getFullYear()}`, {
+    const targetClean = (proposalConfig.targetCondo || 'Comunidad').replace(/[^a-zA-Z0-9]/g, '_');
+    const dateClean = (proposalConfig.date || new Date().toISOString().slice(0, 10)).replace(/[^0-9]/g, '');
+    const filename = `ARANPRO_Dossier_Integral_Licitacion_${targetClean}_${dateClean}`;
+    printDocumentDirectly('printable-full-dossier', filename, {
       pageSize: 'letter portrait',
       fitPage: false,
       margin: '8mm 10mm 8mm 10mm'
@@ -399,7 +406,10 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
 
   // Imprimir Brochure Ejecutivo de la App & Portal Web (PDF Carta)
   const handlePrintBrochure = () => {
-    printDocumentDirectly('printable-app-brochure', `Brochure_App_ARANPRO_${new Date().getFullYear()}`, {
+    const targetClean = (proposalConfig.targetCondo || currentCommunity?.name || 'Condominios').replace(/[^a-zA-Z0-9]/g, '_');
+    const dateClean = new Date().toISOString().slice(0, 10).replace(/[^0-9]/g, '');
+    const filename = `ARANPRO_Brochure_App_Copropietarios_${targetClean}_${dateClean}`;
+    printDocumentDirectly('printable-app-brochure', filename, {
       pageSize: 'letter portrait',
       fitPage: false,
       margin: '6mm 8mm 6mm 8mm'
@@ -408,7 +418,10 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
 
   // Imprimir Informe de Diagnóstico Técnico Inicial Gratuito
   const handlePrintInspectionReport = () => {
-    printDocumentDirectly('printable-technical-inspection', `Informe_Diagnostico_Tecnico_${(inspectionForm.targetCondo || 'Condominio').replace(/\s+/g, '_')}`, {
+    const targetClean = (inspectionForm.targetCondo || proposalConfig.targetCondo || 'Condominio').replace(/[^a-zA-Z0-9]/g, '_');
+    const dateClean = (inspectionForm.date || new Date().toISOString().slice(0, 10)).replace(/[^0-9]/g, '');
+    const filename = `ARANPRO_Informe_Diagnostico_Tecnico_${targetClean}_${dateClean}`;
+    printDocumentDirectly('printable-technical-inspection', filename, {
       pageSize: 'letter portrait',
       fitPage: false,
       margin: '8mm 10mm 8mm 10mm'
@@ -417,7 +430,10 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
 
   // Imprimir Cuadro Comparativo (Tradicional vs. ARANPRO)
   const handlePrintComparisonMatrix = () => {
-    printDocumentDirectly('printable-comparison-matrix', `Comparativa_Gestion_ARANPRO_${new Date().getFullYear()}`, {
+    const targetClean = (proposalConfig.targetCondo || currentCommunity?.name || 'Comunidad').replace(/[^a-zA-Z0-9]/g, '_');
+    const dateClean = new Date().toISOString().slice(0, 10).replace(/[^0-9]/g, '');
+    const filename = `ARANPRO_Matriz_Comparativa_Gestion_${targetClean}_${dateClean}`;
+    printDocumentDirectly('printable-comparison-matrix', filename, {
       pageSize: 'letter portrait',
       fitPage: false,
       margin: '8mm 10mm 8mm 10mm'
@@ -581,17 +597,20 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
     }));
   };
 
-  // Descargar Archivo de Respaldo Original del Diploma
+  // Descargar Archivo de Respaldo Original del Diploma con Nomenclatura Única
   const handleDownloadDiplomaFile = (item) => {
+    const titleClean = (item.title || 'Acreditacion').replace(/[^a-zA-Z0-9]/g, '_');
+    const dateClean = (item.year || new Date().getFullYear());
+    const filename = `ARANPRO_Acreditacion_${titleClean}_${dateClean}`;
     if (item.fileData) {
       const link = document.createElement('a');
       link.href = item.fileData;
-      link.download = item.fileName || `${item.title.replace(/\s+/g, '_')}_ARANPRO.pdf`;
+      link.download = item.fileName || `${filename}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
     } else {
-      printDocumentDirectly('diploma-certificate-preview-card', `Acreditacion_${item.title.replace(/\s+/g, '_')}_ARANPRO`, {
+      printDocumentDirectly('diploma-certificate-preview-card', filename, {
         pageSize: 'letter portrait',
         fitPage: false,
         margin: '10mm'
@@ -2444,26 +2463,21 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 className="bg-white p-8 md:p-12 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-6 text-slate-900"
                 style={{ minHeight: '840px', fontFamily: 'system-ui, -apple-system, sans-serif' }}
               >
-                {/* Membrete Corporativo */}
+                {/* Membrete Corporativo Maestro ARANPRO */}
                 <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-5">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#0F3D2E] text-[#D4B895] flex items-center justify-center font-black text-sm tracking-wider">
-                        A
+                  <div className="flex items-center space-x-3.5">
+                    <AranproLogo className="h-11 w-auto" />
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-black tracking-tight text-[#0F3D2E] uppercase">
+                        {empresaForm.provisionalName || 'ARANPRO • GESTIÓN INTEGRAL INMOBILIARIA'}
                       </div>
-                      <span className="text-lg font-black tracking-tight text-[#0F3D2E]">
-                        {empresaForm.provisionalName}
-                      </span>
+                      <p className="text-[10px] text-slate-500 font-mono">
+                        RUT: {empresaForm.companyRut || '76.999.888-1'} • RNAC MINVU N° {empresaForm.rnacNumber || '48.912'}
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        {empresaForm.email || 'contacto@aranpro.cl'} • {empresaForm.phone || '+56 9 5811 8504'} • {empresaForm.city || 'La Serena, Chile'}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                      Administración Profesional de Condominios • RUT {empresaForm.companyRut}
-                    </p>
-                    <p className="text-[10px] text-slate-600 font-medium">
-                      Inscripción en Registro Nacional Minvu (RNAC) N° {empresaForm.rnacNumber}
-                    </p>
-                    <p className="text-[10px] text-slate-500">
-                      {empresaForm.email} • {empresaForm.phone} • {empresaForm.city}
-                    </p>
                   </div>
 
                   <div className="text-right space-y-1">
@@ -2472,6 +2486,9 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                     </span>
                     <p className="text-[11px] font-bold text-slate-800">
                       Carta de Postulación Formal
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {proposalConfig.targetCondo || 'Comunidad de Copropietarios'}
                     </p>
                     <p className="text-[10px] text-slate-500">
                       Ley N° 21.442 de Copropiedad Inmobiliaria
@@ -2681,26 +2698,21 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
               >
                 {/* SECCIÓN 1: PORTADA Y CARTA DE PRESENTACIÓN */}
                 <div className="space-y-6">
-                  {/* Membrete Corporativo */}
+                  {/* Membrete Corporativo Maestro ARANPRO */}
                   <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-5">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl bg-[#0F3D2E] text-[#D4B895] flex items-center justify-center font-black text-base">
-                          A
+                    <div className="flex items-center space-x-3.5">
+                      <AranproLogo className="h-11 w-auto" />
+                      <div className="space-y-0.5">
+                        <div className="text-base font-black tracking-tight text-[#0F3D2E] uppercase">
+                          {empresaForm.provisionalName || 'ARANPRO • GESTIÓN INTEGRAL INMOBILIARIA'}
                         </div>
-                        <span className="text-xl font-black tracking-tight text-[#0F3D2E]">
-                          {empresaForm.provisionalName}
-                        </span>
+                        <p className="text-[10px] text-slate-500 font-mono">
+                          RUT: {empresaForm.companyRut || '76.999.888-1'} • RNAC MINVU N° {empresaForm.rnacNumber || '48.912'}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          {empresaForm.email || 'contacto@aranpro.cl'} • {empresaForm.phone || '+56 9 5811 8504'} • {empresaForm.city || 'La Serena, Chile'}
+                        </p>
                       </div>
-                      <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
-                        Administración Profesional & Mantención de Condominios • RUT {empresaForm.companyRut}
-                      </p>
-                      <p className="text-[10px] text-slate-600 font-medium">
-                        Registro Nacional de Administradores Minvu (RNAC) N° {empresaForm.rnacNumber}
-                      </p>
-                      <p className="text-[10px] text-slate-500">
-                        {empresaForm.email} • {empresaForm.phone} • {empresaForm.city}
-                      </p>
                     </div>
 
                     <div className="text-right space-y-1">
@@ -2711,7 +2723,7 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                         Propuesta Integral de Gestión
                       </p>
                       <p className="text-[10px] text-slate-500">
-                        Ley N° 21.442 de Copropiedad
+                        {proposalConfig.targetCondo || 'Comunidad de Copropietarios'}
                       </p>
                     </div>
                   </div>
@@ -3221,6 +3233,7 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                   </div>
 
                   <div className="space-y-1">
+                    <AranproLogo className="h-10 w-auto mx-auto mb-2" />
                     <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
                       ARANPRO • GESTIÓN & MANTENCIÓN INTEGRAL DE CONDOMINIOS
                     </span>
@@ -3337,23 +3350,29 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 className="bg-white p-8 md:p-10 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-6 text-slate-900"
                 style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
               >
-                {/* Membrete del Brochure */}
+                {/* Membrete Maestro del Brochure ARANPRO */}
                 <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-4">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
-                      SUITE DIGITAL PARA CONDOMINIOS • LEY N° 21.442
-                    </span>
-                    <h2 className="text-xl font-black text-[#0F3D2E] tracking-tight uppercase">
-                      Portal Web & App Móvil ARANPRO
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      Diseñada para la tranquilidad del Comité y la total transparencia para cada Copropietario
-                    </p>
+                  <div className="flex items-center space-x-3.5">
+                    <AranproLogo className="h-11 w-auto" />
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
+                        SUITE DIGITAL PARA CONDOMINIOS • LEY N° 21.442
+                      </span>
+                      <h2 className="text-lg font-black text-[#0F3D2E] tracking-tight uppercase leading-none">
+                        Portal Web & App Móvil ARANPRO
+                      </h2>
+                      <p className="text-[10px] text-slate-500 font-mono">
+                        {empresaForm.email || 'contacto@aranpro.cl'} • {empresaForm.phone || '+56 9 5811 8504'} • {empresaForm.website || 'www.aranpro.cl'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right space-y-1">
                     <span className="inline-block px-3 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold font-mono">
                       ACCESO 24/7 EN LÍNEA
                     </span>
+                    <p className="text-[10px] text-slate-500">
+                      {proposalConfig.targetCondo || 'Comunidad de Copropietarios'}
+                    </p>
                   </div>
                 </div>
 
@@ -3456,22 +3475,30 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 className="bg-white p-8 md:p-10 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-6 text-slate-900"
                 style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
               >
-                {/* Membrete Técnico */}
+                {/* Membrete Maestro Técnico ARANPRO */}
                 <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-4">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
-                      DEPARTAMENTO TÉCNICO & AUDITORÍA CONSTRUCTIVA ARANPRO
-                    </span>
-                    <h2 className="text-lg font-black text-[#0F3D2E] tracking-tight uppercase">
-                      Informe de Diagnóstico Técnico Inicial
-                    </h2>
-                    <p className="text-xs text-slate-600 font-semibold">
-                      Comunidad Evaluada: {proposalConfig.targetCondo || 'Condominio en Evaluación'}
-                    </p>
+                  <div className="flex items-center space-x-3.5">
+                    <AranproLogo className="h-11 w-auto" />
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
+                        DEPARTAMENTO TÉCNICO & AUDITORÍA CONSTRUCTIVA
+                      </span>
+                      <h2 className="text-lg font-black text-[#0F3D2E] tracking-tight uppercase">
+                        Informe de Diagnóstico Técnico Inicial
+                      </h2>
+                      <p className="text-[10px] text-slate-500 font-mono">
+                        RNAC MINVU N° {empresaForm.rnacNumber || '48.912'} • Fono: {empresaForm.phone || '+56 9 5811 8504'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right text-xs">
-                    <span className="font-bold text-[#0F3D2E] block">Fecha: {inspectionForm.date}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">Auditoría Gratuita de Postulación</span>
+                  <div className="text-right text-xs space-y-0.5">
+                    <span className="inline-block px-2.5 py-0.5 rounded bg-[#0F3D2E]/10 text-[#0F3D2E] text-[10px] font-mono font-bold border border-[#0F3D2E]/20">
+                      DIAGNÓSTICO TÉCNICO
+                    </span>
+                    <p className="font-bold text-slate-800 text-xs">
+                      {proposalConfig.targetCondo || inspectionForm.targetCondo || 'Condominio en Evaluación'}
+                    </p>
+                    <span className="text-[10px] text-slate-500 block">Fecha: {inspectionForm.date}</span>
                   </div>
                 </div>
 
@@ -3588,16 +3615,29 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 className="bg-white p-8 md:p-10 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-6 text-slate-900"
                 style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
               >
-                <div className="border-b-2 border-[#0F3D2E] pb-3 space-y-1">
-                  <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
-                    ANÁLISIS COMPARATIVO DE VALOR AGREGADO
-                  </span>
-                  <h2 className="text-lg font-black text-[#0F3D2E] uppercase">
-                    ¿Por qué elegir la Gestión Integral de ARANPRO?
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Comparación punto a punto para la decisión informada de la Asamblea de Copropietarios
-                  </p>
+                <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-4">
+                  <div className="flex items-center space-x-3.5">
+                    <AranproLogo className="h-11 w-auto" />
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-black text-[#D4B895] uppercase tracking-widest block">
+                        ANÁLISIS COMPARATIVO DE VALOR AGREGADO
+                      </span>
+                      <h2 className="text-lg font-black text-[#0F3D2E] uppercase tracking-tight">
+                        ¿Por qué elegir la Gestión Integral de ARANPRO?
+                      </h2>
+                      <p className="text-[10px] text-slate-500">
+                        {empresaForm.email || 'contacto@aranpro.cl'} • {empresaForm.phone || '+56 9 5811 8504'} • {empresaForm.website || 'www.aranpro.cl'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right space-y-0.5">
+                    <span className="inline-block px-2.5 py-0.5 bg-[#0F3D2E] text-[#D4B895] text-[10px] font-mono font-bold rounded">
+                      ESTÁNDAR LEY 21.442
+                    </span>
+                    <p className="text-[10px] text-slate-500">
+                      {proposalConfig.targetCondo || 'Comunidad de Copropietarios'}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-3">

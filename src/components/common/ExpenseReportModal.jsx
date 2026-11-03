@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileCheck, Printer, Download, X, FileSpreadsheet, ArrowLeft } from 'lucide-react';
 import { formatCLP, formatDate } from '../../utils/formatters';
 import { printDocumentDirectly } from '../../utils/printDocument';
+import { AranproLogo } from './MauranLogo';
 
 // Agrupador ordenado de gastos por categoría con subtotales
 export const groupExpensesByCategory = (expensesList) => {
@@ -312,20 +313,16 @@ export const ExpenseReportModal = ({
             {/* ======================================================== */}
             {expenseReportTemplate === 'ejecutivo' && (
               <div className="space-y-2.5">
-                {/* Membrete Oficial Compacto */}
+                {/* Membrete Oficial Compacto Maestro ARANPRO */}
                 <div className="flex items-center justify-between border-b-2 border-[#0F3D2E] pb-2">
                   <div className="flex items-center space-x-3">
-                    <img 
-                      src="/brand/ARANPRO_logo_horizontal_transparente_trimmed.png" 
-                      alt="ARANPRO Gestión Inmobiliaria" 
-                      className="h-8 sm:h-9 w-auto object-contain"
-                    />
+                    <AranproLogo className="h-8 sm:h-9 w-auto" />
                     <div className="border-l border-slate-300 pl-3 hidden sm:block">
                       <div className="text-[9.5px] font-black text-[#0F3D2E] uppercase tracking-wider">
                         Gestión Inmobiliaria Integral
                       </div>
                       <div className="text-[8.5px] text-slate-500 font-mono">
-                        RUT: 76.999.888-1 • Reg. MINVU N° 44.201
+                        RUT: 76.999.888-1 • RNAC MINVU N° 48.912 • Fono: +56 9 5811 8504
                       </div>
                     </div>
                   </div>

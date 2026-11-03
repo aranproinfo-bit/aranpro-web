@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '../../utils/formatters';
 import { printDocumentDirectly, downloadHtmlDocument } from '../../utils/printDocument';
+import { AranproLogo } from '../common/MauranLogo';
 import { COMPLAINT_RESPONSE_TEMPLATES } from '../../data/complaintResponseTemplates';
 
 export const SuggestionsAndComplaintsModule = ({ currentCommunity }) => {
@@ -843,20 +844,16 @@ export const SuggestionsAndComplaintsModule = ({ currentCommunity }) => {
                 id="complaints-official-book-printable"
                 className="bg-white w-full max-w-3xl mx-auto rounded-2xl shadow-md border border-slate-200 text-slate-800 font-sans p-6 sm:p-8 space-y-4 h-auto min-h-fit mb-8 print:p-0 print:m-0 print:mb-0 print:border-none print:shadow-none print:max-w-none"
               >
-                {/* 1. MEMBRETE OFICIAL ARANPRO */}
+                {/* 1. MEMBRETE OFICIAL MAESTRO ARANPRO */}
                 <div className="flex items-center justify-between border-b-2 border-[#0F3D2E] pb-3">
-                  <div className="flex items-center space-x-3">
-                    <img 
-                      src="/brand/ARANPRO_logo_horizontal_transparente_trimmed.png" 
-                      alt="ARANPRO Gestión Inmobiliaria" 
-                      className="h-9 sm:h-10 w-auto object-contain"
-                    />
-                    <div className="border-l border-slate-300 pl-3 hidden sm:block">
+                  <div className="flex items-center space-x-3.5">
+                    <AranproLogo className="h-10 w-auto" />
+                    <div className="border-l border-slate-300 pl-3 hidden sm:block space-y-0.5">
                       <div className="text-[10px] font-black text-[#0F3D2E] uppercase tracking-wider">
                         Gestión Inmobiliaria Integral
                       </div>
                       <div className="text-[9px] text-slate-500 font-mono">
-                        RUT: 76.999.888-1 • Reg. MINVU N° 44.201
+                        RUT: 76.999.888-1 • RNAC MINVU N° 48.912 • Fono: +56 9 5811 8504
                       </div>
                     </div>
                   </div>
@@ -1031,17 +1028,13 @@ export const SuggestionsAndComplaintsModule = ({ currentCommunity }) => {
       <div id="single-warning-letter-printable" className="hidden">
         {selectedTicket && (
           <div className="p-8 font-serif text-slate-900 space-y-5 max-w-2xl mx-auto">
-            {/* Membrete ARANPRO */}
+            {/* Membrete Maestro ARANPRO */}
             <div className="flex items-center justify-between border-b-2 border-[#0F3D2E] pb-3 font-sans">
-              <div className="flex items-center space-x-3">
-                <img 
-                  src="/brand/ARANPRO_logo_horizontal_transparente_trimmed.png" 
-                  alt="ARANPRO" 
-                  className="h-10 w-auto"
-                />
-                <div className="border-l border-slate-300 pl-3">
+              <div className="flex items-center space-x-3.5">
+                <AranproLogo className="h-10 w-auto" />
+                <div className="border-l border-slate-300 pl-3 space-y-0.5">
                   <div className="text-[10px] font-black text-[#0F3D2E] uppercase">Gestión Inmobiliaria Integral</div>
-                  <div className="text-[9px] text-slate-500">RUT: 76.999.888-1 • Reg. MINVU N° 44.201</div>
+                  <div className="text-[9px] text-slate-500 font-mono">RUT: 76.999.888-1 • RNAC MINVU N° 48.912 • Fono: +56 9 5811 8504</div>
                 </div>
               </div>
               <div className="text-right text-xs">

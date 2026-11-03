@@ -3,6 +3,7 @@ import { useCommunity } from '../../context/CommunityContext';
 import { formatDate, formatRut, formatCLP } from '../../utils/formatters';
 import { printDocumentDirectly, downloadHtmlDocument } from '../../utils/printDocument';
 import { AranproConfirmModal } from '../common/AranproConfirmModal';
+import { AranproLogo } from '../common/MauranLogo';
 import {
   ShieldCheck, FileText, CheckCircle2, AlertTriangle, Printer,
   Download, Share2, Search, Filter, Plus, X, ExternalLink,
@@ -463,7 +464,12 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
 
   // Impresión directa Carta vía printDocumentDirectly
   const handlePrintCertificate = (cert) => {
-    const filename = `Certificado_${(cert.folio || cert.id)}_${(cert.applicantName || 'vecino').replace(/\s+/g, '_')}`;
+    const typeClean = (cert.type || 'Certificado').replace(/[^a-zA-Z0-9]/g, '_');
+    const folioClean = (cert.folio || cert.id || 'FOLIO').replace(/[^a-zA-Z0-9]/g, '_');
+    const unitClean = (cert.unitNumber || 'Unidad').replace(/[^a-zA-Z0-9]/g, '_');
+    const commClean = (cert.communityName || currentCommunity?.name || 'Condominio').replace(/[^a-zA-Z0-9]/g, '_');
+    const dateClean = (cert.date || new Date().toISOString().slice(0, 10)).replace(/[^0-9]/g, '');
+    const filename = `ARANPRO_${typeClean}_Folio_${folioClean}_Casa_${unitClean}_${commClean}_${dateClean}`;
     printDocumentDirectly('printable-official-certificate', filename, {
       pageSize: 'letter portrait',
       fitPage: true,
@@ -1236,7 +1242,14 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                 </button>
 
                 <button
-                  onClick={() => downloadHtmlDocument('printable-official-certificate', `Certificado_${previewCert.folio || previewCert.id}.html`)}
+                  onClick={() => {
+                    const typeClean = (previewCert.type || 'Certificado').replace(/[^a-zA-Z0-9]/g, '_');
+                    const folioClean = (previewCert.folio || previewCert.id || 'FOLIO').replace(/[^a-zA-Z0-9]/g, '_');
+                    const unitClean = (previewCert.unitNumber || 'Unidad').replace(/[^a-zA-Z0-9]/g, '_');
+                    const commClean = (previewCert.communityName || currentCommunity?.name || 'Condominio').replace(/[^a-zA-Z0-9]/g, '_');
+                    const dateClean = (previewCert.date || new Date().toISOString().slice(0, 10)).replace(/[^0-9]/g, '');
+                    downloadHtmlDocument('printable-official-certificate', `ARANPRO_${typeClean}_Folio_${folioClean}_Casa_${unitClean}_${commClean}_${dateClean}.html`);
+                  }}
                   className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs transition-all"
                   title="Descargar copia HTML"
                 >
@@ -1259,26 +1272,21 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                 className="bg-white p-8 md:p-12 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-6 text-slate-900"
                 style={{ minHeight: '840px', fontFamily: 'system-ui, -apple-system, sans-serif' }}
               >
-                {/* Membrete Corporativo */}
+                {/* Membrete Corporativo Maestro ARANPRO */}
                 <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-5">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#0F3D2E] text-[#D4B895] flex items-center justify-center font-black text-sm tracking-wider">
-                        A
+                  <div className="flex items-center space-x-3.5">
+                    <AranproLogo className="h-11 w-auto" />
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-black tracking-tight text-[#0F3D2E] uppercase">
+                        {companySettings?.companyName || 'ARANPRO • GESTIÓN INTEGRAL INMOBILIARIA'}
                       </div>
-                      <span className="text-lg font-black tracking-tight text-[#0F3D2E]">
-                        {companySettings?.companyName || 'ARANPRO GESTIÓN INMOBILIARIA'}
-                      </span>
+                      <p className="text-[10px] text-slate-500 font-mono">
+                        RUT: {companySettings?.companyRut || '76.999.888-1'} • RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        {companySettings?.email || 'contacto@aranpro.cl'} • {companySettings?.phone || '+56 9 5811 8504'} • {companySettings?.website || 'www.aranpro.cl'}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                      Administración Profesional de Condominios • RUT {companySettings?.companyRut || '76.999.888-1'}
-                    </p>
-                    <p className="text-[10px] text-slate-600">
-                      Registro Nacional de Administradores Minvu (RNAC) N° {companySettings?.rnacNumber || '48.912'}
-                    </p>
-                    <p className="text-[10px] text-slate-500">
-                      {companySettings?.email || 'contacto@aranpro.cl'} • {companySettings?.phone || '+56 9 5811 8504'}
-                    </p>
                   </div>
 
                   <div className="text-right space-y-1">
