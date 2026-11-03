@@ -1167,6 +1167,42 @@ export const initialCertificates = [
     debtAmount: 245000,
     issuedBy: 'Administración ARANPRO (RNAC N° 48.912)',
     notes: 'Liquidación morosa con instrucción de Vale Vista para retención notarial según Art. 36° Ley 21.442.'
+  },
+  {
+    id: 'cert-6',
+    folio: 'CERT-2026-006',
+    verificationCode: 'VRF-44K90',
+    communityName: 'Condominio Los Cerezos',
+    applicantName: 'Rodrigo Araya Muñoz',
+    rut: '13.882.190-5',
+    unitNumber: '5',
+    email: 'rodrigo.araya@gmail.com',
+    phone: '+56966221100',
+    type: 'Certificado de Salvoconducto y Desalojo / Mudanza',
+    purpose: 'Autorización y Protocolo de Mudanza de Salida / Transportes Norte',
+    date: '2026-12-03',
+    status: 'EMITIDO',
+    debtAmount: 0,
+    issuedBy: 'Administración ARANPRO (RNAC N° 48.912)',
+    notes: 'Gastos al día y garantía de áreas comunes consignada. Mudanza autorizada para el 06/12/2026 de 09:00 a 14:00 hrs.'
+  },
+  {
+    id: 'cert-7',
+    folio: 'CERT-2026-007',
+    verificationCode: 'VRF-88M12',
+    communityName: 'Condominio Los Cerezos',
+    applicantName: 'Patricia Navas Herrera',
+    rut: '12.441.980-3',
+    unitNumber: '2',
+    email: 'patricia.navas@outlook.com',
+    phone: '+56977114433',
+    type: 'Certificado Oficial de Copropiedad y Alícuota de Prorrateo',
+    purpose: 'Banco de Chile • Tasación Hipotecaria y Crédito de Ampliación',
+    date: '2026-12-04',
+    status: 'EMITIDO',
+    debtAmount: 0,
+    issuedBy: 'Administración ARANPRO (RNAC N° 48.912)',
+    notes: 'Alícuota oficial de 6.250% y ponderación de derechos sobre bienes comunes acreditada.'
   }
 ];
 

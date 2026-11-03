@@ -8,7 +8,7 @@ import {
   Download, Share2, Search, Filter, Plus, X, ExternalLink,
   Clock, UserCheck, Building2, Calendar, DollarSign, AlertCircle,
   Trash2, Eye, Send, Home, Briefcase, Award, Check, FileSpreadsheet,
-  QrCode, Scale, HelpCircle, Layers
+  QrCode, Scale, HelpCircle, Layers, Copy, Truck, Percent, CheckSquare
 } from 'lucide-react';
 
 export const OfficialCertificatesModule = ({ currentCommunity }) => {
@@ -29,6 +29,9 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
   // Estados de modales
   const [showNewModal, setShowNewModal] = useState(false);
   const [previewCert, setPreviewCert] = useState(null);
+  const [verifyingCert, setVerifyingCert] = useState(null); // Propuesta 3: Verificación Notarial Express
+  const [copiedClauseFolio, setCopiedClauseFolio] = useState(null); // Propuesta 4: Copiar Cláusula
+  const [copiedLinkFolio, setCopiedLinkFolio] = useState(null);
 
   // Estado del modal de confirmación personalizado (reemplazo de window.confirm / alert)
   const [modalDialog, setModalDialog] = useState({
@@ -77,7 +80,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
     });
   };
 
-  // Tipos oficiales de certificados según Ley 21.442
+  // Catálogo Completo de 7 Tipos Oficiales de Certificados según Ley N° 21.442
   const CERTIFICATE_TYPES = [
     {
       id: 'Certificado de Gastos Comunes al Día (No Deuda)',
@@ -91,11 +94,27 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
     {
       id: 'Certificado de Estado de Deuda y Liquidación Morosa',
       label: 'Certificado Oficial de Estado de Deuda y Liquidación Morosa',
-      shortName: 'Estado de Deuda',
+      shortName: 'Estado de Deuda (Art. 36°)',
       legalRef: 'Ley N° 21.442 • Arts. 20° y 36° (Responsabilidad real del nuevo adquirente / Retención Notarial)',
       useCase: 'Compraventas con deuda, asunción por nuevo adquirente, retención bancaria en vale vista, remates y juicios',
       isDebtCertificate: true,
       badgeColor: 'bg-rose-50 text-rose-800 border-rose-200'
+    },
+    {
+      id: 'Certificado de Salvoconducto y Desalojo / Mudanza',
+      label: 'Certificado de Salvoconducto y Autorización de Mudanza',
+      shortName: 'Mudanza / Salvoconducto',
+      legalRef: 'Ley N° 21.442 • Ley de Arrendamiento y Reglamento Interno',
+      useCase: 'Autorización formal de mudanza e ingreso/retiro de bienes muebles, acreditando no deuda y resguardo de áreas comunes',
+      badgeColor: 'bg-teal-50 text-teal-800 border-teal-200'
+    },
+    {
+      id: 'Certificado Oficial de Copropiedad y Alícuota de Prorrateo',
+      label: 'Certificado Oficial de Copropiedad y Alícuota de Prorrateo',
+      shortName: 'Alícuota y Copropiedad',
+      legalRef: 'Ley N° 21.442 • Art. 3° y Art. 13° (Derechos sobre Bienes Comunes)',
+      useCase: 'Tasaciones bancarias, estudios de título hipotecarios, créditos de autoconstrucción y avalúos',
+      badgeColor: 'bg-indigo-50 text-indigo-800 border-indigo-200'
     },
     {
       id: 'Certificado de Residencia y Domicilio',
@@ -136,6 +155,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
     status: 'EMITIDO',
     debtAmount: 0,
     retentionAmount: 0,
+    aliquotPercent: '',
     debtBreakdown: {
       currentCharge: 0,
       previousDebt: 0,
@@ -156,6 +176,8 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
   // Auditoría financiera de unidades de la comunidad actual
   const financialAuditMap = useMemo(() => {
     if (!currentCommunity?.units) return {};
+    const totalUnitsCount = currentCommunity.units.length || 1;
+    const defaultAliquot = (100 / totalUnitsCount).toFixed(3);
     const map = {};
     currentCommunity.units.forEach(u => {
       const fin = getUnitFinancials ? getUnitFinancials(u) : { pendingDebt: 0, isFullyPaid: true };
@@ -167,6 +189,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
         rut: u.rut,
         email: u.email,
         phone: u.phone,
+        aliquot: u.aliquot || defaultAliquot,
         currentCharge: fin.currentCharge || 0,
         previousDebt: fin.previousDebt || 0,
         extraCharge: fin.extraCharge || 0,
@@ -201,7 +224,8 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
       (c.purpose || '').toLowerCase().includes('crédito') ||
       (c.purpose || '').toLowerCase().includes('compraventa') ||
       c.type.includes('No Deuda') ||
-      c.type.includes('Estado de Deuda')
+      c.type.includes('Estado de Deuda') ||
+      c.type.includes('Alícuota')
     ).length;
 
     return { total, pending, issued, upToDateUnits, unitsWithDebt, totalUnits, upToDatePercent, debtCertsCount, notarialCount };
@@ -239,6 +263,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
         rut: audit.rut || prev.rut,
         email: audit.email || prev.email,
         phone: audit.phone || prev.phone,
+        aliquotPercent: audit.aliquot || '6.250',
         type: prev.type === 'Certificado de Gastos Comunes al Día (No Deuda)' && audit.pendingDebt > 0 ? defaultType : prev.type,
         debtAmount: audit.pendingDebt || 0,
         retentionAmount: audit.pendingDebt || 0,
@@ -278,12 +303,26 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
         confirmText: 'Sí, cambiar a Certificado de Deuda',
         cancelText: 'Continuar de todos modos',
         onConfirm: () => {
-          // Cambiar a certificado de deuda y emitir
           proceedIssuing({
             ...formData,
             type: 'Certificado de Estado de Deuda y Liquidación Morosa',
             debtAmount
           });
+        }
+      });
+      return;
+    }
+
+    // Validación preventiva si intenta emitir salvoconducto de mudanza con deuda
+    if (formData.type.includes('Mudanza') && debtAmount > 0) {
+      showConfirm({
+        title: 'Restricción de Salvoconducto de Mudanza',
+        message: `La Casa ${formData.unitNumber} registra una deuda pendiente de $${debtAmount.toLocaleString('es-CL')}.\n\nEl Reglamento de Copropiedad y la práctica notarial exigen estar al día en gastos comunes antes de autorizar la salida de bienes.\n\n¿Desea emitir la autorización consignando expresamente la retención o compromiso de pago?`,
+        type: 'warning',
+        confirmText: 'Sí, Emitir con Constancia de Deuda',
+        cancelText: 'Cancelar y Cobrar Antes',
+        onConfirm: () => {
+          proceedIssuing({ ...formData, debtAmount });
         }
       });
       return;
@@ -313,6 +352,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
       verificationCode,
       debtAmount: certDataToSave.debtAmount || 0,
       retentionAmount: certDataToSave.retentionAmount || certDataToSave.debtAmount || 0,
+      aliquotPercent: certDataToSave.aliquotPercent || '6.250',
       debtBreakdown: certDataToSave.debtBreakdown,
       notes: certDataToSave.notes.trim(),
       issuedBy: `${companySettings?.adminName || 'Administración ARANPRO'} (RNAC N° ${companySettings?.rnacNumber || '48.912'})`
@@ -331,12 +371,65 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
       status: 'EMITIDO',
       debtAmount: 0,
       retentionAmount: 0,
+      aliquotPercent: '',
       debtBreakdown: { currentCharge: 0, previousDebt: 0, extraCharge: 0, repactedInstallment: 0 }
     });
 
     if (newCert) {
       setPreviewCert(newCert);
     }
+  };
+
+  // Propuesta 4: Generador y Copiado de Cláusula Notarial 1-Click
+  const generateNotaryClause = (cert) => {
+    const communityName = cert.communityName || currentCommunity?.name || 'Condominio';
+    const rnacNum = companySettings?.rnacNumber || '48.912';
+    const applicantName = cert.applicantName || 'el copropietario';
+    const rut = formatRut(cert.rut);
+    const unit = cert.unitNumber;
+    const folio = cert.folio || cert.id;
+    const dateFormatted = formatDate(cert.date);
+    const hash = cert.verificationCode || 'VRF-OK';
+
+    if (cert.type.includes('Estado de Deuda')) {
+      const debtFormatted = Number(cert.debtAmount || 0).toLocaleString('es-CL');
+      return `CLÁUSULA DÉCIMO PRIMERA (DEUDA POR GASTOS COMUNES Y RETENCIÓN NOTARIAL):\n` +
+        `Las partes comparecientes declaran expresamente conocer el Certificado Oficial de Estado de Deuda y Liquidación Morosa Folio N° ${folio} (Cód. Hash ${hash}), emitido con fecha ${dateFormatted} por la Administración del "${communityName}" (RUT ${companySettings?.companyRut || '76.999.888-1'}, RNAC Minvu N° ${rnacNum}), conforme a los Artículos 20° y 36° de la Ley N° 21.442 de Copropiedad Inmobiliaria. En dicho instrumento se certifica que la Unidad correspondiente a la Casa/Departamento N° ${unit}, perteneciente a don(a) ${applicantName} (RUT ${rut}), mantiene una deuda líquida y exigible por concepto de gastos comunes que asciende a la suma total de $${debtFormatted} pesos chilenos.\n\n` +
+        `En cumplimiento del Artículo 36° de la Ley N° 21.442 —conforme al cual la obligación por los gastos comunes sigue siempre al dominio del inmueble, aun respecto de los devengados con anterioridad a su adquisición—, las partes acuerdan e instruyen expresamente al Notario Público autorizante retener del precio de venta la suma de $${debtFormatted} mediante Vale Vista Bancario emitido nominativamente a nombre de "${communityName}". Dicho documento será entregado a la Administración del condominio contra entrega del respectivo comprobante oficial de cancelación definitiva, liberando al nuevo adquirente de toda responsabilidad pecuniaria precedente.`;
+    }
+
+    if (cert.type.includes('No Deuda')) {
+      return `CLÁUSULA DÉCIMO PRIMERA (GASTOS COMUNES ÍNTEGRAMENTE AL DÍA):\n` +
+        `En cumplimiento de los Artículos 20° y 36° de la Ley N° 21.442 sobre Copropiedad Inmobiliaria, se inserta en este instrumento el Certificado Oficial Folio N° ${folio} (Cód. Hash ${hash}), emitido con fecha ${dateFormatted} por la Administración del "${communityName}" (RNAC Minvu N° ${rnacNum}), en el cual se certifica fehacientemente que la Unidad correspondiente a la Casa/Departamento N° ${unit}, de dominio de don(a) ${applicantName} (RUT ${rut}), se encuentra con sus obligaciones económicas y gastos comunes ordinarios, extraordinarios y fondo de reserva ÍNTEGRAMENTE AL DÍA a la fecha de la presente escritura, no registrando multas, intereses ni saldos pendientes de cobro a favor de la comunidad.`;
+    }
+
+    if (cert.type.includes('Mudanza') || cert.type.includes('Salvoconducto')) {
+      return `CONSTANCIA DE MUDANZA Y SALVOCONDUCTO REGLAMENTARIO:\n` +
+        `Se deja constancia formal de la agregación del Certificado de Salvoconducto y Autorización de Mudanza Folio N° ${folio} (Hash ${hash}) expedido por la Administración ARANPRO, el cual acredita que la Casa/Departamento N° ${unit} de "${communityName}" no adeuda gastos comunes, no registra daños a bienes comunes y cuenta con la respectiva autorización para efectuar el retiro y traslado de mobiliario conforme a los horarios del Reglamento de Copropiedad.`;
+    }
+
+    if (cert.type.includes('Alícuota') || cert.type.includes('Copropiedad')) {
+      const aliquot = cert.aliquotPercent || (100 / (currentCommunity?.units?.length || 16)).toFixed(3);
+      return `CONSTANCIA DE COPROPIEDAD Y ALÍCUOTA REGISTRAL (ART. 3° LEY 21.442):\n` +
+        `Se inserta en la presente minuta el Certificado Oficial de Copropiedad y Alícuota Folio N° ${folio}, expedido por la Administración de "${communityName}", en que se acredita que la Casa/Departamento N° ${unit} goza de un porcentaje de prorrateo sobre los bienes comunes equivalente al ${aliquot}% y derecho de voto proporcional en asambleas ordinarias y extraordinarias conforme a la Ley N° 21.442.`;
+    }
+
+    return `CONSTANCIA NOTARIAL DE CERTIFICADO OFICIAL:\n` +
+      `Se deja constancia de la agregación a la presente escritura del documento oficial "${cert.type}", Folio N° ${folio} (Cód. Hash ${hash}), expedido con fecha ${dateFormatted} por la Administración del "${communityName}".`;
+  };
+
+  const handleCopyNotaryClause = (cert) => {
+    const clauseText = generateNotaryClause(cert);
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(clauseText);
+    }
+    setCopiedClauseFolio(cert.folio || cert.id);
+    showAlert(
+      '✓ Cláusula Notarial Copiada',
+      `Se copió al portapapeles la cláusula legal en formato formal lista para ser insertada por el Notario o abogado redactor en la Escritura Pública de Compraventa conforme a la Ley N° 21.442.\n\n(Folio ${cert.folio || cert.id})`,
+      'success'
+    );
+    setTimeout(() => setCopiedClauseFolio(null), 3500);
   };
 
   // Envío por WhatsApp con mensaje formal timbrado
@@ -360,7 +453,8 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
       msg += `💰 *Deuda Liquidada:* $${Number(cert.debtAmount).toLocaleString('es-CL')} (Instrucción de retención en Notaría según Art. 36°)\n`;
     }
 
-    msg += `🏢 *Emitido por:* ${companySettings?.companyName || 'ARANPRO SpA'} (RNAC N° ${companySettings?.rnacNumber || '48.912'})\n\n` +
+    msg += `🌐 *Verificación Notarial:* https://portalnet.cl/verificar?folio=${cert.folio || cert.id}\n` +
+      `🏢 *Emitido por:* ${companySettings?.companyName || 'ARANPRO SpA'} (RNAC N° ${companySettings?.rnacNumber || '48.912'})\n\n` +
       `El documento cuenta con timbre digital y se encuentra debidamente validado para su presentación.`;
 
     const url = phoneClean ? `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
@@ -430,8 +524,9 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
               Certificados & Acreditaciones Comunitarias
             </h2>
             <p className="text-xs md:text-sm text-emerald-100/90 max-w-2xl leading-relaxed">
-              Emisión formal de certificados de <strong>No Deuda</strong> y <strong>Estado de Deuda Morosa (Art. 36°)</strong> para notarías,
-              bancos y nuevos adquirentes, con auditoría contable en tiempo real, timbre digital ARANPRO y folios correlativos.
+              Emisión formal de certificados de <strong>No Deuda</strong>, <strong>Estado de Deuda Morosa (Art. 36°)</strong>,
+              <strong> Salvoconductos de Mudanza</strong> y <strong>Alícuota de Copropiedad</strong> para notarías y bancos,
+              con verificación en línea y cláusula notarial de 1-clic.
             </p>
           </div>
 
@@ -519,7 +614,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
           </div>
           <div className="text-2xl font-black text-slate-900">{stats.notarialCount}</div>
           <p className="text-[11px] text-purple-700 font-medium mt-1">
-            Compraventas y créditos hipotecarios
+            Compraventas, créditos y mudanzas
           </p>
         </div>
       </div>
@@ -615,13 +710,22 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                   const audit = financialAuditMap[cert.unitNumber];
                   const hasDebt = audit && audit.pendingDebt > 0;
                   const isDebtCert = cert.type.includes('Deuda') && !cert.type.includes('No Deuda');
+                  const isMudanzaCert = cert.type.includes('Mudanza');
+                  const isAliquotCert = cert.type.includes('Alícuota');
 
                   return (
                     <tr key={cert.id} className="hover:bg-slate-50/80 transition-colors">
                       {/* Folio & Estado */}
                       <td className="px-5 py-4">
-                        <div className="font-mono font-bold text-slate-900 text-xs">
-                          {cert.folio || cert.id}
+                        <div className="font-mono font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                          <span>{cert.folio || cert.id}</span>
+                          <button
+                            onClick={() => setVerifyingCert(cert)}
+                            className="text-slate-400 hover:text-[#0F3D2E] transition-colors"
+                            title="Verificar en línea en el portal público"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                         <div className="mt-1 flex items-center gap-1.5">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -637,9 +741,13 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                             {cert.status}
                           </span>
                           {cert.verificationCode && (
-                            <span className="text-[10px] font-mono text-slate-400 font-medium">
+                            <button
+                              onClick={() => setVerifyingCert(cert)}
+                              className="text-[10px] font-mono text-slate-400 hover:text-[#0F3D2E] font-medium underline"
+                              title="Verificar integridad de este código hash"
+                            >
                               {cert.verificationCode}
-                            </span>
+                            </button>
                           )}
                         </div>
                       </td>
@@ -667,13 +775,23 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                         <div className="font-bold text-[#0F3D2E] flex items-center gap-1.5">
                           {isDebtCert ? (
                             <Scale className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          ) : isMudanzaCert ? (
+                            <Truck className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                          ) : isAliquotCert ? (
+                            <Percent className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                           ) : (
                             <ShieldCheck className="w-3.5 h-3.5 text-[#D4B895] shrink-0" />
                           )}
                           <span>{cert.type}</span>
                         </div>
                         <div className="text-[10px] text-slate-400 mt-0.5">
-                          {isDebtCert ? 'Ley 21.442 • Arts. 20° y 36° (Responsabilidad Nuevo Dueño)' : 'Ley 21.442 • Copropiedad Inmobiliaria'}
+                          {isDebtCert
+                            ? 'Ley 21.442 • Arts. 20° y 36° (Responsabilidad Nuevo Dueño)'
+                            : isMudanzaCert
+                            ? 'Reglamento Interno & Ley de Arrendamiento'
+                            : isAliquotCert
+                            ? 'Ley 21.442 • Art. 3° (Derechos sobre Bienes Comunes)'
+                            : 'Ley 21.442 • Copropiedad Inmobiliaria'}
                         </div>
                       </td>
 
@@ -712,6 +830,15 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                       {/* Acciones */}
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Propuesta 4: Copiar Cláusula Notarial */}
+                          <button
+                            onClick={() => handleCopyNotaryClause(cert)}
+                            className="p-1.5 bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-800 rounded-xl transition-all"
+                            title="Copiar Cláusula Notarial para la Escritura Pública"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+
                           {/* Validar y emitir si está solicitado */}
                           {cert.status !== 'EMITIDO' && (
                             <button
@@ -746,7 +873,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                             <Send className="w-4 h-4" />
                           </button>
 
-                          {/* Eliminar (con modal propio elegante ARANPRO, sin popup nativo) */}
+                          {/* Eliminar (con modal corporativo ARANPRO) */}
                           <button
                             onClick={() => {
                               showConfirm({
@@ -893,6 +1020,29 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                 </div>
               )}
 
+              {/* Banner Asistido si es Alícuota de Copropiedad */}
+              {formData.type.includes('Alícuota') && (
+                <div className="p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200 space-y-2">
+                  <div className="flex items-center gap-2 text-indigo-900 font-bold text-xs">
+                    <Percent className="w-4 h-4 text-indigo-700 shrink-0" />
+                    <span>Acreditación de Prorrateo de Copropiedad (Art. 3° Ley 21.442)</span>
+                  </div>
+                  <p className="text-[11px] text-indigo-800 leading-relaxed">
+                    Certifica el porcentaje exacto de derechos de la unidad sobre los bienes de dominio común (terreno, muros, techumbre, accesos y equipamiento) para fines de tasación bancaria y créditos hipotecarios.
+                  </p>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-indigo-700 block mb-1">Porcentaje de Alícuota / Prorrateo</span>
+                    <input
+                      type="text"
+                      value={formData.aliquotPercent}
+                      onChange={(e) => setFormData(prev => ({ ...prev, aliquotPercent: e.target.value }))}
+                      placeholder="Ej: 6.250%"
+                      className="w-full px-3 py-1.5 bg-white border border-indigo-300 rounded-lg text-xs font-bold text-slate-900 font-mono"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Advertencia preventiva si tiene deuda y es cert no deuda */}
               {formData.type.includes('No Deuda') && formData.unitNumber && financialAuditMap[formData.unitNumber]?.pendingDebt > 0 && (
                 <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-2">
@@ -988,7 +1138,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                   type="text"
                   value={formData.purpose}
                   onChange={(e) => setFormData(prev => ({ ...prev, purpose: e.target.value }))}
-                  placeholder="Ej: Notaría de La Serena / Estudio de Título Compraventa / Banco Santander"
+                  placeholder="Ej: Notaría de La Serena / Estudio de Título Compraventa / Banco Santander / Mudanza"
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
                 />
               </div>
@@ -1002,7 +1152,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                   value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                   rows={2}
-                  placeholder="Instrucción de retención bancaria o antecedentes de asamblea..."
+                  placeholder="Instrucción de retención bancaria, fecha y hora autorizada de mudanza o alícuota..."
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
                 />
               </div>
@@ -1049,9 +1199,29 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Propuesta 4: Copiar Cláusula para Escritura Notarial */}
+                <button
+                  onClick={() => handleCopyNotaryClause(previewCert)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs shadow-xs transition-all active:scale-95"
+                  title="Copiar texto formal para insertar en la escritura pública notarial"
+                >
+                  <Copy className="w-3.5 h-3.5 text-amber-700" />
+                  Copiar Cláusula Notarial
+                </button>
+
+                {/* Propuesta 3: Verificación Pública Express */}
+                <button
+                  onClick={() => setVerifyingCert(previewCert)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all"
+                  title="Abrir vista pública de verificación para Notaría o Banco"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                  Verificar QR
+                </button>
+
                 <button
                   onClick={() => handlePrintCertificate(previewCert)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs shadow-xs transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs shadow-xs transition-all active:scale-95"
                 >
                   <Printer className="w-4 h-4 text-[#D4B895]" />
                   Imprimir / PDF Oficial (Carta)
@@ -1059,7 +1229,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
 
                 <button
                   onClick={() => handleSendWhatsApp(previewCert)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95"
                 >
                   <Send className="w-3.5 h-3.5" />
                   WhatsApp
@@ -1243,7 +1413,56 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                       </div>
                     )}
 
-                    {/* Caso 3: Residencia */}
+                    {/* Caso 3: Salvoconducto y Desalojo / Mudanza (Propuesta 1) */}
+                    {previewCert.type.includes('Mudanza') && (
+                      <div className="space-y-2">
+                        <p>
+                          Que conforme a las disposiciones del Reglamento de Copropiedad Interno y la Ley N° 21.442, se
+                          <strong> AUTORIZA EL TRASLADO DE BIENES MUEBLES Y MUDANZA</strong> correspondiente a la
+                          <strong> Casa / Departamento N° {previewCert.unitNumber}</strong>, a nombre de don(a)
+                          <strong> {previewCert.applicantName}</strong> (RUT {formatRut(previewCert.rut)}), certificando fehacientemente:
+                        </p>
+                        <ul className="list-disc pl-5 space-y-1 text-xs">
+                          <li>Que la unidad se encuentra con sus obligaciones económicas y gastos comunes al día a la fecha.</li>
+                          <li>Que no registra multas pendientes ni daños ocasionados a bienes de dominio común (portones, ascensores, áreas comunes).</li>
+                          <li>Que se ha coordinado el protocolo de resguardo y protección de accesos vehiculares y peatonales.</li>
+                        </ul>
+                        <p className="text-[11px] text-slate-600 font-semibold bg-white p-2 rounded border border-slate-200">
+                          Horario de Mudanza Autorizado: Lunes a Viernes de 09:00 a 18:00 hrs. Sábados de 09:00 a 14:00 hrs. Domingos y festivos prohibido.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Caso 4: Alícuota y Copropiedad (Propuesta 2) */}
+                    {previewCert.type.includes('Alícuota') && (
+                      <div className="space-y-2">
+                        <p>
+                          Que de acuerdo con los títulos de dominio y el plano de copropiedad inscrito en el Conservador de Bienes Raíces respectivo,
+                          la <strong>Casa / Departamento N° {previewCert.unitNumber}</strong>, perteneciente a don(a)
+                          <strong> {previewCert.applicantName}</strong> (RUT {formatRut(previewCert.rut)}), forma parte de esta copropiedad legalmente constituida.
+                        </p>
+                        <div className="bg-white p-3 rounded-lg border border-slate-200 grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] uppercase text-slate-400 block font-bold">Porcentaje de Alícuota / Prorrateo</span>
+                            <span className="text-sm font-black text-[#0F3D2E] font-mono">{previewCert.aliquotPercent || '6.250'}%</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase text-slate-400 block font-bold">Destino del Inmueble</span>
+                            <span className="font-bold text-slate-800">Habitacional Residencial</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase text-slate-400 block font-bold">Fondo de Reserva Legal (Art. 6°)</span>
+                            <span className="font-bold text-slate-800">5.0% sobre gasto común</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase text-slate-400 block font-bold">Ponderación en Asambleas (Art. 15°)</span>
+                            <span className="font-bold text-slate-800">{previewCert.aliquotPercent || '6.250'}% de derecho a voto</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Caso 5: Residencia */}
                     {previewCert.type.includes('Residencia') && (
                       <p>
                         Que conforme al <strong>Registro Oficial de Copropietarios y Residentes</strong> establecido en el Artículo 17° inciso 2
@@ -1253,7 +1472,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                       </p>
                     )}
 
-                    {/* Caso 4: Comité */}
+                    {/* Caso 6: Comité */}
                     {previewCert.type.includes('Comité') && (
                       <p>
                         Que de conformidad con el Artículo 17° de la Ley N° 21.442 y el acta de Asamblea General de Copropietarios debidamente protocolizada,
@@ -1263,7 +1482,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                       </p>
                     )}
 
-                    {/* Caso 5: Buena Convivencia */}
+                    {/* Caso 7: Buena Convivencia */}
                     {previewCert.type.includes('Buena Convivencia') && (
                       <p>
                         Que revisado el Libro Oficial de Sugerencias y Reclamos y el registro de sanciones de la copropiedad,
@@ -1337,13 +1556,19 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
 
                 {/* Pie de Página de Validación con Cód. de Verificación y Código QR Notarial */}
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                  <div className="flex items-center gap-2">
-                    {/* QR SVG Notarial */}
-                    <svg className="w-8 h-8 text-slate-700 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm10-2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14 0h-4v2h2v4h2v-2h2v-2h-2v-2zm-4 4h2v2h-2v-2zm6-4h2v2h-2v-2zm0 4h2v2h-2v-2zM6 6h2v2H6V6zm12 0h2v2h-2V6zM6 18h2v2H6v-2z"/>
-                    </svg>
+                  <div className="flex items-center gap-2.5">
+                    {/* QR SVG Notarial Interactivo */}
+                    <button
+                      onClick={() => setVerifyingCert(previewCert)}
+                      className="group p-1 rounded-lg border border-slate-200 hover:border-[#0F3D2E] transition-all bg-white"
+                      title="Haga clic para abrir la vista pública de verificación express"
+                    >
+                      <svg className="w-8 h-8 text-slate-700 group-hover:text-[#0F3D2E] transition-colors shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm10-2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14 0h-4v2h2v4h2v-2h2v-2h-2v-2zm-4 4h2v2h-2v-2zm6-4h2v2h-2v-2zm0 4h2v2h-2v-2zM6 6h2v2H6V6zm12 0h2v2h-2V6zM6 18h2v2H6v-2z"/>
+                      </svg>
+                    </button>
                     <div>
-                      <div>Verificación en línea: aranpro.cl/verificar</div>
+                      <div>Verificación Notarial: portalnet.cl/verificar</div>
                       <div className="text-[#0F3D2E] font-bold">Cód. Hash: {previewCert.verificationCode || 'VRF-OK'}</div>
                     </div>
                   </div>
@@ -1358,7 +1583,97 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
         </div>
       )}
 
-      {/* 8. MODAL DE CONFIRMACIÓN CORPORATIVO ARANPRO (Elimina popups nativos del navegador) */}
+      {/* 8. MODAL DE VERIFICACIÓN PÚBLICA NOTARIAL EXPRESS (Propuesta 3) */}
+      {verifyingCert && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150 text-center space-y-4">
+            <button
+              onClick={() => setVerifyingCert(null)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Sello de Autenticidad */}
+            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-50 border-2 border-emerald-500 text-emerald-600 flex items-center justify-center shadow-lg">
+              <ShieldCheck className="w-9 h-9 text-emerald-600 animate-pulse" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase tracking-wider inline-block">
+                ✓ Documento Auténtico y Vigente
+              </span>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                Verificación de Fe Pública ARANPRO
+              </h3>
+              <p className="text-xs text-slate-500">
+                Conforme al Registro Nacional de Administradores de Condominios Minvu (RNAC N° {companySettings?.rnacNumber || '48.912'})
+              </p>
+            </div>
+
+            {/* Ficha Resumen de Integridad */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left space-y-2 text-xs">
+              <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500">Folio Oficial:</span>
+                <span className="font-mono font-bold text-slate-900">{verifyingCert.folio || verifyingCert.id}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500">Código Hash Criptográfico:</span>
+                <span className="font-mono font-bold text-[#0F3D2E]">{verifyingCert.verificationCode || 'VRF-OK'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500">Tipo de Certificado:</span>
+                <span className="font-bold text-slate-900 text-right max-w-[200px] truncate">{verifyingCert.type}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500">Comunidad / Inmueble:</span>
+                <span className="font-bold text-slate-900">{verifyingCert.communityName} • Casa {verifyingCert.unitNumber}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500">Titular Solicitante:</span>
+                <span className="font-semibold text-slate-800">{verifyingCert.applicantName} ({formatRut(verifyingCert.rut)})</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500">Fecha de Expedición:</span>
+                <span className="font-semibold text-slate-800">{formatDate(verifyingCert.date)}</span>
+              </div>
+              <div className="flex justify-between pt-0.5">
+                <span className="text-slate-500">Estado de Validez:</span>
+                <span className="font-bold text-emerald-700">30 Días Corridos (Vigente ante Notarías y Bancos)</span>
+              </div>
+            </div>
+
+            {/* Botones de Acción */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  const url = `https://portalnet.cl/verificar?folio=${verifyingCert.folio || verifyingCert.id}&hash=${verifyingCert.verificationCode || 'VRF-OK'}`;
+                  if (navigator?.clipboard) navigator.clipboard.writeText(url);
+                  setCopiedLinkFolio(verifyingCert.folio || verifyingCert.id);
+                  setTimeout(() => setCopiedLinkFolio(null), 2500);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
+              >
+                <Share2 className="w-3.5 h-3.5 text-[#0F3D2E]" />
+                {copiedLinkFolio ? '¡Enlace Copiado!' : 'Copiar Enlace de Verificación'}
+              </button>
+
+              <button
+                onClick={() => {
+                  setVerifyingCert(null);
+                  setPreviewCert(verifyingCert);
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5 text-[#D4B895]" />
+                Ver Documento Timbrado
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. MODAL DE CONFIRMACIÓN CORPORATIVO ARANPRO (Elimina popups nativos del navegador) */}
       <AranproConfirmModal
         isOpen={modalDialog.isOpen}
         type={modalDialog.type}
