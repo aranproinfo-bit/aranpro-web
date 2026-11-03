@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
-  const { currentUser, communities, getUnitFinancials, setActiveReceipt, reportPayment, addAnnouncement, calculateCommunityTotals, changeResidentPassword, logout } = useCommunity();
+  const { currentUser, communities, getUnitFinancials, setActiveReceipt, reportPayment, addAnnouncement, calculateCommunityTotals, changeResidentPassword, logout, companySettings } = useCommunity();
   const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'gastos' | 'mis-pagos' | 'comunicados' | 'cuenta-bancaria'
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showCommitteeAnnForm, setShowCommitteeAnnForm] = useState(false);
@@ -1582,6 +1582,23 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
               <div className="flex justify-between pt-2 border-t border-[#D4B895] text-sm">
                 <span className="font-black text-[#0F3D2E]">MONTO PAGADO:</span>
                 <span className="font-black text-emerald-700">{formatCLP(activePaymentReceipt.amount)}</span>
+              </div>
+            </div>
+
+            {/* Timbre y Firma Digital de Emisión */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-slate-500 font-mono block">Recaudado y Validado</span>
+                <span className="font-bold text-[#0F3D2E] text-[11px] block">{companySettings?.adminName || companySettings?.administratorName || 'Administración ARANPRO'}</span>
+                <span className="text-[9px] text-slate-500 font-mono">RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}</span>
+              </div>
+              <div className="text-right">
+                {companySettings?.signatureDataUrl ? (
+                  <img src={companySettings.signatureDataUrl} alt="Firma" className="max-h-11 object-contain ml-auto" />
+                ) : (
+                  <div className="h-6"></div>
+                )}
+                <span className="text-[9px] font-mono text-emerald-800 font-bold block">✓ Timbre Digital Verificado</span>
               </div>
             </div>
 

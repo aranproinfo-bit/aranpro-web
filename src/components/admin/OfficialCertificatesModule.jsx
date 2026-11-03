@@ -1522,17 +1522,28 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                 <div className="pt-8 border-t border-slate-200 grid grid-cols-2 gap-8 items-end">
                   {/* Firma de la Administración */}
                   <div className="text-center space-y-2">
-                    <div className="h-16 flex items-center justify-center">
+                    <div className="h-20 flex items-center justify-center gap-3">
+                      {companySettings?.signatureDataUrl ? (
+                        <img 
+                          src={companySettings.signatureDataUrl} 
+                          alt="Firma Representante Legal" 
+                          className="max-h-20 max-w-[180px] object-contain drop-shadow-xs" 
+                        />
+                      ) : (
+                        <div className="text-[11px] font-serif italic text-slate-400">
+                          {companySettings?.adminName || 'Firma de la Administración'}
+                        </div>
+                      )}
                       {/* Timbre Digital Simulado */}
-                      <div className="border-2 border-dashed border-[#0F3D2E] rounded-full w-28 h-16 flex flex-col items-center justify-center p-1 bg-[#0F3D2E]/5">
+                      <div className="border-2 border-dashed border-[#0F3D2E] rounded-full w-24 h-14 flex flex-col items-center justify-center p-1 bg-[#0F3D2E]/5 shrink-0">
                         <span className="text-[7px] font-black text-[#0F3D2E] uppercase">TIMBRE DIGITAL</span>
-                        <span className="text-[9px] font-bold text-[#0F3D2E]">ARANPRO SpA</span>
-                        <span className="text-[7px] text-[#0F3D2E]">RNAC N° 48.912</span>
+                        <span className="text-[8.5px] font-bold text-[#0F3D2E]">ARANPRO SpA</span>
+                        <span className="text-[7px] text-[#0F3D2E]">RNAC N° {companySettings?.rnacNumber || '48.912'}</span>
                       </div>
                     </div>
                     <div className="border-t border-slate-400 pt-1.5">
                       <p className="font-bold text-xs text-slate-900">
-                        {companySettings?.adminName || 'ADMINISTRACIÓN ARANPRO'}
+                        {companySettings?.adminName || companySettings?.administratorName || 'ADMINISTRACIÓN ARANPRO'}
                       </p>
                       <p className="text-[10px] text-slate-500 font-mono">
                         RUT Administrador: {companySettings?.adminRut || '14.882.140-K'}

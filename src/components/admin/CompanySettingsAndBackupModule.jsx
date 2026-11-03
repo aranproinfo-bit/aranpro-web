@@ -297,6 +297,14 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
     if (canvas) {
       const dataUrl = canvas.toDataURL('image/png');
       setSignatureImage(dataUrl);
+      setHasCanvasDrawn(true);
+      // Actualizar automáticamente en companySettings para sincronizar con todos los PDFs
+      setCompanySettings(prev => ({
+        ...prev,
+        signatureDataUrl: dataUrl,
+        signature: dataUrl,
+        digitalSignature: dataUrl
+      }));
     }
   };
 
@@ -307,6 +315,12 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setSignatureImage('');
     setHasCanvasDrawn(false);
+    setCompanySettings(prev => ({
+      ...prev,
+      signatureDataUrl: '',
+      signature: '',
+      digitalSignature: ''
+    }));
   };
 
   const handleUploadSignatureFile = (e) => {
@@ -318,6 +332,13 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
       if (typeof result === 'string') {
         setSignatureImage(result);
         setHasCanvasDrawn(true);
+        // Actualizar automáticamente en companySettings para sincronizar con todos los PDFs
+        setCompanySettings(prev => ({
+          ...prev,
+          signatureDataUrl: result,
+          signature: result,
+          digitalSignature: result
+        }));
       }
     };
     reader.readAsDataURL(file);
@@ -338,12 +359,15 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
       email: empresaForm.email,
       website: empresaForm.website,
       adminName: empresaForm.adminName,
+      administratorName: empresaForm.adminName,
       adminRut: empresaForm.adminRut,
       adminRole: empresaForm.adminRole,
       rnacNumber: empresaForm.rnacNumber,
       rnacCategory: empresaForm.rnacCategory,
       adminPin: adminPin,
       signatureDataUrl: signatureImage,
+      signature: signatureImage,
+      digitalSignature: signatureImage,
       profileLicitacion: {
         specialty: empresaForm.specialty,
         startYear: empresaForm.startYear,
@@ -1108,6 +1132,25 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Banner de Sincronización Global de Firma en todos los PDFs */}
+              {(signatureImage || companySettings?.signatureDataUrl) && (
+                <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl flex items-center justify-between text-xs text-emerald-950 max-w-xl mx-auto shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-100" />
+                    </div>
+                    <div>
+                      <strong className="block text-emerald-900 font-black">
+                        Firma Digital Sincronizada en Todos los Módulos
+                      </strong>
+                      <span className="text-[11px] text-emerald-800">
+                        Esta firma se estampa automáticamente en Certificados oficiales, Actas de Asamblea, Citaciones, Cartas de Cobranza, Rendiciones y Dossier.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 flex justify-end">
                 <button
@@ -3277,6 +3320,13 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
 
                   <div className="pt-4 flex items-center justify-between text-left border-t border-slate-200 text-[10px] text-slate-400 font-mono">
                     <div>
+                      {(signatureImage || companySettings?.signatureDataUrl) && (
+                        <img 
+                          src={signatureImage || companySettings?.signatureDataUrl} 
+                          alt="Firma" 
+                          className="max-h-12 object-contain mb-1" 
+                        />
+                      )}
                       <p className="font-bold text-slate-700">Firma Autorizada ARANPRO</p>
                       <p>Registro Central de Custodia Digital</p>
                     </div>
@@ -3664,9 +3714,18 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                   ))}
                 </div>
 
-                <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                  <div>ARANPRO Gestión Integral • {empresaForm.website}</div>
-                  <div>Contacto: {empresaForm.phone}</div>
+                <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-xs">
+                  <div className="text-[10px] text-slate-500 font-mono space-y-0.5">
+                    <div>ARANPRO Gestión Integral • {empresaForm.website}</div>
+                    <div>Contacto: {empresaForm.phone} • RNAC Minvu N° {empresaForm.rnacNumber}</div>
+                  </div>
+                  <div className="text-right">
+                    {(signatureImage || companySettings?.signatureDataUrl) && (
+                      <img src={signatureImage || companySettings?.signatureDataUrl} alt="Firma" className="max-h-12 object-contain ml-auto" />
+                    )}
+                    <span className="text-[10px] font-bold text-slate-800 block">{empresaForm.adminName}</span>
+                    <span className="text-[9px] text-slate-400 font-mono">Firma Autorizada</span>
+                  </div>
                 </div>
               </div>
             </div>

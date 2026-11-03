@@ -15,7 +15,8 @@ export const SuggestionsAndComplaintsModule = ({ currentCommunity }) => {
   const { 
     addCommunityTicket, 
     updateTicketStatus, 
-    toggleTicketElevate 
+    toggleTicketElevate,
+    companySettings
   } = useCommunity();
 
   const tickets = currentCommunity?.communityTickets || [];
@@ -1072,16 +1073,30 @@ export const SuggestionsAndComplaintsModule = ({ currentCommunity }) => {
             </div>
 
             {/* Firmas */}
-            <div className="pt-8 border-t border-slate-300 grid grid-cols-2 gap-8 text-center text-xs font-sans">
+            <div className="pt-8 border-t border-slate-300 grid grid-cols-2 gap-8 text-center text-xs font-sans items-end">
               <div className="space-y-1">
-                <div className="h-8"></div>
+                <div className="h-16 flex items-center justify-center">
+                  {companySettings?.signatureDataUrl ? (
+                    <img 
+                      src={companySettings.signatureDataUrl} 
+                      alt="Firma Administrador" 
+                      className="max-h-16 object-contain mx-auto" 
+                    />
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">Firma de la Administración</span>
+                  )}
+                </div>
                 <div className="border-t border-slate-400 pt-1">
-                  <strong>Administración General ARANPRO</strong>
-                  <span className="block text-[10px] text-slate-500">RUT: 76.999.888-1</span>
+                  <strong>{companySettings?.adminName || companySettings?.administratorName || 'Administración General ARANPRO'}</strong>
+                  <span className="block text-[10px] text-slate-500">
+                    RUT: {companySettings?.companyRut || '76.999.888-1'} • RNAC N° {companySettings?.rnacNumber || '48.912'}
+                  </span>
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="h-8"></div>
+                <div className="h-16 flex items-center justify-center">
+                  <span className="text-xs text-slate-400 italic">V°B° Comité de Administración</span>
+                </div>
                 <div className="border-t border-slate-400 pt-1">
                   <strong>Presidente Comité de Administración</strong>
                   <span className="block text-[10px] text-slate-500">{currentCommunity.name}</span>

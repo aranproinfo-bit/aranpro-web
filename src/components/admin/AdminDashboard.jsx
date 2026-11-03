@@ -12411,17 +12411,25 @@ _Administración ARANPRO_`;
                 <div className="grid grid-cols-3 gap-6 text-center text-xs">
                   <div>
                     <div className="h-20 print:h-16 w-full flex items-center justify-center mb-2">
-                      <div className="w-full max-w-[130px] h-14 print:h-12 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] print:text-[8px] text-slate-400 bg-slate-50/50">
-                        <span className="font-bold text-slate-500">Firma y Timbre</span>
-                        <span className="text-[7.5px] text-slate-400">Administrador / Rendidor</span>
-                      </div>
+                      {companySettings?.signatureDataUrl ? (
+                        <img 
+                          src={companySettings.signatureDataUrl} 
+                          alt="Firma Administrador" 
+                          className="max-h-20 print:max-h-16 object-contain mx-auto" 
+                        />
+                      ) : (
+                        <div className="w-full max-w-[130px] h-14 print:h-12 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] print:text-[8px] text-slate-400 bg-slate-50/50">
+                          <span className="font-bold text-slate-500">Firma y Timbre</span>
+                          <span className="text-[7.5px] text-slate-400">Administrador / Rendidor</span>
+                        </div>
+                      )}
                     </div>
                     <div className="border-t-2 border-slate-500 pt-1.5">
                       <div className="font-bold text-slate-900 text-[11px] truncate">
-                        {companySettings.administratorName || 'John Andrés Arancibia M.'}
+                        {companySettings.adminName || companySettings.administratorName || 'John Andrés Arancibia M.'}
                       </div>
                       <div className="text-[9.5px] text-slate-600">Administrador de Copropiedad</div>
-                      <div className="text-[9px] text-slate-400 font-semibold">ARANPRO SpA</div>
+                      <div className="text-[9px] text-[#0F3D2E] font-semibold">ARANPRO • RNAC MINVU N° {companySettings.rnacNumber || '48.912'}</div>
                     </div>
                   </div>
 
@@ -13567,20 +13575,24 @@ _Administración ARANPRO_`;
                       {/* Firma 1: Administrador */}
                       <div className="flex flex-col items-center justify-between text-center min-h-[140px] p-3 rounded-xl border border-slate-200 bg-white shadow-2xs">
                         <div className="w-full flex-1 flex items-end justify-center pb-2">
-                          <div className="w-4/5 border-b-2 border-slate-800 border-dashed"></div>
+                          {companySettings?.signatureDataUrl ? (
+                            <img src={companySettings.signatureDataUrl} alt="Firma Administrador" className="max-h-16 object-contain mx-auto" />
+                          ) : (
+                            <div className="w-4/5 border-b-2 border-slate-800 border-dashed"></div>
+                          )}
                         </div>
                         <div className="space-y-0.5 pt-1">
                           <div className="text-[11px] font-black text-slate-900 uppercase">
-                            ADMINISTRACIÓN ARANPRO
+                            {companySettings?.adminName || companySettings?.administratorName || 'ADMINISTRACIÓN ARANPRO'}
                           </div>
                           <div className="text-[9.5px] text-slate-600">
                             Administrador Titular
                           </div>
                           <div className="text-[9px] font-mono text-slate-500">
-                            RUT: 15.420.891-3
+                            RUT: {companySettings?.adminRut || '14.882.140-K'}
                           </div>
                           <div className="text-[8.5px] font-bold text-[#0F3D2E]">
-                            Reg. Nacional MINVU N° 45.291-K
+                            RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}
                           </div>
                         </div>
                       </div>
@@ -16170,6 +16182,23 @@ _Administración ARANPRO_`;
               </div>
             </div>
 
+            {/* Timbre y Firma Digital de Emisión */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-slate-500 font-mono block">Recaudado y Validado</span>
+                <span className="font-bold text-[#0F3D2E] text-[11px] block">{companySettings?.adminName || companySettings?.administratorName || 'Administración ARANPRO'}</span>
+                <span className="text-[9px] text-slate-500 font-mono">RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}</span>
+              </div>
+              <div className="text-right">
+                {companySettings?.signatureDataUrl ? (
+                  <img src={companySettings.signatureDataUrl} alt="Firma" className="max-h-11 object-contain ml-auto" />
+                ) : (
+                  <div className="h-6"></div>
+                )}
+                <span className="text-[9px] font-mono text-emerald-800 font-bold block">✓ Timbre Digital Verificado</span>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between pt-2">
               <button
                 onClick={() => {
@@ -16811,10 +16840,14 @@ _Administración ARANPRO_`;
                 <div className="hidden print:grid grid-cols-2 gap-8 pt-8 text-center text-xs">
                   <div className="space-y-1">
                     <div className="h-16 w-full flex items-center justify-center mb-2">
-                      <div className="w-40 h-12 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50/50">
-                        <span className="font-bold text-slate-500">Firma y Timbre</span>
-                        <span className="text-[7.5px] text-slate-400">Administración</span>
-                      </div>
+                      {companySettings?.signatureDataUrl ? (
+                        <img src={companySettings.signatureDataUrl} alt="Firma Administrador" className="max-h-16 object-contain mx-auto" />
+                      ) : (
+                        <div className="w-40 h-12 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50/50">
+                          <span className="font-bold text-slate-500">Firma y Timbre</span>
+                          <span className="text-[7.5px] text-slate-400">Administración</span>
+                        </div>
+                      )}
                     </div>
                     <div className="w-40 mx-auto border-t-2 border-slate-900 pt-1"></div>
                     <span className="block font-black uppercase text-slate-900">{companySettings.administratorName}</span>
@@ -17128,10 +17161,14 @@ _Administración ARANPRO_`;
                   <div className="grid grid-cols-2 gap-8 pt-6 print:pt-8">
                     <div className="text-center space-y-1">
                       <div className="h-20 w-full flex items-center justify-center mb-2">
-                        <div className="w-48 h-14 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50/50">
-                          <span className="font-bold text-slate-500">Firma y Timbre</span>
-                          <span className="text-[7.5px] text-slate-400">Administrador de Copropiedad</span>
-                        </div>
+                        {companySettings?.signatureDataUrl ? (
+                          <img src={companySettings.signatureDataUrl} alt="Firma Administrador" className="max-h-20 object-contain mx-auto" />
+                        ) : (
+                          <div className="w-48 h-14 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50/50">
+                            <span className="font-bold text-slate-500">Firma y Timbre</span>
+                            <span className="text-[7.5px] text-slate-400">Administrador de Copropiedad</span>
+                          </div>
+                        )}
                       </div>
                       <div className="w-48 mx-auto border-t-2 border-slate-900 pt-1"></div>
                       <span className="block text-xs font-black uppercase text-slate-900">
@@ -17812,10 +17849,14 @@ _Administración ARANPRO_`;
                       <div className="pt-6 grid grid-cols-2 gap-8 text-center text-xs print:pt-8">
                         <div className="space-y-1">
                           <div className="h-20 w-full flex items-center justify-center mb-2">
-                            <div className="w-48 h-14 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50/50">
-                              <span className="font-bold text-slate-500">Firma y Timbre</span>
-                              <span className="text-[7.5px] text-slate-400">Administración ARANPRO</span>
-                            </div>
+                            {companySettings?.signatureDataUrl ? (
+                              <img src={companySettings.signatureDataUrl} alt="Firma Administrador" className="max-h-20 object-contain mx-auto" />
+                            ) : (
+                              <div className="w-48 h-14 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50/50">
+                                <span className="font-bold text-slate-500">Firma y Timbre</span>
+                                <span className="text-[7.5px] text-slate-400">Administración ARANPRO</span>
+                              </div>
+                            )}
                           </div>
                           <div className="w-48 mx-auto border-t-2 border-slate-900 pt-1"></div>
                           <span className="block font-black uppercase text-slate-900">

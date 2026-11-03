@@ -10,7 +10,7 @@ import { printDocumentDirectly, downloadHtmlDocument } from '../../../utils/prin
 import { AranproLogo } from '../../common/MauranLogo';
 
 export const AssemblyMinutesSubTab = ({ currentCommunity }) => {
-  const { addAssemblyMinute, deleteAssemblyMinute } = useCommunity();
+  const { addAssemblyMinute, deleteAssemblyMinute, companySettings } = useCommunity();
 
   const minutes = currentCommunity?.assemblyMinutes || [];
 
@@ -390,15 +390,27 @@ export const AssemblyMinutesSubTab = ({ currentCommunity }) => {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="h-10 flex items-center justify-center">
-                    <span className="font-mono text-emerald-800 text-xs italic font-bold">
-                      [Firmado Electrónicamente]
-                    </span>
+                  <div className="h-14 flex items-center justify-center">
+                    {companySettings?.signatureDataUrl ? (
+                      <img 
+                        src={companySettings.signatureDataUrl} 
+                        alt="Firma Administrador" 
+                        className="max-h-14 object-contain mx-auto" 
+                      />
+                    ) : (
+                      <span className="font-mono text-emerald-800 text-xs italic font-bold">
+                        [Firmado Electrónicamente]
+                      </span>
+                    )}
                   </div>
                   <div className="border-t border-slate-400 pt-1.5">
-                    <strong className="text-xs text-slate-900 block">{selectedMinute.adminName}</strong>
+                    <strong className="text-xs text-slate-900 block">
+                      {companySettings?.adminName || companySettings?.administratorName || selectedMinute.adminName}
+                    </strong>
                     <span className="text-[10px] text-slate-600 block">Administrador General ARANPRO</span>
-                    <span className="text-[10px] text-slate-500 font-mono">RUT: {selectedMinute.adminRut}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      RUT: {companySettings?.adminRut || selectedMinute.adminRut} • RNAC N° {companySettings?.rnacNumber || '48.912'}
+                    </span>
                   </div>
                 </div>
               </div>

@@ -2091,17 +2091,33 @@ RUT: ______________________                 RUT: ______________________`;
                       • <strong>Validez en 2ª Citación:</strong> {selectedTopic.category === 'ordinaria' ? 'En caso de no reunirse el quórum en 1ª citación, la asamblea sesionará válidamente en 2ª citación con los copropietarios que concurran, adoptándose los acuerdos por mayoría de los presentes hábiles.' : 'Requiere el quórum calificado de constitución en ambas citaciones.'}
                     </div>
 
-                    <div className="pt-8 grid grid-cols-2 gap-8 text-center font-sans text-xs">
+                    <div className="pt-8 grid grid-cols-2 gap-8 text-center font-sans text-xs items-end">
                       <div>
+                        <div className="h-16 flex items-center justify-center">
+                          <span className="text-xs text-slate-400 italic">Firma y Visto Bueno Comité</span>
+                        </div>
                         <div className="border-t border-slate-400 pt-1">
                           <strong>Presidente Comité de Administración</strong><br />
                           {currentCommunity?.name}
                         </div>
                       </div>
                       <div>
+                        <div className="h-16 flex items-center justify-center">
+                          {companySettings?.signatureDataUrl ? (
+                            <img 
+                              src={companySettings.signatureDataUrl} 
+                              alt="Firma Administrador" 
+                              className="max-h-16 object-contain mx-auto" 
+                            />
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Firma del Administrador</span>
+                          )}
+                        </div>
                         <div className="border-t border-slate-400 pt-1">
-                          <strong>Administrador de la Comunidad</strong><br />
-                          ARANPRO Gestión Integral
+                          <strong>{companySettings?.adminName || companySettings?.administratorName || 'Administrador de la Comunidad'}</strong><br />
+                          <span className="text-[10px] text-slate-500">
+                            ARANPRO • RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}
+                          </span>
                         </div>
                       </div>
                     </div>

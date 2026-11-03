@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileCheck, Printer, Download, X, FileSpreadsheet, ArrowLeft } from 'lucide-react';
 import { formatCLP, formatDate } from '../../utils/formatters';
 import { printDocumentDirectly } from '../../utils/printDocument';
+import { useCommunity } from '../../context/CommunityContext';
 import { AranproLogo } from './MauranLogo';
 
 // Agrupador ordenado de gastos por categoría con subtotales
@@ -47,6 +48,7 @@ export const ExpenseReportModal = ({
   community,
   onExportCSV
 }) => {
+  const { companySettings } = useCommunity();
   const [expenseReportTemplate, setExpenseReportTemplate] = useState('ejecutivo'); // 'ejecutivo' | 'clasico' | 'moderno'
 
   if (!isOpen || !community) return null;
@@ -491,14 +493,20 @@ export const ExpenseReportModal = ({
                 {/* Bloque de Firmas Formales (Ajustado para no cortarse jamás en 1 página) */}
                 <div className="pt-2 pb-1 grid grid-cols-3 gap-4 text-center text-[8.5px] page-break-inside-avoid">
                   <div className="flex flex-col items-center">
-                    <div className="h-9 w-full max-w-[125px] border border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-[7px] text-slate-400 mb-1 bg-slate-50/40">
-                      <span className="font-bold text-slate-500">Firma y Timbre</span>
-                      <span className="text-[6.5px]">Administración</span>
+                    <div className="h-9 w-full max-w-[125px] flex flex-col items-center justify-center text-[7px] text-slate-400 mb-1">
+                      {companySettings?.signatureDataUrl ? (
+                        <img src={companySettings.signatureDataUrl} alt="Firma" className="max-h-9 object-contain mx-auto" />
+                      ) : (
+                        <div className="w-full h-full border border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center bg-slate-50/40">
+                          <span className="font-bold text-slate-500">Firma y Timbre</span>
+                          <span className="text-[6.5px]">Administración</span>
+                        </div>
+                      )}
                     </div>
                     <div className="w-full border-t border-slate-700 pt-1 leading-tight">
-                      <div className="font-black text-slate-900 text-[8.5px]">ARANPRO GESTIÓN</div>
+                      <div className="font-black text-slate-900 text-[8.5px]">{companySettings?.adminName || 'ARANPRO GESTIÓN'}</div>
                       <div className="text-[7.5px] text-slate-600">Administrador de Copropiedad</div>
-                      <div className="text-[7px] font-mono text-slate-400">Reg. MINVU N° 44.201</div>
+                      <div className="text-[7px] font-mono text-slate-400">RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}</div>
                     </div>
                   </div>
                   <div className="flex flex-col items-center">
@@ -656,13 +664,19 @@ export const ExpenseReportModal = ({
                 {/* Firmas de Auditoría */}
                 <div className="pt-2 pb-1 grid grid-cols-3 gap-4 text-center text-[8px] page-break-inside-avoid">
                   <div className="flex flex-col items-center">
-                    <div className="h-9 w-full max-w-[125px] border border-dashed border-slate-400 rounded-lg flex flex-col items-center justify-center text-[7px] text-slate-500 mb-1 bg-slate-50/50">
-                      <span className="font-bold">Firma y Timbre</span>
-                      <span className="text-[6.5px]">Auditoría / Adm.</span>
+                    <div className="h-9 w-full max-w-[125px] flex flex-col items-center justify-center text-[7px] text-slate-500 mb-1">
+                      {companySettings?.signatureDataUrl ? (
+                        <img src={companySettings.signatureDataUrl} alt="Firma" className="max-h-9 object-contain mx-auto" />
+                      ) : (
+                        <div className="w-full h-full border border-dashed border-slate-400 rounded-lg flex flex-col items-center justify-center bg-slate-50/50">
+                          <span className="font-bold">Firma y Timbre</span>
+                          <span className="text-[6.5px]">Auditoría / Adm.</span>
+                        </div>
+                      )}
                     </div>
                     <div className="w-full border-t border-slate-700 pt-1 leading-tight">
-                      <div className="font-bold text-slate-900 text-[8.5px]">ARANPRO GESTIÓN INMOBILIARIA</div>
-                      <div className="text-[7.5px] text-slate-600">Administrador • Reg. MINVU N° 44.201</div>
+                      <div className="font-bold text-slate-900 text-[8.5px]">{companySettings?.adminName || 'ARANPRO GESTIÓN INMOBILIARIA'}</div>
+                      <div className="text-[7.5px] text-slate-600">Administrador • RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}</div>
                     </div>
                   </div>
                   <div className="flex flex-col items-center">
@@ -819,13 +833,19 @@ export const ExpenseReportModal = ({
                 {/* Sello de Confianza y Firmas Vecinales */}
                 <div className="pt-2 pb-1 grid grid-cols-2 gap-8 text-center text-[8.5px] page-break-inside-avoid">
                   <div className="flex flex-col items-center">
-                    <div className="h-9 w-full max-w-[140px] border border-dashed border-[#0F3D2E]/30 rounded-lg flex flex-col items-center justify-center text-[7.5px] text-[#0F3D2E]/70 bg-emerald-50/20 mb-1">
-                      <span className="font-bold">Firma y Timbre</span>
-                      <span className="text-[6.5px]">Administración ARANPRO</span>
+                    <div className="h-9 w-full max-w-[140px] flex flex-col items-center justify-center text-[7.5px] text-[#0F3D2E]/70 mb-1">
+                      {companySettings?.signatureDataUrl ? (
+                        <img src={companySettings.signatureDataUrl} alt="Firma" className="max-h-9 object-contain mx-auto" />
+                      ) : (
+                        <div className="w-full h-full border border-dashed border-[#0F3D2E]/30 rounded-lg flex flex-col items-center justify-center bg-emerald-50/20">
+                          <span className="font-bold">Firma y Timbre</span>
+                          <span className="text-[6.5px]">Administración ARANPRO</span>
+                        </div>
+                      )}
                     </div>
                     <div className="w-full border-t border-[#0F3D2E] pt-1 leading-tight">
-                      <div className="font-bold text-[#0F3D2E] text-[8.5px]">ARANPRO GESTIÓN INMOBILIARIA</div>
-                      <div className="text-[7.5px] text-slate-600">Administración Responsable • Reg. MINVU N° 44.201</div>
+                      <div className="font-bold text-[#0F3D2E] text-[8.5px]">{companySettings?.adminName || 'ARANPRO GESTIÓN INMOBILIARIA'}</div>
+                      <div className="text-[7.5px] text-slate-600">Administración Responsable • RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}</div>
                     </div>
                   </div>
                   <div className="flex flex-col items-center">
