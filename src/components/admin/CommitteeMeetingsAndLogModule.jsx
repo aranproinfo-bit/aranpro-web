@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
-import { formatDate, formatRut } from '../../utils/formatters';
+import { formatDate, formatRut, formatCLP } from '../../utils/formatters';
 import { printDocumentDirectly } from '../../utils/printDocument';
 import {
   ClipboardList, Users, Calendar, Clock, CheckCircle2, AlertCircle,
@@ -26,7 +26,9 @@ export const CommitteeMeetingsAndLogModule = ({
     addCommitteeTask,
     toggleCommitteeTaskStatus,
     deleteCommitteeTask,
-    toggleUnitCommittee
+    toggleUnitCommittee,
+    updateUnit,
+    getUnitFinancials
   } = useCommunity();
 
   // Control de sub-vista activa ('reuniones' | 'novedades' | 'tareas' | 'directorio')
@@ -96,21 +98,34 @@ export const CommitteeMeetingsAndLogModule = ({
     notes: ''
   });
 
+  // Estado para Modal de Designación / Edición de Miembros del Comité (Art. 17°)
+  const [showDesignateMemberModal, setShowDesignateMemberModal] = useState(false);
+  const [designateForm, setDesignateForm] = useState({
+    unitId: '',
+    role: 'Miembro del Comité'
+  });
+
   // Miembros del Comité Vigente
   const committeeMembers = useMemo(() => {
     return (currentCommunity?.units || [])
       .filter(u => u.isCommittee)
-      .map(u => ({
-        unitNumber: u.number,
-        tower: u.tower,
-        name: u.ownerName || 'Copropietario',
-        rut: u.ownerRut || '',
-        phone: u.ownerPhone || '',
-        email: u.ownerEmail || '',
-        role: u.committeeRole || 'Miembro del Comité',
-        isUpToDate: !u.pendingDebt || u.pendingDebt <= 0
-      }));
-  }, [currentCommunity]);
+      .map(u => {
+        const fin = getUnitFinancials ? getUnitFinancials(u) : { pendingDebt: 0, previousDebt: 0 };
+        const isUpToDate = (fin.pendingDebt || 0) <= 0 && (fin.previousDebt || 0) <= 0;
+        return {
+          unitId: u.id,
+          unitNumber: u.number,
+          tower: u.tower,
+          name: u.owner || u.ownerName || 'Copropietario',
+          rut: u.rut || u.ownerRut || '',
+          phone: u.phone || u.ownerPhone || '',
+          email: u.email || u.ownerEmail || '',
+          role: u.committeeRole || 'Miembro del Comité',
+          isUpToDate,
+          pendingDebt: fin.pendingDebt || 0
+        };
+      });
+  }, [currentCommunity, getUnitFinancials]);
 
   // Contadores KPIs
   const pendingTasksCount = tasks.filter(t => t.status !== 'CUMPLIDA').length;
@@ -359,7 +374,7 @@ export const CommitteeMeetingsAndLogModule = ({
     text += `⚖️ _Administración ARANPRO • Gestión Integral_\n\n`;
 
     text += `🔔 *NOVEDADES RECIENTES:*\n`;
-    novedades.slice(0, 4).forEach((n, idx) => {
+    novedades.slice(0, 4).forEach((n) => {
       const icon = n.priority === 'URGENTE' ? '🚨' : n.priority === 'ALTA' ? '⚠️' : 'ℹ️';
       text += `${icon} *${n.title}* (${formatDate(n.date)})\n   _${n.description}_\n\n`;
     });
@@ -378,7 +393,45 @@ export const CommitteeMeetingsAndLogModule = ({
 
     navigator.clipboard.writeText(text);
     setWhatsAppNovedadesCopied(true);
-    setTimeout(() => setWhatsAppNovedadesCopied(false), 2500);
+    setTimeout(() => setWhatsAppNovedadesCopied(false), 3000);
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // Compartir Acta Oficial por WhatsApp
+  const handleShareMeetingWhatsApp = (m) => {
+    if (!m) return;
+    const communityName = currentCommunity?.name || 'Condominio';
+    let text = `📖 *ACTA OFICIAL DE SESIÓN DE COMITÉ — ${communityName.toUpperCase()}*\n`;
+    text += `📜 *Folio:* ${m.folio} • *Fecha:* ${formatDate(m.date)} (${m.time})\n`;
+    text += `🏛️ *Tipo:* ${m.type} • *Modalidad:* ${m.modality}\n\n`;
+    text += `✅ *ACUERDOS ADOPTADOS (Art. 17° Ley N° 21.442):*\n`;
+    (m.agreements || []).forEach((agr, i) => {
+      text += `${i + 1}. ${agr}\n`;
+    });
+    if (m.tasks && m.tasks.length > 0) {
+      text += `\n⏳ *COMPROMISOS DERIVADOS:*\n`;
+      m.tasks.forEach(t => {
+        text += `• ${t.title} (Resp: ${t.assignee} - Vence: ${t.dueDate ? formatDate(t.dueDate) : 'Pronto'})\n`;
+      });
+    }
+    text += `\n_Documento oficial foliado en el Libro de Actas de Administración ARANPRO._`;
+    navigator.clipboard.writeText(text);
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // Compartir Novedad Individual por WhatsApp
+  const handleShareNovedadWhatsApp = (n) => {
+    if (!n) return;
+    const communityName = currentCommunity?.name || 'Condominio';
+    const icon = n.priority === 'URGENTE' ? '🚨' : n.priority === 'ALTA' ? '⚠️' : 'ℹ️';
+    let text = `${icon} *NOVEDAD DEL COMITÉ — ${communityName.toUpperCase()}*\n`;
+    text += `📌 *${n.title}*\n`;
+    text += `📅 *Fecha:* ${formatDate(n.date)} (${n.time}) • *Categoría:* ${n.category}\n`;
+    text += `⚖️ *Prioridad:* ${n.priority} • *Estado:* ${n.status}\n\n`;
+    text += `📝 *Detalle:* ${n.description}\n`;
+    text += `\n_Reportado por: ${n.reportedBy} • Administración ARANPRO_`;
+    navigator.clipboard.writeText(text);
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   // Guardar Nueva Reunión
@@ -437,20 +490,20 @@ export const CommitteeMeetingsAndLogModule = ({
   return (
     <div className="space-y-4">
       {/* 1. BARRA SUPERIOR EJECUTIVA DEL COMITÉ DE ADMINISTRACIÓN */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center space-x-3 shrink-0">
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3.5 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs w-full">
+        <div className="flex items-start sm:items-center space-x-3 min-w-0">
           <div className="p-2.5 bg-gradient-to-br from-[#0F3D2E] to-[#14533d] text-white rounded-2xl shadow-xs shrink-0">
             <ClipboardList className="w-5 h-5 text-[#D4B895]" />
           </div>
-          <div>
-            <div className="flex items-center space-x-2 flex-wrap">
-              <h3 className="text-base font-black text-slate-900 tracking-tight whitespace-nowrap">
+          <div className="min-w-0">
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+              <h3 className="text-base font-black text-slate-900 tracking-tight">
                 Comité de Administración: Reuniones & Novedades
               </h3>
-              <span className="text-[10px] font-bold bg-[#0F3D2E]/10 text-[#0F3D2E] px-2 py-0.5 rounded-full border border-[#0F3D2E]/20 uppercase">
+              <span className="text-[10px] font-bold bg-[#0F3D2E]/10 text-[#0F3D2E] px-2 py-0.5 rounded-full border border-[#0F3D2E]/20 uppercase shrink-0">
                 Ley N° 21.442 • Arts. 17° y 20°
               </span>
-              <span className="text-[9.5px] font-bold text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded-md hidden sm:inline-block">
+              <span className="text-[9.5px] font-bold text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded-md hidden sm:inline-block shrink-0">
                 {currentCommunity?.name}
               </span>
             </div>
@@ -461,15 +514,15 @@ export const CommitteeMeetingsAndLogModule = ({
         </div>
 
         {/* Acciones principales rápidas a la derecha */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setShowNewMeetingModal(true)}
             className="px-3.5 py-2 bg-gradient-to-r from-[#0F3D2E] to-[#14533d] hover:from-[#0A291F] hover:to-[#0F3D2E] text-[#D4B895] border border-[#D4B895] font-black text-xs rounded-xl flex items-center shadow-xs transition-all cursor-pointer"
             title="Registrar una nueva reunión de comité con tabla, acuerdos y tareas"
           >
-            <Plus className="w-4 h-4 mr-1 text-[#D4B895]" />
-            + Nueva Sesión de Comité
+            <Plus className="w-4 h-4 mr-1.5 text-[#D4B895]" />
+            Nueva Sesión de Comité
           </button>
 
           <button
@@ -478,24 +531,24 @@ export const CommitteeMeetingsAndLogModule = ({
             className="px-3 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
             title="Anotar una novedad o evento urgente para conocimiento del comité"
           >
-            <Bell className="w-3.5 h-3.5 mr-1 text-[#D4B895]" />
-            + Registrar Novedad
+            <Bell className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
+            Registrar Novedad
           </button>
 
           <button
             type="button"
             onClick={handleCopyWhatsAppSummary}
             className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
-            title="Copiar reporte ejecutivo para pegar en el grupo de WhatsApp del Comité"
+            title="Copiar reporte ejecutivo y abrir en WhatsApp para el Comité"
           >
             {whatsAppNovedadesCopied ? (
               <>
-                <Check className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                <span className="font-bold">¡Copiado!</span>
+                <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+                <span className="font-bold">¡Copiado & Abierto!</span>
               </>
             ) : (
               <>
-                <MessageCircle className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                <MessageCircle className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
                 <span>WhatsApp Comité</span>
               </>
             )}
@@ -699,15 +752,40 @@ export const CommitteeMeetingsAndLogModule = ({
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handlePrintCommitteeMinute(selectedMeeting)}
-                    className="px-3.5 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer shrink-0"
-                    title="Imprimir Acta Oficial Foliada con membrete formal ARANPRO y firmas"
-                  >
-                    <Printer className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
-                    Imprimir Acta Oficial (PDF)
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handlePrintCommitteeMinute(selectedMeeting)}
+                      className="px-3.5 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+                      title="Imprimir Acta Oficial Foliada con membrete formal ARANPRO y firmas"
+                    >
+                      <Printer className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
+                      Imprimir Acta Oficial (PDF)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleShareMeetingWhatsApp(selectedMeeting)}
+                      className="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer"
+                      title="Compartir acuerdos y temas del acta por WhatsApp al Comité"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
+                      WhatsApp Acta
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar el acta de sesión folio ${selectedMeeting.folio}?`)) {
+                          deleteCommitteeMeeting(currentCommunity.id, selectedMeeting.id);
+                        }
+                      }}
+                      className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                      title="Eliminar sesión del libro"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Asistentes a la Sesión */}
@@ -895,6 +973,29 @@ export const CommitteeMeetingsAndLogModule = ({
                           + Elevar a Reunión
                         </button>
                       )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleShareNovedadWhatsApp(nov)}
+                        className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-lg border border-emerald-300 transition-colors cursor-pointer flex items-center"
+                        title="Enviar detalle de esta novedad al WhatsApp del Comité"
+                      >
+                        <MessageCircle className="w-3 h-3 mr-1 text-emerald-600" />
+                        WhatsApp
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`¿Eliminar la novedad "${nov.title}" de la bitácora?`)) {
+                            deleteCommitteeNovedad(currentCommunity.id, nov.id);
+                          }
+                        }}
+                        className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                        title="Eliminar novedad"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 
@@ -999,13 +1100,27 @@ export const CommitteeMeetingsAndLogModule = ({
                         {task.dueDate ? formatDate(task.dueDate) : 'Sin plazo'}
                       </strong>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => toggleCommitteeTaskStatus(currentCommunity.id, task.id)}
-                      className="text-[10px] font-bold text-[#0F3D2E] hover:underline cursor-pointer"
-                    >
-                      {isCompleted ? 'Reabrir Tarea' : 'Completar →'}
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleCommitteeTaskStatus(currentCommunity.id, task.id)}
+                        className="text-[10px] font-bold text-[#0F3D2E] hover:underline cursor-pointer"
+                      >
+                        {isCompleted ? 'Reabrir Tarea' : 'Completar →'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`¿Eliminar la tarea "${task.title}"?`)) {
+                            deleteCommitteeTask(currentCommunity.id, task.id);
+                          }
+                        }}
+                        className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer"
+                        title="Eliminar tarea"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -1017,6 +1132,32 @@ export const CommitteeMeetingsAndLogModule = ({
       {/* --- VISTA 4: DIRECTORIO DE MIEMBROS DEL COMITÉ --- */}
       {currentTab === 'directorio' && (
         <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+            <div>
+              <h4 className="text-sm font-black text-slate-900">
+                Directorio Oficial de Miembros del Comité ({committeeMembers.length})
+              </h4>
+              <p className="text-[11px] text-slate-500">
+                Designación y control de inhabilidades según el Art. 17° de la Ley N° 21.442
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const firstAvailableUnit = (currentCommunity?.units || []).find(u => !u.isCommittee);
+                setDesignateForm({
+                  unitId: firstAvailableUnit?.id || (currentCommunity?.units?.[0]?.id || ''),
+                  role: 'Vocal Comité'
+                });
+                setShowDesignateMemberModal(true);
+              }}
+              className="px-3.5 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl flex items-center shadow-xs transition-colors cursor-pointer shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
+              Designar / Agregar Miembro
+            </button>
+          </div>
+
           <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-start space-x-3">
             <Shield className="w-5 h-5 text-emerald-800 shrink-0 mt-0.5" />
             <div className="text-xs text-emerald-950">
@@ -1029,44 +1170,79 @@ export const CommitteeMeetingsAndLogModule = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {committeeMembers.map((m, idx) => (
-              <div key={idx} className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0F3D2E] to-[#14533d] text-white flex items-center justify-center font-bold text-xs">
-                      {m.name.charAt(0)}
+              <div key={idx} className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs space-y-3 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0F3D2E] to-[#14533d] text-white flex items-center justify-center font-bold text-xs">
+                        {m.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-black text-slate-900">{m.name}</h5>
+                        <span className="text-[10px] font-bold text-[#0F3D2E] bg-[#0F3D2E]/10 px-1.5 py-0.2 rounded-md">
+                          {m.role}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <h5 className="text-xs font-black text-slate-900">{m.name}</h5>
-                      <span className="text-[10px] font-bold text-[#0F3D2E] bg-[#0F3D2E]/10 px-1.5 py-0.2 rounded-md">
-                        {m.role}
-                      </span>
-                    </div>
-                  </div>
 
-                  <span className="text-[11px] font-mono font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                    {m.tower ? `${m.tower} - ${m.unitNumber}` : `Casa ${m.unitNumber}`}
-                  </span>
-                </div>
-
-                <div className="space-y-1 text-xs text-slate-600 pt-1 border-t border-slate-100">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">RUT:</span>
-                    <span className="font-mono font-bold">{m.rut ? formatRut(m.rut) : '—'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Teléfono:</span>
-                    <span className="font-bold">{m.phone || '—'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Correo:</span>
-                    <span className="font-bold truncate max-w-[170px]">{m.email || '—'}</span>
-                  </div>
-                  <div className="flex justify-between pt-1">
-                    <span className="text-slate-400">Estado Gastos:</span>
-                    <span className="font-bold text-emerald-700 flex items-center">
-                      <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" /> Al Día (Hábil)
+                    <span className="text-[11px] font-mono font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {m.tower ? `${m.tower} - ${m.unitNumber}` : `Casa ${m.unitNumber}`}
                     </span>
                   </div>
+
+                  <div className="space-y-1 text-xs text-slate-600 pt-2 mt-2 border-t border-slate-100">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">RUT:</span>
+                      <span className="font-mono font-bold">{m.rut ? formatRut(m.rut) : '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Teléfono:</span>
+                      <span className="font-bold">{m.phone || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Correo:</span>
+                      <span className="font-bold truncate max-w-[170px]">{m.email || '—'}</span>
+                    </div>
+                    <div className="flex justify-between pt-1">
+                      <span className="text-slate-400">Estado Gastos:</span>
+                      {m.isUpToDate ? (
+                        <span className="font-bold text-emerald-700 flex items-center">
+                          <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" /> Al Día (Hábil)
+                        </span>
+                      ) : (
+                        <span className="font-bold text-rose-600 flex items-center">
+                          <AlertTriangle className="w-3 h-3 mr-1 text-rose-500" /> Inhábil (Deuda: {formatCLP(m.pendingDebt)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDesignateForm({
+                        unitId: m.unitId,
+                        role: m.role
+                      });
+                      setShowDesignateMemberModal(true);
+                    }}
+                    className="text-[11px] font-bold text-[#0F3D2E] hover:underline cursor-pointer"
+                  >
+                    Editar Cargo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`¿Remover a ${m.name} (Casa ${m.unitNumber}) del Comité de Administración?`)) {
+                        updateUnit(currentCommunity.id, m.unitId, { isCommittee: false, committeeRole: '' });
+                      }
+                    }}
+                    className="text-[11px] font-bold text-rose-600 hover:text-rose-800 cursor-pointer"
+                  >
+                    Remover del Comité
+                  </button>
                 </div>
               </div>
             ))}
@@ -1454,6 +1630,118 @@ export const CommitteeMeetingsAndLogModule = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 4: DESIGNAR / EDITAR MIEMBRO DEL COMITÉ --- */}
+      {showDesignateMemberModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-[#0F3D2E] text-white rounded-xl">
+                  <UserCheck className="w-5 h-5 text-[#D4B895]" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900">Designar Miembro del Comité</h3>
+                  <p className="text-xs text-slate-500">Art. 17° Ley N° 21.442 • Requisitos de Habilidad</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDesignateMemberModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Seleccionar Copropietario / Vivienda</label>
+                <select
+                  value={designateForm.unitId}
+                  onChange={(e) => setDesignateForm({ ...designateForm, unitId: e.target.value })}
+                  className="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white font-bold"
+                >
+                  {(currentCommunity?.units || []).map(u => {
+                    const fin = getUnitFinancials ? getUnitFinancials(u) : { pendingDebt: 0 };
+                    const hasDebt = fin.pendingDebt > 0;
+                    return (
+                      <option key={u.id} value={u.id}>
+                        Casa {u.number} — {u.owner || u.ownerName} {hasDebt ? `(⚠️ Con Deuda: ${formatCLP(fin.pendingDebt)})` : '(🟢 Al Día)'}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {(() => {
+                const selectedUnit = (currentCommunity?.units || []).find(u => u.id === designateForm.unitId);
+                const fin = selectedUnit ? (getUnitFinancials ? getUnitFinancials(selectedUnit) : { pendingDebt: 0 }) : { pendingDebt: 0 };
+                if (fin.pendingDebt > 0) {
+                  return (
+                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-[11px] space-y-1">
+                      <div className="font-black flex items-center">
+                        <AlertTriangle className="w-3.5 h-3.5 mr-1 text-amber-700" />
+                        ADVERTENCIA LEGAL (ART. 17° LEY 21.442):
+                      </div>
+                      <p>
+                        Esta unidad mantiene una deuda de <strong>{formatCLP(fin.pendingDebt)}</strong>. La ley exige que los miembros del comité se encuentren al día en sus gastos comunes para ejercer legalmente el cargo.
+                      </p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-[11px] flex items-center space-x-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Copropietario cumple con los requisitos legales para integrar el Comité.</span>
+                  </div>
+                );
+              })()}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Cargo a Asignar en el Comité</label>
+                <select
+                  value={designateForm.role}
+                  onChange={(e) => setDesignateForm({ ...designateForm, role: e.target.value })}
+                  className="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white font-bold"
+                >
+                  <option value="Presidente del Comité">Presidente(a) del Comité</option>
+                  <option value="Tesorero(a) del Comité">Tesorero(a) del Comité</option>
+                  <option value="Secretario(a) del Comité">Secretario(a) del Comité</option>
+                  <option value="Primer Vocal">Primer Vocal</option>
+                  <option value="Segundo Vocal">Segundo Vocal</option>
+                  <option value="Revisor(a) de Cuentas">Revisor(a) de Cuentas</option>
+                  <option value="Miembro del Comité">Miembro del Comité</option>
+                </select>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDesignateMemberModal(false)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl cursor-pointer hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!designateForm.unitId) return;
+                    updateUnit(currentCommunity.id, designateForm.unitId, {
+                      isCommittee: true,
+                      committeeRole: designateForm.role
+                    });
+                    setShowDesignateMemberModal(false);
+                  }}
+                  className="px-4 py-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
+                >
+                  Guardar Designación
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
