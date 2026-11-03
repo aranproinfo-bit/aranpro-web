@@ -164,6 +164,15 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
 
   const [newDiplomaForm, setNewDiplomaForm] = useState(initialNewDiplomaState);
 
+  // Configuración de Destinatario y Condominio a Postular (Carta de Presentación & Dossier)
+  const [proposalConfig, setProposalConfig] = useState({
+    targetCondo: companySettings?.lastProposalConfig?.targetCondo || '',
+    targetRecipient: companySettings?.lastProposalConfig?.targetRecipient || 'Señores Miembros del Comité de Administración',
+    targetCity: companySettings?.lastProposalConfig?.targetCity || 'La Serena, Región de Coquimbo',
+    proposalDate: companySettings?.lastProposalConfig?.proposalDate || new Date().toISOString().split('T')[0],
+    leaveRecipientBlank: companySettings?.lastProposalConfig?.leaveRecipientBlank || false
+  });
+
   // Estado del modal corporativo de confirmación (reemplazo de window.confirm)
   const [modalDialog, setModalDialog] = useState({
     isOpen: false,
@@ -313,7 +322,8 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
       },
       academicBackground: academicRecords,
       accreditationFiles: accreditationDocs,
-      committeeReferenceRequests: committeeReferences
+      committeeReferenceRequests: committeeReferences,
+      lastProposalConfig: proposalConfig
     };
 
     setCompanySettings(updatedSettings);
@@ -1245,6 +1255,137 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 </div>
               </div>
 
+              {/* CONFIGURACIÓN Y PERSONALIZACIÓN DE DESTINATARIO DE LA CARTA / DOSSIER */}
+              <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2.5 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200">
+                      <PenTool className="w-4 h-4 text-[#0F3D2E]" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                        Personalización de la Carta & Destinatario a Postular
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Ingresa los datos del condominio y a quién se dirige la carta (comité, presidente, directiva) o déjalo en blanco.
+                      </p>
+                    </div>
+                  </div>
+                  {proposalConfig.targetCondo || (!proposalConfig.leaveRecipientBlank && proposalConfig.targetRecipient) ? (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 self-start sm:self-auto">
+                      ✓ Carta Personalizada
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 self-start sm:self-auto">
+                      Carta Abierta / En Blanco
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Campo 1: Condominio a Postular */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Condominio o Edificio al que Postulas
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Condominio Mirador de San Joaquín (o dejar vacío)"
+                      value={proposalConfig.targetCondo}
+                      onChange={(e) => setProposalConfig({ ...proposalConfig, targetCondo: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
+                    />
+                    <p className="text-[10.5px] text-slate-400">
+                      Se incorporará automáticamente en el membrete y en el texto formal de presentación.
+                    </p>
+                  </div>
+
+                  {/* Campo 2: Ciudad / Comuna */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Ciudad / Comuna de la Postulación
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: La Serena, Coquimbo, Ovalle"
+                      value={proposalConfig.targetCity}
+                      onChange={(e) => setProposalConfig({ ...proposalConfig, targetCity: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
+                    />
+                    <p className="text-[10.5px] text-slate-400">
+                      Aparece junto a la fecha oficial de la propuesta.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Campo 3: A quién se dirige la carta (Destinatario) */}
+                <div className="space-y-2 pt-1 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      A la atención de / Destinatario de la Carta:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setProposalConfig({ ...proposalConfig, targetRecipient: '', leaveRecipientBlank: true })}
+                      className="text-[11px] font-bold text-rose-600 hover:underline"
+                    >
+                      Limpiar / Dejar en blanco
+                    </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    placeholder="Escribe el destinatario o selecciona una opción rápida abajo..."
+                    value={proposalConfig.leaveRecipientBlank ? '' : proposalConfig.targetRecipient}
+                    disabled={proposalConfig.leaveRecipientBlank}
+                    onChange={(e) => setProposalConfig({ ...proposalConfig, targetRecipient: e.target.value, leaveRecipientBlank: false })}
+                    className={`w-full px-3.5 py-2.5 border rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#0F3D2E] transition-all ${
+                      proposalConfig.leaveRecipientBlank
+                        ? 'bg-slate-100 text-slate-400 border-dashed border-slate-300'
+                        : 'bg-slate-50 text-slate-800 border-slate-200'
+                    }`}
+                  />
+
+                  {/* Botones Presets Rápidos */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 mr-1">Opciones Rápidas:</span>
+                    {[
+                      { label: 'Comité de Administración', value: 'Señores Miembros del Comité de Administración' },
+                      { label: 'Presidente(a) del Comité', value: 'Señor(a) Presidente(a) del Comité de Administración' },
+                      { label: 'Directiva del Condominio', value: 'Señores Miembros de la Directiva del Condominio' },
+                      { label: 'Asamblea de Copropietarios', value: 'Asamblea de Copropietarios & Comité de Administración' },
+                      { label: 'Comisión de Licitación', value: 'Señores Integrantes de la Comisión de Licitación' },
+                      { label: 'Dejar en Blanco (Completar a mano)', value: '', isBlank: true }
+                    ].map((preset) => {
+                      const isSelected = preset.isBlank
+                        ? proposalConfig.leaveRecipientBlank || !proposalConfig.targetRecipient
+                        : !proposalConfig.leaveRecipientBlank && proposalConfig.targetRecipient === preset.value;
+
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            if (preset.isBlank) {
+                              setProposalConfig({ ...proposalConfig, targetRecipient: '', leaveRecipientBlank: true });
+                            } else {
+                              setProposalConfig({ ...proposalConfig, targetRecipient: preset.value, leaveRecipientBlank: false });
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                            isSelected
+                              ? 'bg-[#0F3D2E] text-white border-[#0F3D2E] shadow-xs'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
               {/* OPCIONES DE GENERACIÓN DE DOSSIER */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* 1. DOSSIER INTEGRAL COMPLETO (RECOMENDADO) */}
@@ -1602,6 +1743,40 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
               </div>
             </div>
 
+            {/* BARRA DE AJUSTE RÁPIDO DE DESTINATARIO */}
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs mb-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-slate-700">Condominio a Postular:</span>
+                <input
+                  type="text"
+                  placeholder="Ej: Condominio Los Cerezos (o vacío)"
+                  value={proposalConfig.targetCondo}
+                  onChange={(e) => setProposalConfig({ ...proposalConfig, targetCondo: e.target.value })}
+                  className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 text-xs w-48 sm:w-56 focus:outline-none focus:ring-1 focus:ring-[#0F3D2E]"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-slate-700">Dirigido a:</span>
+                <input
+                  type="text"
+                  placeholder="Ej: Comité / Presidente / Directiva (o vacío)"
+                  value={proposalConfig.leaveRecipientBlank ? '' : proposalConfig.targetRecipient}
+                  disabled={proposalConfig.leaveRecipientBlank}
+                  onChange={(e) => setProposalConfig({ ...proposalConfig, targetRecipient: e.target.value, leaveRecipientBlank: false })}
+                  className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 text-xs w-56 sm:w-64 focus:outline-none focus:ring-1 focus:ring-[#0F3D2E]"
+                />
+                <label className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-600 select-none">
+                  <input
+                    type="checkbox"
+                    checked={proposalConfig.leaveRecipientBlank}
+                    onChange={(e) => setProposalConfig({ ...proposalConfig, leaveRecipientBlank: e.target.checked, targetRecipient: e.target.checked ? '' : 'Señores Miembros del Comité de Administración' })}
+                    className="w-3.5 h-3.5 rounded text-[#0F3D2E]"
+                  />
+                  <span>En blanco</span>
+                </label>
+              </div>
+            </div>
+
             {/* CONTENEDOR DE LA CARTA IMPRIMIBLE TAMAÑO CARTA */}
             <div className="overflow-y-auto flex-1 pr-1">
               <div
@@ -1645,10 +1820,36 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 </div>
 
                 {/* Encabezado Formal Notarial */}
-                <div className="text-xs text-slate-700 space-y-1">
-                  <p><strong>A:</strong> Señores Miembros del Comité de Administración & Asamblea de Copropietarios</p>
+                <div className="text-xs text-slate-700 space-y-1.5 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <p>
+                    <strong>A:</strong>{' '}
+                    {proposalConfig.leaveRecipientBlank || !proposalConfig.targetRecipient?.trim() ? (
+                      <span className="font-mono text-slate-400">__________________________________________________________________</span>
+                    ) : (
+                      <strong className="text-slate-900">{proposalConfig.targetRecipient}</strong>
+                    )}
+                  </p>
+                  {proposalConfig.targetCondo?.trim() ? (
+                    <p>
+                      <strong>Condominio / Edificio:</strong>{' '}
+                      <strong className="text-[#0F3D2E] uppercase">{proposalConfig.targetCondo}</strong>
+                    </p>
+                  ) : (
+                    proposalConfig.leaveRecipientBlank && (
+                      <p>
+                        <strong>Condominio / Edificio:</strong>{' '}
+                        <span className="font-mono text-slate-400">__________________________________________________________</span>
+                      </p>
+                    )
+                  )}
                   <p><strong>De:</strong> {empresaForm.adminName} — {empresaForm.adminRole}</p>
-                  <p><strong>Fecha:</strong> {new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  <p>
+                    <strong>Fecha:</strong>{' '}
+                    {proposalConfig.proposalDate
+                      ? new Date(proposalConfig.proposalDate + 'T12:00:00').toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })
+                      : new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    {proposalConfig.targetCity?.trim() ? ` • ${proposalConfig.targetCity}` : ` • ${empresaForm.city}`}
+                  </p>
                   <p><strong>Materia:</strong> Propuesta de Servicios Profesionales de Administración Integral de Condominios</p>
                 </div>
 
@@ -1663,13 +1864,20 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                 {/* Cuerpo de la Carta */}
                 <div className="text-justify text-xs md:text-sm text-slate-800 leading-relaxed space-y-3">
                   <p>
-                    Estimados miembros del Comité de Administración y vecinos copropietarios:
+                    {proposalConfig.leaveRecipientBlank || !proposalConfig.targetRecipient?.trim()
+                      ? 'Estimados señores miembros del Comité de Administración y vecinos copropietarios:'
+                      : `Estimados ${proposalConfig.targetRecipient}:`}
                   </p>
                   <p>
                     Por medio de la presente, tengo el agrado de presentar a ustedes los servicios profesionales de
                     <strong> {empresaForm.provisionalName}</strong>, con el firme propósito de asumir la administración,
-                    gestión operativa y resguardo patrimonial de su comunidad conforme a las disposiciones de la
-                    <strong> Ley N° 21.442 de Copropiedad Inmobiliaria</strong>.
+                    gestión operativa y resguardo patrimonial de{' '}
+                    {proposalConfig.targetCondo?.trim() ? (
+                      <strong>{proposalConfig.targetCondo}</strong>
+                    ) : (
+                      <strong>su distinguida comunidad</strong>
+                    )}{' '}
+                    conforme a las disposiciones de la <strong>Ley N° 21.442 de Copropiedad Inmobiliaria</strong>.
                   </p>
                   <p>
                     {empresaForm.presentationText}
@@ -1770,6 +1978,40 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
               </div>
             </div>
 
+            {/* BARRA DE AJUSTE RÁPIDO DE DESTINATARIO DEL DOSSIER */}
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs mb-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-slate-700">Condominio a Postular:</span>
+                <input
+                  type="text"
+                  placeholder="Ej: Condominio Los Cerezos (o vacío)"
+                  value={proposalConfig.targetCondo}
+                  onChange={(e) => setProposalConfig({ ...proposalConfig, targetCondo: e.target.value })}
+                  className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 text-xs w-48 sm:w-56 focus:outline-none focus:ring-1 focus:ring-[#0F3D2E]"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-slate-700">Dirigido a:</span>
+                <input
+                  type="text"
+                  placeholder="Ej: Comité / Presidente / Directiva (o vacío)"
+                  value={proposalConfig.leaveRecipientBlank ? '' : proposalConfig.targetRecipient}
+                  disabled={proposalConfig.leaveRecipientBlank}
+                  onChange={(e) => setProposalConfig({ ...proposalConfig, targetRecipient: e.target.value, leaveRecipientBlank: false })}
+                  className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 text-xs w-56 sm:w-64 focus:outline-none focus:ring-1 focus:ring-[#0F3D2E]"
+                />
+                <label className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-600 select-none">
+                  <input
+                    type="checkbox"
+                    checked={proposalConfig.leaveRecipientBlank}
+                    onChange={(e) => setProposalConfig({ ...proposalConfig, leaveRecipientBlank: e.target.checked, targetRecipient: e.target.checked ? '' : 'Señores Miembros del Comité de Administración' })}
+                    className="w-3.5 h-3.5 rounded text-[#0F3D2E]"
+                  />
+                  <span>En blanco</span>
+                </label>
+              </div>
+            </div>
+
             {/* CONTENEDOR DEL DOSSIER INTEGRAL IMPRIMIBLE */}
             <div className="overflow-y-auto flex-1 pr-1 space-y-6">
               <div
@@ -1815,10 +2057,36 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                   </div>
 
                   {/* Encabezado Formal */}
-                  <div className="text-xs text-slate-700 space-y-1 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <p><strong>A:</strong> Señores Miembros del Comité de Administración y Asamblea de Copropietarios</p>
+                  <div className="text-xs text-slate-700 space-y-1.5 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <p>
+                      <strong>A:</strong>{' '}
+                      {proposalConfig.leaveRecipientBlank || !proposalConfig.targetRecipient?.trim() ? (
+                        <span className="font-mono text-slate-400">__________________________________________________________________</span>
+                      ) : (
+                        <strong className="text-slate-900">{proposalConfig.targetRecipient}</strong>
+                      )}
+                    </p>
+                    {proposalConfig.targetCondo?.trim() ? (
+                      <p>
+                        <strong>Condominio / Edificio:</strong>{' '}
+                        <strong className="text-[#0F3D2E] uppercase">{proposalConfig.targetCondo}</strong>
+                      </p>
+                    ) : (
+                      proposalConfig.leaveRecipientBlank && (
+                        <p>
+                          <strong>Condominio / Edificio:</strong>{' '}
+                          <span className="font-mono text-slate-400">__________________________________________________________</span>
+                        </p>
+                      )
+                    )}
                     <p><strong>De:</strong> {empresaForm.adminName} — {empresaForm.adminRole}</p>
-                    <p><strong>Fecha:</strong> {new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    <p>
+                      <strong>Fecha:</strong>{' '}
+                      {proposalConfig.proposalDate
+                        ? new Date(proposalConfig.proposalDate + 'T12:00:00').toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })
+                        : new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      {proposalConfig.targetCity?.trim() ? ` • ${proposalConfig.targetCity}` : ` • ${empresaForm.city}`}
+                    </p>
                     <p><strong>Materia:</strong> Postulación Integral a la Administración y Custodia Técnica del Condominio</p>
                   </div>
 
@@ -1836,12 +2104,19 @@ export const CompanySettingsAndBackupModule = ({ currentCommunity }) => {
                   {/* Carta de Presentación */}
                   <div className="text-justify text-xs md:text-sm text-slate-800 leading-relaxed space-y-3">
                     <p>
-                      Estimados miembros del Comité y vecinos copropietarios:
+                      {proposalConfig.leaveRecipientBlank || !proposalConfig.targetRecipient?.trim()
+                        ? 'Estimados señores miembros del Comité de Administración y vecinos copropietarios:'
+                        : `Estimados ${proposalConfig.targetRecipient}:`}
                     </p>
                     <p>
                       Junto con saludarles muy cordialmente, nos es muy grato presentar a su distinguida comunidad el dossier de postulación
-                      de <strong>{empresaForm.provisionalName}</strong> para asumir la administración profesional bajo las exigencias de la
-                      <strong> Ley N° 21.442 de Copropiedad Inmobiliaria</strong>.
+                      de <strong>{empresaForm.provisionalName}</strong> para asumir la administración profesional y resguardo patrimonial de{' '}
+                      {proposalConfig.targetCondo?.trim() ? (
+                        <strong>{proposalConfig.targetCondo}</strong>
+                      ) : (
+                        <strong>su comunidad</strong>
+                      )}{' '}
+                      bajo las exigencias de la <strong>Ley N° 21.442 de Copropiedad Inmobiliaria</strong>.
                     </p>
                     <p>
                       {empresaForm.presentationText}
