@@ -137,15 +137,31 @@ export const Footer = ({ setCurrentView, setSelectedCommunitySlug, onOpenCertifi
         </div>
 
         {/* Bottom Credits */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#F5F4EF]/75 gap-4">
+        <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between text-xs text-[#F5F4EF]/75 gap-4">
           <p>
             © {new Date().getFullYear()} ARANPRO • Gestión Integral. Todos los derechos reservados.
           </p>
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap items-center gap-5">
             <span className="flex items-center text-[#F5F4EF]/85">
               <FileCheck className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
               Conforme a Ley 21.442 de Copropiedad Inmobiliaria
             </span>
+            <a
+              href="https://redenlace.cl/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-[#F5F4EF]/75 hover:text-white transition-colors text-xs group"
+              title="Visitar Red-Enlace Soluciones Digitales"
+            >
+              <img
+                src="/red-enlace-logo.png"
+                alt="Logo Red-Enlace"
+                width={20}
+                height={20}
+                className="h-4 w-auto opacity-70 group-hover:opacity-100 transition-opacity grayscale group-hover:grayscale-0"
+              />
+              <span>Desarrollado por Red-Enlace Soluciones Digitales</span>
+            </a>
           </div>
         </div>
       </div>
