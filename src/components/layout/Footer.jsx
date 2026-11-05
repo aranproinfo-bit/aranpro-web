@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
 import { DOMAIN_CONFIG } from '../../config/domains';
 import { AranproLogo } from '../common/MauranLogo';
-import { Phone, Mail, MapPin, ShieldCheck, FileCheck, ArrowRight } from 'lucide-react';
+import { LegalAspectsModal } from '../common/LegalAspectsModal';
+import { Phone, Mail, MapPin, ShieldCheck, FileCheck, ArrowRight, Scale, Lock, Shield } from 'lucide-react';
 
 export const Footer = ({ setCurrentView, setSelectedCommunitySlug, onOpenCertificates }) => {
   const { companySettings, communities } = useCommunity();
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalInitialTab, setLegalInitialTab] = useState('terminos');
+
+  const openLegalModal = (tab = 'terminos') => {
+    setLegalInitialTab(tab);
+    setLegalModalOpen(true);
+  };
 
   return (
     <footer className="bg-[#0F3D2E] text-[#F5F4EF] border-t border-[#D4B895]/30 pt-16 pb-12">
@@ -78,10 +86,35 @@ export const Footer = ({ setCurrentView, setSelectedCommunitySlug, onOpenCertifi
                   Certificados de Residencia
                 </button>
               </li>
+              <li className="pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('terminos')}
+                  className="text-xs text-[#D4B895] hover:underline flex items-center gap-1.5 font-semibold cursor-pointer"
+                >
+                  <Scale className="w-3.5 h-3.5" />
+                  <span>Términos y Propiedad Intelectual</span>
+                </button>
+              </li>
               <li>
-                <a href="#contacto" className="text-[#D4B895] hover:underline font-semibold transition-colors">
-                  Cotizar Administración
-                </a>
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('privacidad')}
+                  className="text-xs text-[#F5F4EF]/70 hover:text-[#D4B895] flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Privacidad y Datos (Ley 19.628)</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('ley21442')}
+                  className="text-xs text-[#F5F4EF]/70 hover:text-[#D4B895] flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Cumplimiento Ley 21.442 & RNAC</span>
+                </button>
               </li>
             </ul>
           </div>
@@ -138,9 +171,19 @@ export const Footer = ({ setCurrentView, setSelectedCommunitySlug, onOpenCertifi
 
         {/* Bottom Credits */}
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between text-xs text-[#F5F4EF]/75 gap-4">
-          <p>
-            © {new Date().getFullYear()} ARANPRO • Gestión Integral. Todos los derechos reservados.
-          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
+            <p>
+              © {new Date().getFullYear()} ARANPRO • Gestión Integral. Todos los derechos reservados.
+            </p>
+            <span className="hidden sm:inline text-white/30">•</span>
+            <button
+              type="button"
+              onClick={() => openLegalModal('terminos')}
+              className="text-[#D4B895] hover:underline font-medium cursor-pointer"
+            >
+              Aviso Legal & Términos de Uso
+            </button>
+          </div>
           <div className="flex flex-wrap items-center gap-5">
             <span className="flex items-center text-[#F5F4EF]/85">
               <FileCheck className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
@@ -165,6 +208,13 @@ export const Footer = ({ setCurrentView, setSelectedCommunitySlug, onOpenCertifi
           </div>
         </div>
       </div>
+
+      {/* Modal Legal Interactivo */}
+      <LegalAspectsModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalInitialTab}
+      />
     </footer>
   );
 };
