@@ -47,13 +47,13 @@ export const CompanySettingsAndBackupModule = ({
     adminName: companySettings?.adminName || 'John Andrés Arancibia Maureira',
     adminRut: (companySettings?.adminRut && companySettings.adminRut !== '14.882.140-K') ? companySettings.adminRut : '16.012.871-2',
     adminRole: companySettings?.adminRole || 'Administrador Titular & Representante Legal',
-    rnacNumber: companySettings?.rnacNumber || '48.912',
+    rnacNumber: companySettings?.rnacNumber || '',
     rnacCategory: companySettings?.rnacCategory || 'Persona Natural (Vigente)',
     // Perfil para licitaciones y cartas
     specialty: companySettings?.profileLicitacion?.specialty || 'Administración Integral de Condominios, Mantención Técnica e Infraestructura Edilicia',
     startYear: companySettings?.profileLicitacion?.startYear || '2019',
     presentationText: companySettings?.profileLicitacion?.presentationText ||
-      'ARANPRO ofrece servicios profesionales de administración bajo la Ley N° 21.442 de Copropiedad Inmobiliaria. Nuestra gran ventaja competitiva radica en la formación técnica y constructiva de nuestro equipo (Técnico en Construcción y estudios avanzados en Construcción Civil), lo que nos permite auditar, fiscalizar y supervisar con criterio experto obras de mantención, salas de bombas, cubiertas, filtraciones y contratos de proveedores, garantizando la preservación y plusvalía del patrimonio comunitario.'
+      'ARANPRO ofrece servicios profesionales de administración bajo la Ley N° 21.442 de Copropiedad Inmobiliaria. Nuestra gran ventaja competitiva radica en la formación técnica y constructiva de nuestro equipo (Constructor Civil), lo que nos permite auditar, fiscalizar y supervisar con criterio experto obras de mantención, salas de bombas, cubiertas, filtraciones y contratos de proveedores, garantizando la preservación y plusvalía del patrimonio comunitario.'
   });
 
   // Estado para la Firma Digital Manuscrita (Canvas y Subida)
@@ -79,7 +79,7 @@ export const CompanySettingsAndBackupModule = ({
   const [academicRecords, setAcademicRecords] = useState(companySettings?.academicBackground || [
     {
       id: 'acad-1',
-      title: 'Técnico en Construcción (Titulado)',
+      title: 'Constructor Civil (Titulado)',
       institution: 'Instituto Profesional AIEP / Santo Tomás',
       category: 'Título Técnico Profesional',
       status: 'Titulado',
@@ -126,7 +126,7 @@ export const CompanySettingsAndBackupModule = ({
 
   // Lista de Documentos de Acreditación
   const [accreditationDocs, setAccreditationDocs] = useState(companySettings?.accreditationFiles || [
-    { id: 'acc-1', name: 'Certificado de Inscripción RNAC Minvu (Folio 48.912)', category: 'Minvu Ley 21.442', status: 'Vigente ★★★', date: '2025-01-15' },
+    { id: 'acc-1', name: 'Inscripción en Trámite RNAC Minvu (Solicitud PN-27583)', category: 'Minvu Ley 21.442', status: 'Vigente ★★★', date: '2025-01-15' },
     { id: 'acc-2', name: 'Certificado de Título Técnico en Construcción', category: 'Título Profesional', status: 'Acreditado', date: '2018-12-20' },
     { id: 'acc-3', name: 'Certificado de Alumno Regular - Construcción Civil', category: 'Formación Superior', status: 'Activo 2026', date: '2026-03-10' },
     { id: 'acc-4', name: 'Certificado de Antecedentes para Fines Especiales', category: 'Registro Civil', status: 'Intachable', date: '2026-01-05' }
@@ -1949,7 +1949,7 @@ export const CompanySettingsAndBackupModule = ({
                       </h4>
                       <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
                         Ofrece al comité una auditoría visual in situ sin costo de sus instalaciones críticas. Demuestra tu experiencia como
-                        <strong> Técnico en Construcción y estudiante de Construcción Civil</strong> detectando fallas que otros administradores ignoran.
+                        <strong> Constructor Civil</strong> detectando fallas que otros administradores ignoran.
                       </p>
                     </div>
 
@@ -2182,7 +2182,7 @@ export const CompanySettingsAndBackupModule = ({
                       {
                         time: 'Minutos 3 - 5',
                         title: 'El Diferenciador Técnico en Construcción',
-                        what: 'Explicar que los administradores convencionales son contadores o comerciales sin experiencia en terreno. Tu formación como Técnico en Construcción y estudiante de Construcción Civil ahorra millones a la comunidad.',
+                        what: 'Explicar que los administradores convencionales son contadores o comerciales sin experiencia en terreno. Tu formación como Constructor Civil ahorra millones a la comunidad.',
                         phrase: '"Cuando falla una bomba o hay una filtración en cubierta, nosotros diagnosticamos la falla real en terreno antes de llamar a un contratista, evitando que les cobren presupuestos inflados."'
                       },
                       {
@@ -2685,10 +2685,10 @@ export const CompanySettingsAndBackupModule = ({
                   {aboutOpenSections.quienesSomos && (
                     <div className="px-5 py-4 text-xs text-slate-600 leading-relaxed space-y-2 border-t border-slate-100">
                       <p>
-                        ARANPRO es una empresa liderada por <strong>John Andrés Arancibia Maureira</strong>, Administrador Profesional de Condominios acreditado por el Colegio de Gestión y Administración Inmobiliaria (CGAI Chile Socio N° 13-563), la Asociación Gremial AGACECH e inscrito en el Registro Nacional de Administradores Minvu (RNAC N° 48.912).
+                        ARANPRO es una empresa liderada por <strong>John Andrés Arancibia Maureira</strong>, Administrador Profesional de Condominios acreditado por el Colegio de Gestión y Administración Inmobiliaria (CGAI Chile Socio N° 13-563), la Asociación Gremial AGACECH e inscrito en el Registro Nacional de Administradores Minvu (Ley N° 21.442).
                       </p>
                       <p>
-                        Nuestra gran ventaja competitiva radica en la formación técnica y constructiva de nuestro equipo: <strong>Técnico en Construcción titulado y estudiante avanzado de Construcción Civil</strong>. Esta sólida base constructiva nos permite auditar, fiscalizar y supervisar con criterio experto obras de mantención, salas de bombas, cubiertas, filtraciones y contratos de proveedores, garantizando la preservación y plusvalía del patrimonio comunitario.
+                        Nuestra gran ventaja competitiva radica en la formación técnica y constructiva de nuestro equipo: <strong>Constructor Civil</strong>. Esta sólida base constructiva nos permite auditar, fiscalizar y supervisar con criterio experto obras de mantención, salas de bombas, cubiertas, filtraciones y contratos de proveedores, garantizando la preservación y plusvalía del patrimonio comunitario.
                       </p>
                     </div>
                   )}
@@ -2837,7 +2837,7 @@ export const CompanySettingsAndBackupModule = ({
                         {empresaForm.provisionalName || 'ARANPRO • GESTIÓN INTEGRAL INMOBILIARIA'}
                       </div>
                       <p className="text-[10px] text-slate-500 font-mono">
-                        RUT: {empresaForm.companyRut || '76.999.888-1'} • RNAC MINVU N° {empresaForm.rnacNumber || '48.912'}
+                        RUT: {empresaForm.companyRut || '76.999.888-1'} • RNAC MINVU N° {empresaForm.rnacNumber || 'Ley N° 21.442'}
                       </p>
                       <p className="text-[10px] text-slate-500">
                         {empresaForm.email || 'contacto@aranpro.cl'} • {empresaForm.phone || '+56 9 5811 8504'} • {empresaForm.city || 'La Serena, Chile'}
@@ -2932,7 +2932,7 @@ export const CompanySettingsAndBackupModule = ({
                     </p>
                     <ul className="list-disc pl-5 space-y-1.5 text-slate-700">
                       <li>
-                        <strong>Solvencia Técnica en Construcción:</strong> Formación como Técnico en Construcción y estudios avanzados en Construcción Civil, permitiéndonos realizar diagnósticos certeros en bombas, filtraciones, tableros eléctricos, sellos y cubiertas sin depender a ciegas de presupuestos inflados de contratistas externos.
+                        <strong>Solvencia Técnica en Construcción:</strong> Formación como Constructor Civil, permitiéndonos realizar diagnósticos certeros en bombas, filtraciones, tableros eléctricos, sellos y cubiertas sin depender a ciegas de presupuestos inflados de contratistas externos.
                       </li>
                       <li>
                         <strong>Transparencia Contable 100% Digital:</strong> Implementamos para su comunidad un portal web y aplicación móvil donde cada copropietario puede auditar en vivo con 1 clic las boletas, facturas y comprobantes bancarios reales de cada gasto realizado.
@@ -3073,7 +3073,7 @@ export const CompanySettingsAndBackupModule = ({
                             {empresaForm.provisionalName || 'ARANPRO • GESTIÓN INTEGRAL INMOBILIARIA'}
                           </div>
                           <p className="text-[10px] text-slate-500 font-mono">
-                            RUT: {empresaForm.companyRut || '76.999.888-8'} • RNAC MINVU N° {empresaForm.rnacNumber || '48.912'}
+                            RUT: {empresaForm.companyRut || '76.999.888-8'} • RNAC MINVU N° {empresaForm.rnacNumber || 'Ley N° 21.442'}
                           </p>
                           <p className="text-[10px] text-slate-500">
                             {empresaForm.email || 'contacto@aranpro.cl'} • {empresaForm.phone || '+56958118504'} • {empresaForm.city || 'La Serena, Chile'}
@@ -3227,7 +3227,7 @@ export const CompanySettingsAndBackupModule = ({
                           Ficha Técnica Constructiva: Auditoría & Prevención de Daños
                         </h2>
                         <p className="text-[10px] text-slate-500">
-                          La ventaja diferencial del perfil de Técnico en Construcción y estudios avanzados en Construcción Civil
+                          La ventaja diferencial del perfil de Constructor Civil
                         </p>
                       </div>
                     </div>
@@ -3329,7 +3329,7 @@ export const CompanySettingsAndBackupModule = ({
                     <div className="p-3 rounded-xl bg-gradient-to-r from-[#0F3D2E]/10 via-[#0F3D2E]/5 to-transparent border-l-4 border-[#0F3D2E] text-xs">
                       <strong className="text-[#0F3D2E] block text-[11px]">Garantía de Cumplimiento Legal • Ley N° 21.442</strong>
                       <p className="text-slate-600 text-[10px] leading-relaxed mt-0.5">
-                        Administrador inscrito con vigencia plena en el <strong>Registro Nacional de Administradores de Condominios (RNAC Minvu N° {empresaForm.rnacNumber || '48.912'})</strong>, sin anotaciones negativas, sanciones ni reclamos. Sujeto a rendición documentada mensual ante el Comité de Administración.
+                        Administrador inscrito con vigencia plena en el <strong>Registro Nacional de Administradores de Condominios (RNAC Minvu N° {empresaForm.rnacNumber || 'Ley N° 21.442'})</strong>, sin anotaciones negativas, sanciones ni reclamos. Sujeto a rendición documentada mensual ante el Comité de Administración.
                       </p>
                     </div>
                   </div>
@@ -3983,7 +3983,7 @@ export const CompanySettingsAndBackupModule = ({
                         Informe de Diagnóstico Técnico Inicial
                       </h2>
                       <p className="text-[10px] text-slate-500 font-mono">
-                        RNAC MINVU N° {empresaForm.rnacNumber || '48.912'} • Fono: {empresaForm.phone || '+56 9 5811 8504'}
+                        RNAC MINVU N° {empresaForm.rnacNumber || 'Ley N° 21.442'} • Fono: {empresaForm.phone || '+56 9 5811 8504'}
                       </p>
                     </div>
                   </div>
@@ -4138,7 +4138,7 @@ export const CompanySettingsAndBackupModule = ({
 
                 <div className="space-y-3">
                   {[
-                    { p: '1. Supervisión Constructiva', t: 'Visitas esporádicas. No saben de construcción ni bombas; dependen a ciegas de técnicos externos con sobrecostos.', a: 'Administrador Técnico en Construcción y estudiante de Construcción Civil. Audita bombas, sellos, filtraciones y fiscaliza a contratistas en terreno.' },
+                    { p: '1. Supervisión Constructiva', t: 'Visitas esporádicas. No saben de construcción ni bombas; dependen a ciegas de técnicos externos con sobrecostos.', a: 'Administrador Constructor Civil. Audita bombas, sellos, filtraciones y fiscaliza a contratistas en terreno.' },
                     { p: '2. Transparencia en Cuentas', t: 'Planillas Excel confusas enviadas a fin de mes. Comprobantes bancarios ocultos o extraviados.', a: 'Portal y App móvil 24/7 donde cada vecino audita las facturas y comprobantes bancarios reales de cada gasto con 1 solo clic.' },
                     { p: '3. Asambleas Ley 21.442', t: 'Falta crónica de quórum presencial. Actas en papel que tardan semanas en protocolizarse.', a: 'Asambleas telemáticas e híbridas con voto digital seguro desde el teléfono celular y quórums automatizados (Art. 15°).' },
                     { p: '4. Atención de Reclamos', t: 'Mensajes de WhatsApp o llamados informales que quedan en el olvido sin respuesta.', a: 'Libro Oficial de Reclamos y Sugerencias digital foliado con plazo legal estricto de respuesta garantizado (Art. 20°).' },
