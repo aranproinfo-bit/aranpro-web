@@ -1546,7 +1546,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                         {companySettings?.adminName || companySettings?.administratorName || 'ADMINISTRACIÓN ARANPRO'}
                       </p>
                       <p className="text-[10px] text-slate-500 font-mono">
-                        RUT Administrador: {companySettings?.adminRut || '14.882.140-K'}
+                        RUT Administrador: {(companySettings?.adminRut && companySettings.adminRut !== '14.882.140-K') ? companySettings.adminRut : '16.012.871-2'}
                       </p>
                       <p className="text-[9px] text-[#0F3D2E] font-semibold">
                         Administrador Legal de la Copropiedad (RNAC Minvu N° {companySettings?.rnacNumber || '48.912'})

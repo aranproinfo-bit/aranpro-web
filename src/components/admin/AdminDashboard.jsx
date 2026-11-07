@@ -13629,7 +13629,7 @@ _Administración ARANPRO_`;
                             Administrador Titular
                           </div>
                           <div className="text-[9px] font-mono text-slate-500">
-                            RUT: {companySettings?.adminRut || '14.882.140-K'}
+                            RUT: {(companySettings?.adminRut && companySettings.adminRut !== '14.882.140-K') ? companySettings.adminRut : '16.012.871-2'}
                           </div>
                           <div className="text-[8.5px] font-bold text-[#0F3D2E]">
                             RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}
