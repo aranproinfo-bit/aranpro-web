@@ -152,7 +152,7 @@ export const CommunityProvider = ({ children }) => {
           signatureDataUrl: parsed.signatureDataUrl || parsed.signature || parsed.digitalSignature || '',
           signature: parsed.signatureDataUrl || parsed.signature || parsed.digitalSignature || '',
           digitalSignature: parsed.signatureDataUrl || parsed.signature || parsed.digitalSignature || '',
-          title: parsed.title || initialCompanySettings.title,
+          title: (parsed.title && !/técnico/i.test(parsed.title)) ? parsed.title : initialCompanySettings.title,
           experienceSince: parsed.experienceSince || initialCompanySettings.experienceSince,
           accreditations: initialCompanySettings.accreditations
         };
