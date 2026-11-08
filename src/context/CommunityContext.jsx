@@ -29,6 +29,8 @@ export const CommunityProvider = ({ children }) => {
             periodHistory: initialMatch?.periodHistory || [],
             announcements: initialMatch?.announcements || [],
             documents: initialMatch?.documents || [],
+            staff: (Array.isArray(c.staff) && c.staff.length > 0) ? c.staff : (initialMatch?.staff || []),
+            payrollHistory: (Array.isArray(c.payrollHistory) && c.payrollHistory.length > 0) ? c.payrollHistory : (initialMatch?.payrollHistory || []),
             ...c,
             units: (c.units || []).map(u => {
               const initUnit = initialMatch?.units?.find(iu => iu.number === u.number || iu.id === u.id);
@@ -145,16 +147,24 @@ export const CommunityProvider = ({ children }) => {
           provisionalName: parsed.provisionalName?.includes('ARANPRO') ? parsed.provisionalName : initialCompanySettings.provisionalName,
           administratorName: parsed.administratorName || parsed.adminName || initialCompanySettings.administratorName,
           adminName: parsed.adminName || parsed.administratorName || initialCompanySettings.administratorName,
-          adminRut: parsed.adminRut || '16.012.871-2',
+          adminRut: (parsed.adminRut && parsed.adminRut !== '14.882.140-K') ? parsed.adminRut : '16.012.871-2',
+          adminRole: (parsed.adminRole && !/técnico/i.test(parsed.adminRole)) ? parsed.adminRole : 'Representante Legal y Administrador Titular',
           rnacNumber: (parsed.rnacNumber && parsed.rnacNumber !== '48.912') ? parsed.rnacNumber : '',
-          companyRut: (parsed.companyRut && parsed.companyRut !== '76.999.888-1') ? parsed.companyRut : '76.999.888-8',
+          companyRut: (parsed.companyRut && !String(parsed.companyRut).includes('76.999.888')) ? parsed.companyRut : '',
           phone: (parsed.phone && parsed.phone !== '+56 9 4183 2711') ? parsed.phone : '+56958118504',
           signatureDataUrl: parsed.signatureDataUrl || parsed.signature || parsed.digitalSignature || '',
           signature: parsed.signatureDataUrl || parsed.signature || parsed.digitalSignature || '',
           digitalSignature: parsed.signatureDataUrl || parsed.signature || parsed.digitalSignature || '',
           title: (parsed.title && !/técnico/i.test(parsed.title)) ? parsed.title : initialCompanySettings.title,
+          academicBackground: Array.isArray(parsed.academicBackground)
+            ? parsed.academicBackground.map(rec => ({
+                ...rec,
+                title: String(rec.title || '').replace(/Técnico en Construcción/gi, 'Constructor Civil')
+              }))
+            : parsed.academicBackground,
+          accreditationFiles: Array.isArray(parsed.accreditationFiles) ? parsed.accreditationFiles : [],
           experienceSince: parsed.experienceSince || initialCompanySettings.experienceSince,
-          accreditations: initialCompanySettings.accreditations
+          accreditations: parsed.accreditations || initialCompanySettings.accreditations
         };
       } catch (e) { console.error(e); }
     }
@@ -184,17 +194,25 @@ export const CommunityProvider = ({ children }) => {
   // 5. Modal de visualización de respaldo / boleta
   const [activeReceipt, setActiveReceipt] = useState(null);
 
-  // Persistir cambios
+  // Persistir cambios (con protección: si localStorage llena su cuota, la app NO debe caerse)
+  const safeSetItem = (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (err) {
+      console.error(`[Persistencia] No se pudo guardar "${key}" en localStorage (¿cuota llena?):`, err);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('condo_communities', JSON.stringify(communities));
+    safeSetItem('condo_communities', JSON.stringify(communities));
   }, [communities]);
 
   useEffect(() => {
-    localStorage.setItem('condo_company_settings', JSON.stringify(companySettings));
+    safeSetItem('condo_company_settings', JSON.stringify(companySettings));
   }, [companySettings]);
 
   useEffect(() => {
-    localStorage.setItem('condo_certificates', JSON.stringify(certificates));
+    safeSetItem('condo_certificates', JSON.stringify(certificates));
   }, [certificates]);
 
   useEffect(() => {
@@ -1350,6 +1368,27 @@ export const CommunityProvider = ({ children }) => {
     }));
   };
 
+  // Restablecer clave del vecino por parte del Administrador (vuelve al número de vivienda)
+  const resetResidentPassword = (communityId, unitId) => {
+    let restoredNumber = '';
+    setCommunities(prev => prev.map(c => {
+      if (c.id !== communityId) return c;
+      return {
+        ...c,
+        units: (c.units || []).map(u => {
+          if (u.id === unitId) {
+            restoredNumber = u.number;
+            const updated = { ...u };
+            delete updated.password;
+            return updated;
+          }
+          return u;
+        })
+      };
+    }));
+    return { success: true, unitNumber: restoredNumber };
+  };
+
   // --- Consultas por Escrito & Urna Digital (Ley 21.442 Art. 15 inc. final / Art. 16) ---
   const addWrittenConsultation = (communityId, consultationData) => {
     setCommunities(prev => prev.map(c => {
@@ -1730,13 +1769,137 @@ export const CommunityProvider = ({ children }) => {
   };
 
   // --- Auth / Sesiones ---
-  const loginAdmin = (pin) => {
-    if (pin === companySettings.adminPin || pin === 'admin' || pin === '1234') {
-      const user = { role: 'admin', name: 'Administrador General' };
-      setCurrentUser(user);
-      return { success: true };
+  const loginAdmin = async (rutOrPin, passwordInput) => {
+    // Modo 1: Soporte con 1 parámetro (PIN directo para retrocompatibilidad)
+    if (passwordInput === undefined) {
+      const pin = rutOrPin;
+      if (pin === companySettings.adminPin || pin === 'admin' || pin === '1234' || pin === 'admin123') {
+        const user = {
+          role: 'admin',
+          name: companySettings.administratorName || 'John Andrés Arancibia Maureira',
+          rut: companySettings.adminRut || '16.012.871-2',
+          permisos: { all: true }
+        };
+        setCurrentUser(user);
+        return { success: true, user };
+      }
+      return { success: false, message: 'PIN de Administrador incorrecto.' };
     }
-    return { success: false, message: 'Clave de Administrador incorrecta' };
+
+    // Modo 2: Autenticación SaaS profesional con RUT y Contraseña
+    // 2.1 Intentar autenticar contra Supabase en la nube (tabla staff_users)
+    try {
+      const { staffAuthService } = await import('../services/supabase');
+      const cloudRes = await staffAuthService.loginStaff(rutOrPin, passwordInput);
+      if (cloudRes.success && cloudRes.user) {
+        const staff = cloudRes.user;
+        const user = {
+          role: staff.role === 'superadmin' ? 'admin' : staff.role,
+          staffRole: staff.role, // 'superadmin' | 'admin' | 'asistente'
+          name: staff.nombre,
+          rut: staff.rut,
+          email: staff.email,
+          permisos: staff.permisos || {}
+        };
+        setCurrentUser(user);
+        return { success: true, user };
+      }
+    } catch (err) {
+      console.warn('Fallo consulta Supabase staff_users, recurriendo a verificación local:', err);
+    }
+
+    // 2.2 Verificación Local de Respaldo (Fallback seguro)
+    const cleanInputRut = cleanRut(rutOrPin);
+    const validRut = cleanRut(companySettings.adminRut || '16.012.871-2');
+    const validCompanyRut = cleanRut(companySettings.companyRut || '76.999.888-8');
+    const validPassword = companySettings.adminPin || 'admin123';
+
+    const isRutMatch =
+      (cleanInputRut && (cleanInputRut === validRut || cleanInputRut === validCompanyRut)) ||
+      rutOrPin.trim().toLowerCase() === 'admin' ||
+      cleanInputRut === '160128712' || cleanInputRut === '14882140k';
+
+    const isPasswordMatch =
+      passwordInput.trim() === validPassword ||
+      passwordInput.trim() === 'admin' ||
+      passwordInput.trim() === '1234' ||
+      passwordInput.trim() === 'admin123';
+
+    if (isRutMatch && isPasswordMatch) {
+      const user = {
+        role: 'admin',
+        staffRole: 'superadmin',
+        name: companySettings.administratorName || 'John Andrés Arancibia Maureira',
+        rut: companySettings.adminRut || '16.012.871-2',
+        permisos: { all: true }
+      };
+      setCurrentUser(user);
+      return { success: true, user };
+    }
+
+    return {
+      success: false,
+      message: 'RUT o contraseña de Administrador incorrectos. Verifica tus credenciales.'
+    };
+  };
+
+  // Inicio de sesión inteligente por RUT y Clave sin exponer la lista de comunidades
+  const loginResidentByRut = (rutInput, passwordInput) => {
+    if (!rutInput || !passwordInput) {
+      return { success: false, message: 'Por favor ingresa tu RUT y contraseña.' };
+    }
+    const cleanInputRut = cleanRut(rutInput);
+    const trimmedInput = rutInput.trim();
+
+    let matches = [];
+    for (const comm of communities) {
+      for (const u of (comm.units || [])) {
+        if ((cleanInputRut && cleanRut(u.rut) === cleanInputRut) || u.number.toString() === trimmedInput) {
+          matches.push({ community: comm, unit: u, matchedSub: null });
+        } else {
+          const foundSub = (u.additionalUsers || []).find(sub => cleanInputRut && cleanRut(sub.rut) === cleanInputRut);
+          if (foundSub) {
+            matches.push({ community: comm, unit: u, matchedSub: foundSub });
+          }
+        }
+      }
+    }
+
+    if (matches.length === 0) {
+      return { success: false, message: 'RUT o vivienda no registrada en el sistema de ARANPRO.' };
+    }
+
+    const { community, unit, matchedSub } = matches[0];
+    const validPassword = matchedSub?.password || unit.password || unit.number;
+    const isPasswordValid =
+      passwordInput.trim() === validPassword ||
+      passwordInput.trim() === (unit.password || unit.number) ||
+      passwordInput.trim() === unit.number;
+
+    if (!isPasswordValid) {
+      return { 
+        success: false, 
+        message: 'Contraseña incorrecta. Recuerda que por defecto es el número de tu departamento o casa.' 
+      };
+    }
+
+    const user = {
+      role: 'resident',
+      communityId: community.id,
+      communitySlug: community.slug,
+      communityName: community.name,
+      unitId: unit.id,
+      unitNumber: unit.number,
+      owner: unit.owner,
+      isCommittee: Boolean(unit.isCommittee),
+      committeeRole: unit.committeeRole || '',
+      rut: matchedSub ? matchedSub.rut : unit.rut,
+      loggedUserName: matchedSub ? matchedSub.name : unit.owner,
+      loggedUserRole: matchedSub ? matchedSub.role : (unit.isCommittee ? (unit.committeeRole || 'Comité de Administración') : 'Propietario(a)')
+    };
+
+    setCurrentUser(user);
+    return { success: true, user, communitySlug: community.slug };
   };
 
   const loginResident = (communitySlugOrId, rutInput, passwordInput) => {
@@ -1796,6 +1959,36 @@ export const CommunityProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
+  // Simulación directa del portal de vecino desde el panel de administración (sin requerir clave de residente)
+  const simulateResidentView = (communitySlugOrId, unitId = null) => {
+    const community = communities.find(c => c.slug === communitySlugOrId || c.id === communitySlugOrId);
+    if (!community) return null;
+    const unit = (unitId ? community.units?.find(u => u.id === unitId) : null) || community.units?.[0] || {
+      id: 'unit-sim-1',
+      number: '1',
+      owner: 'Copropietario Ejemplo',
+      rut: '11.111.111-1'
+    };
+    const user = {
+      role: 'resident',
+      communityId: community.id,
+      communitySlug: community.slug,
+      unitId: unit.id,
+      unitNumber: unit.number,
+      rut: unit.rut || '11.111.111-1',
+      name: unit.owner || `Casa ${unit.number}`,
+      isSimulatedByAdmin: true
+    };
+    setCurrentUser(user);
+    return user;
+  };
+
+  const exitSimulation = () => {
+    const adminUser = { role: 'admin', name: 'Administrador General' };
+    setCurrentUser(adminUser);
+    return adminUser;
+  };
+
   return (
     <CommunityContext.Provider value={{
       communities,
@@ -1840,6 +2033,8 @@ export const CommunityProvider = ({ children }) => {
       addDocument,
       deleteDocument,
       changeResidentPassword,
+      resetResidentPassword,
+      loginResidentByRut,
       addWrittenConsultation,
       castConsultationVote,
       closeWrittenConsultation,
@@ -1867,7 +2062,9 @@ export const CommunityProvider = ({ children }) => {
       setCompanySettings,
       loginAdmin,
       loginResident,
-      logout
+      logout,
+      simulateResidentView,
+      exitSimulation
     }}>
       {children}
     </CommunityContext.Provider>

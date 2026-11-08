@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
-import { formatCLP, formatDate, formatRut } from '../../utils/formatters';
-import { AranproLogo } from '../common/MauranLogo';
+import { formatCLP, formatDate, formatRut, generateCommunityEmailProposal } from '../../utils/formatters';
+import { AranproLogo, AranproOfficialSeal, AranproPdfStyleSelector, useAranproPdfStyle } from '../common/MauranLogo';
 import { printDocumentDirectly as printFormalDocument } from '../../utils/printDocument';
 import { AssemblyQuorumModule } from './AssemblyQuorumModule';
 import { PreventiveMaintenanceModule } from './PreventiveMaintenanceModule';
@@ -10,20 +10,25 @@ import { MuralAndComplaintsModule } from './MuralAndComplaintsModule';
 import { CommitteeMeetingsAndLogModule } from './CommitteeMeetingsAndLogModule';
 import { OfficialCertificatesModule } from './OfficialCertificatesModule';
 import { CompanySettingsAndBackupModule } from './CompanySettingsAndBackupModule';
+import { CommunitySettingsAndLegalTab } from './CommunitySettingsAndLegalTab';
+import { CommunityPayrollAndStaffModule } from './CommunityPayrollAndStaffModule';
 import { ExpenseReportModal } from '../common/ExpenseReportModal';
+import { UnitAccountStatementView } from './UnitAccountStatementView';
+import { EmailDispatchTrackingModule } from './EmailDispatchTrackingModule';
+import { PwaInstallButton } from '../layout/PwaPrompt';
 import { 
   Building2, Plus, Trash2, Edit3, ExternalLink, Users, 
   DollarSign, FileText, CheckCircle2, AlertCircle, Copy, 
-  Check, ArrowRight, Shield, Settings, Sliders, Eye, Save, X, RefreshCw,
+  Check, ArrowRight, ArrowLeft, Shield, Settings, Sliders, Eye, Save, X, RefreshCw,
   Download, Printer, MessageCircle, MessageSquare, Megaphone, FolderOpen, Repeat, Archive,
   Menu, ChevronLeft, ChevronRight, Home, BarChart3, LogOut, Globe, Upload, Store,
   Mail, Send, MoreVertical, Car, Package, BookOpen, ClipboardList, Filter, Dog, FileCheck,
   Search, Clock, FileSpreadsheet, ShieldAlert, Receipt, ShieldCheck, CheckSquare,
   Briefcase, Phone, CreditCard, Landmark, Wrench, BadgeCheck, Sparkles,
-  History, Calendar, FilePlus, ArrowUpDown,
+  History, Calendar, FilePlus, ArrowUpDown, Palmtree, UserMinus,
   AlertTriangle, Zap, Droplets, Lock, Unlock, CalendarClock,
   TrendingUp, Calculator, CalendarRange, PieChart, Scale, RotateCcw,
-  Smartphone, Activity, TrendingDown, Layers, Bell, PenTool, HardHat, Key
+  Smartphone, Activity, TrendingDown, Layers, Bell, PenTool, HardHat, Key, KeyRound
 } from 'lucide-react';
 
 // Catálogo de Proveedores Habituales en Condominios Chilenos (Autocompletado 1-Click)
@@ -40,7 +45,7 @@ const DEFAULT_CHILEAN_PROVIDERS = [
   { name: 'Jardines del Elqui / Paisajismo y Poda', rut: '14.892.341-2', category: 'Aseo y Áreas Verdes', documentType: 'Boleta de Honorarios' },
   { name: 'Extintores y Seguridad Chile Ltda. (DS 44)', rut: '78.901.234-5', category: 'Mantención Periódica', documentType: 'Factura Electrónica' },
   { name: 'Hidráulica & Bombas del Norte SpA', rut: '76.543.210-9', category: 'Reparaciones e Imprevistos', documentType: 'Factura Electrónica' },
-  { name: 'ARANPRO • Gestión Integral', rut: '76.999.888-1', category: 'Administración y Seguros', documentType: 'Factura Electrónica' }
+  { name: 'ARANPRO • Gestión Integral', rut: '76.999.888-8', category: 'Administración y Seguros', documentType: 'Factura Electrónica' }
 ];
 
 // Helper para clasificar e iconizar categorías de gastos en condominios
@@ -110,7 +115,7 @@ const groupExpensesByCategory = (expensesList) => {
   });
 };
 
-export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb }) => {
+export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb, initialCommunityId, onSwitchCommunityWorkspace }) => {
   const { 
     communities, addCommunity, updateCommunity, deleteCommunity, 
     getUnitFinancials, addUnit, updateUnit, deleteUnit, toggleUnitPaid,
@@ -124,11 +129,21 @@ export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb }) => {
     issueMonthlyBilling, closeAndArchivePeriod, approvePayment,
     addAnnouncement, deleteAnnouncement, addDocument, deleteDocument,
     certificates, updateCertificateStatus,
-    companySettings, setCompanySettings, setActiveReceipt, logout
+    companySettings, setCompanySettings, setActiveReceipt, logout,
+    resetResidentPassword, currentUser
   } = useCommunity();
 
-  // Comunidad seleccionada para gestionar (por defecto la primera)
-  const [selectedCommunityId, setSelectedCommunityId] = useState(communities[0]?.id || null);
+  // Comunidad seleccionada para gestionar (por defecto la inicial o la primera)
+  const [selectedCommunityId, setSelectedCommunityId] = useState(initialCommunityId || communities[0]?.id || null);
+  const [pendingCommunitySwitch, setPendingCommunitySwitch] = useState(null);
+  const [resetPassModalUnit, setResetPassModalUnit] = useState(null);
+  const [resetPassToast, setResetPassToast] = useState('');
+
+  useEffect(() => {
+    if (initialCommunityId) {
+      setSelectedCommunityId(initialCommunityId);
+    }
+  }, [initialCommunityId]);
   const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'unidades' | 'gastos' | 'emision' | 'comite' | 'asambleas' | 'comunicados' | 'certificados' | 'ajustes'
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -369,11 +384,14 @@ export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb }) => {
 
   // --- Estados para Directorio de Proveedores y Contratistas ---
   const [expensesSubTab, setExpensesSubTab] = useState('gastos'); // 'gastos' | 'proveedores' | 'historico' | 'presupuesto' | 'mantenciones'
+  const [remuneracionesSubTab, setRemuneracionesSubTab] = useState('nomina'); // 'nomina' | 'liquidaciones' | 'previred' | 'gastos_comunes' | 'contratos'
   const [asambleasSubTab, setAsambleasSubTab] = useState('asamblea'); // 'asamblea' | 'consultas' | 'actas' | 'poderes'
   const [comunicadosSubTab, setComunicadosSubTab] = useState('mural'); // 'mural' | 'reclamos'
   const [comiteSubTab, setComiteSubTab] = useState('reuniones'); // 'reuniones' | 'novedades' | 'tareas' | 'directorio'
   const [emisionSubTab, setEmisionSubTab] = useState('todos');
-  const [companySubTab, setCompanySubTab] = useState('empresa'); // 'todos' | 'auditoria' | 'calculo' | 'despacho' | 'cierre'
+  const [companySubTab, setCompanySubTab] = useState('condominio'); // 'condominio' | 'sobre_app'
+  const [pdfStyle, setPdfStyle] = useAranproPdfStyle('alt4');
+  const [colillaDesign, setColillaDesign] = useState('ejecutiva'); // 'ejecutiva' | 'transparencia' | 'cupon'
   const [providerSearchQuery, setProviderSearchQuery] = useState('');
   const [providerCategoryFilter, setProviderCategoryFilter] = useState('ALL');
   const [providerContractFilter, setProviderContractFilter] = useState('ALL');
@@ -1322,12 +1340,22 @@ _Administración ARANPRO_`;
       `;
     }).join('');
 
+    const logoUrl = `${window.location.origin}/brand/ARANPRO_logo_principal_transparente_trimmed.png`;
+    const sealUrl = `${window.location.origin}/brand/ARANPRO_sello_circular_integral_transparente.png`;
+    const sigHtml = companySettings?.signatureDataUrl
+      ? `<img src="${companySettings.signatureDataUrl}" alt="Firma" style="max-height: 52px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />`
+      : `<div style="border-bottom: 1px solid #334155; height: 35px; margin-bottom: 4px;"></div>`;
+
     const html = `
       <div style="font-family: system-ui, sans-serif; color: #0f172a; line-height: 1.4; padding: 10px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0F3D2E; padding-bottom: 8px;">
-          <div>
-            <div style="font-size: 11px; font-weight: 900; color: #0F3D2E; text-transform: uppercase;">ARANPRO GESTIÓN INMOBILIARIA</div>
-            <div style="font-size: 9px; color: #64748b;">RUT: 76.999.888-1 • Reg. MINVU N° 44.201</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0F3D2E; padding-bottom: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="${logoUrl}" alt="ARANPRO" style="height: 46px; width: auto; object-fit: contain;" />
+            <div style="border-left: 1px solid #cbd5e1; padding-left: 12px;">
+              <div style="font-size: 11px; font-weight: 900; color: #0F3D2E; text-transform: uppercase;">${companySettings?.brandName || 'ARANPRO'} • GESTIÓN INTEGRAL INMOBILIARIA</div>
+              <div style="font-size: 9px; color: #64748b; font-family: monospace;">${companySettings?.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? `RUT Empresa: ${companySettings.companyRut} • ` : ''}Ley N° 21.442 de Copropiedad Inmobiliaria</div>
+              <div style="font-size: 8.5px; color: #64748b;">${companySettings?.email || 'administracion@aranpro.cl'} • ${companySettings?.phone || '+56 9 5811 8504'}</div>
+            </div>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 13px; font-weight: 900;">${currentCommunity.name}</div>
@@ -1381,12 +1409,17 @@ _Administración ARANPRO_`;
           </tbody>
         </table>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; font-size: 9px; margin-top: 24px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; font-size: 9px; margin-top: 24px; align-items: end;">
           <div>
-            <div style="border-bottom: 1px solid #334155; height: 35px; margin-bottom: 4px;"></div>
-            <strong>ARANPRO GESTIÓN</strong><br/>
-            <span>Administrador de Copropiedad</span><br/>
-            <span style="font-size: 8px; color: #64748b;">Reg. MINVU N° 44.201</span>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+              <img src="${sealUrl}" alt="Sello ARANPRO" style="height: 44px; width: 44px; object-fit: contain;" />
+              <div>${sigHtml}</div>
+            </div>
+            <div style="border-top: 1.5px solid #0F3D2E; padding-top: 4px;">
+              <strong>${companySettings?.adminName || companySettings?.administratorName || 'John Andrés Arancibia M.'}</strong><br/>
+              <span>Administrador Titular • ${companySettings?.brandName || 'ARANPRO'}</span><br/>
+              <span style="font-size: 8px; color: #0F3D2E; font-weight: bold;">RNAC MINVU N° ${companySettings?.rnacNumber || '48.912'}</span>
+            </div>
           </div>
           <div>
             <div style="border-bottom: 1px solid #334155; height: 35px; margin-bottom: 4px;"></div>
@@ -1404,7 +1437,7 @@ _Administración ARANPRO_`;
       </div>
     `;
 
-    printFormalDocument(html, `Acta_Cierre_Contable_${cleanComm}_Periodo_${m}_${y}`, { fitPage: true });
+    printFormalDocument(html, `Acta_Cierre_Contable_${cleanComm}_Periodo_${m}_${y}`, { fitPage: true, pdfStyle });
   };
 
   // Selector y resolución de datos de período histórico
@@ -1498,6 +1531,12 @@ _Administración ARANPRO_`;
     const sumCredits = (currentCommunity.units || []).reduce((acc, u) => acc + (getUnitFinancials(u).creditBalance || 0), 0);
     const sumGrandTotal = (currentCommunity.units || []).reduce((acc, u) => acc + (getUnitFinancials(u).totalToPay || 0), 0);
 
+    const logoUrl = `${window.location.origin}/brand/ARANPRO_logo_principal_transparente_trimmed.png`;
+    const sealUrl = `${window.location.origin}/brand/ARANPRO_sello_circular_integral_transparente.png`;
+    const sigHtml = companySettings?.signatureDataUrl
+      ? `<img src="${companySettings.signatureDataUrl}" alt="Firma" style="max-height: 48px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />`
+      : ``;
+
     const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -1506,10 +1545,10 @@ _Administración ARANPRO_`;
   <title>Planilla General de Emisión y Prorrateo - ${periodName} - ${currentCommunity.name}</title>
   <style>
     @page { size: letter landscape; margin: 10mm 12mm; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 12px; font-size: 11px; line-height: 1.35; background: #fff; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 12px 12px 12px 24px; font-size: 11px; line-height: 1.35; background: #fff; border-left: 2.5px solid #0F3D2E; box-shadow: inset 4px 0 0 0 #fff, inset 5.5px 0 0 0 #D4B895; }
     .header-bar { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0F3D2E; padding-bottom: 10px; margin-bottom: 12px; }
-    .logo-title { font-size: 18px; font-weight: 900; color: #0F3D2E; letter-spacing: -0.5px; margin: 0; }
-    .logo-sub { font-size: 10px; font-weight: 700; color: #D4B895; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+    .logo-title { font-size: 15px; font-weight: 900; color: #0F3D2E; letter-spacing: -0.3px; margin: 0; }
+    .logo-sub { font-size: 9.5px; font-weight: 700; color: #D4B895; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
     .badge-period { display: inline-block; background: #0F3D2E; color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; }
     .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
     .kpi-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; }
@@ -1519,18 +1558,22 @@ _Administración ARANPRO_`;
     th { background: #0F3D2E; color: #fff; font-weight: 800; text-transform: uppercase; font-size: 8.5px; padding: 6px 8px; border: 1px solid #0F3D2E; letter-spacing: 0.3px; }
     td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
     .totals-row td { background: #F5F4EF; font-weight: 900; font-family: monospace; border-top: 2px solid #0F3D2E; border-bottom: 2px solid #0F3D2E; font-size: 10px; }
-    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 25px; page-break-inside: avoid; }
-    .sig-box { border-top: 1px solid #94a3b8; text-align: center; padding-top: 8px; font-size: 10px; color: #334155; }
+    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; page-break-inside: avoid; align-items: end; }
+    .sig-box { border-top: 1.5px solid #0F3D2E; text-align: center; padding-top: 8px; font-size: 10px; color: #334155; }
     .legal-footer { margin-top: 12px; font-size: 8px; color: #64748b; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 8px; }
   </style>
 </head>
 <body>
   <div class="header-bar">
-    <div>
-      <div class="logo-title">${companySettings?.brandName || 'ARANPRO'} • GESTIÓN INTEGRAL</div>
-      <div class="logo-sub">Planilla General de Emisión, Prorrateo & Cobro de Gastos Comunes</div>
-      <div style="font-size: 11px; color: #334155; margin-top: 4px;">
-        <strong>${currentCommunity.name}</strong> • RUT: ${currentCommunity.rut || '96.854.120-K'} • ${currentCommunity.address || 'Av. Los Pajaritos 1234'} (${currentCommunity.city || 'La Serena / Coquimbo'})
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <img src="${logoUrl}" alt="ARANPRO" style="height: 52px; width: auto; object-fit: contain;" />
+      <div style="border-left: 1px solid #cbd5e1; padding-left: 14px;">
+        <div class="logo-title">${companySettings?.brandName || 'ARANPRO'} • GESTIÓN INTEGRAL INMOBILIARIA</div>
+        <div style="font-size: 9.5px; color: #64748b; font-family: monospace; margin-top: 1px;">${companySettings?.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? `RUT Empresa: ${companySettings.companyRut} • ` : ''}Ley N° 21.442 de Copropiedad Inmobiliaria</div>
+        <div class="logo-sub">Planilla General de Emisión, Prorrateo & Cobro de Gastos Comunes</div>
+        <div style="font-size: 10.5px; color: #334155; margin-top: 3px;">
+          <strong>${currentCommunity.name}</strong> • RUT: ${currentCommunity.rut || '65.123.456-7'} • ${currentCommunity.address || 'Av. Los Pajaritos 1234'} (${currentCommunity.city || 'La Serena / Coquimbo'})
+        </div>
       </div>
     </div>
     <div style="text-align: right;">
@@ -1598,15 +1641,24 @@ _Administración ARANPRO_`;
   </table>
 
   <div class="signatures">
-    <div class="sig-box">
-      <strong>${companySettings?.administratorName || 'Administrador General ARANPRO'}</strong><br/>
-      Administrador de Condominios Ley N° 21.442<br/>
-      <span style="font-size: 8.5px; color: #64748b;">Firma y Timbre de Emisión Oficial</span>
+    <div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px;">
+        <img src="${sealUrl}" alt="Sello ARANPRO" style="height: 48px; width: 48px; object-fit: contain;" />
+        <div>${sigHtml}</div>
+      </div>
+      <div class="sig-box">
+        <strong>${companySettings?.adminName || companySettings?.administratorName || 'John Andrés Arancibia Maureira'}</strong><br/>
+        Administrador Titular • RNAC MINVU N° ${companySettings?.rnacNumber || '48.912'}<br/>
+        <span style="font-size: 8.5px; color: #64748b;">Firma y Timbre de Emisión Oficial</span>
+      </div>
     </div>
-    <div class="sig-box">
-      <strong>Comité de Administración</strong><br/>
-      ${currentCommunity.name}<br/>
-      <span style="font-size: 8.5px; color: #64748b;">Visación y Visto Bueno Art. 17° Ley N° 21.442</span>
+    <div>
+      <div style="height: 54px;"></div>
+      <div class="sig-box">
+        <strong>Comité de Administración</strong><br/>
+        ${currentCommunity.name}<br/>
+        <span style="font-size: 8.5px; color: #64748b;">Visación y Visto Bueno Art. 17° Ley N° 21.442</span>
+      </div>
     </div>
   </div>
 
@@ -1617,7 +1669,7 @@ _Administración ARANPRO_`;
 </html>
     `;
 
-    printFormalDocument(html, `Planilla_Emision_Prorrateo_${m}_${y}_${cleanComm}`);
+    printFormalDocument(html, `Planilla_Emision_Prorrateo_${m}_${y}_${cleanComm}`, { landscape: true, pdfStyle });
   };
 
   // Enviar recordatorio o colilla por WhatsApp directo al vecino
@@ -1700,7 +1752,7 @@ _Administración ARANPRO_`;
 
   // Impresión directa aislada y generación de PDF formal delegada a la utilidad estándar ARANPRO
   const printDocumentDirectly = (elementId, documentTitle = 'Documento Oficial ARANPRO', options = {}) => {
-    return printFormalDocument(elementId, documentTitle, options);
+    return printFormalDocument(elementId, documentTitle, { pdfStyle, ...options });
   };
 
   // Descarga instantánea de cualquier documento como archivo HTML formateado
@@ -1965,11 +2017,13 @@ _Administración ARANPRO_`;
   // Acciones
   const handleCreateCommunity = (e) => {
     if (e) e.preventDefault();
+    const officialEmail = newCommForm.email?.trim() || generateCommunityEmailProposal(newCommForm.name);
     const created = addCommunity({
       name: newCommForm.name,
       type: newCommForm.type,
       address: newCommForm.address,
       city: newCommForm.city,
+      email: officialEmail,
       totalUnits: wizardParsedUnits.length > 0 ? wizardParsedUnits.length : newCommForm.totalUnits,
       reserveFundPercentage: newCommForm.reserveFundPercentage,
       initialBankBalance: newCommForm.initialBankBalance,
@@ -1981,7 +2035,7 @@ _Administración ARANPRO_`;
         accountNumber: newCommForm.accountNumber,
         holderName: `Comunidad ${newCommForm.name}`,
         rut: newCommForm.rut,
-        email: newCommForm.email
+        email: officialEmail
       }
     });
     setShowNewCommModal(false);
@@ -2824,16 +2878,18 @@ _Administración ARANPRO_`;
     { id: 'resumen', label: 'Dashboard Financiero', shortLabel: 'Dashboard', icon: BarChart3, badge: null },
     { id: 'unidades', label: 'Unidades (Casas)', shortLabel: 'Unidades', icon: Home, badge: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} por validar` : currentCommunity?.units?.length || 0, alertBadge: pendingPaymentsCount > 0 },
     { id: 'gastos', label: 'Gastos & Respaldos', shortLabel: 'Gastos', icon: FileText, badge: currentCommunity?.expenses?.length || 0, alertBadge: urgentMaintCount > 0 },
+    { id: 'remuneraciones', label: 'RR.HH. & Remuneraciones', shortLabel: 'Remuneraciones', icon: Users, badge: (currentCommunity?.staff?.length || 0) > 0 ? `${currentCommunity.staff.length} Pers.` : 'Personal' },
     { id: 'emision', label: 'Cierre y Cobro del Mes', shortLabel: 'Cierre Mes', icon: RefreshCw, badge: preClosingAudit?.hasCriticalBlock ? 'Alerta' : currentCommunity?.activePeriod?.status || 'Activo', alertBadge: preClosingAudit?.hasCriticalBlock },
     { id: 'comite', label: 'Comité de Administración', shortLabel: 'Comité', icon: ClipboardList, badge: pendingCommitteeTasksCount > 0 ? `${pendingCommitteeTasksCount} pendientes` : 'Art. 17°', alertBadge: pendingCommitteeTasksCount > 0 },
     { id: 'asambleas', label: 'Asambleas & Quórum', shortLabel: 'Asambleas', icon: Users, badge: 'Ley 21.442' },
     { id: 'comunicados', label: 'Mural & Reclamos', shortLabel: 'Mural & Reclamos', icon: Megaphone, badge: totalDocsAndAnnCount, alertBadge: pendingTicketsCount > 0 },
     { id: 'certificados', label: 'Certificados', shortLabel: 'Certificados', icon: ShieldCheck, badge: pendingCertificatesCount > 0 ? `${pendingCertificatesCount} pend.` : certificates.length, alertBadge: pendingCertificatesCount > 0 },
-    { id: 'ajustes', label: 'Empresa & Ajustes', shortLabel: 'Empresa', icon: Settings, badge: null }
+    { id: 'ajustes', label: 'Ajustes Comunidad & App', shortLabel: 'Ajustes', icon: Settings, badge: null }
   ];
 
   const openEditCommunityModal = () => {
     if (!currentCommunity) return;
+    const officialEmail = currentCommunity.email || currentCommunity.bankInfo?.email || generateCommunityEmailProposal(currentCommunity.name);
     setEditCommForm({
       name: currentCommunity.name,
       type: currentCommunity.type || 'Casas',
@@ -2847,27 +2903,27 @@ _Administración ARANPRO_`;
       accountNumber: currentCommunity.bankInfo?.accountNumber || '',
       holderName: currentCommunity.bankInfo?.holderName || currentCommunity.name,
       rut: currentCommunity.bankInfo?.rut || '',
-      email: currentCommunity.bankInfo?.email || ''
+      email: officialEmail
     });
     setShowEditCommModal(true);
   };
 
   const renderSidebarContent = (isMobile = false) => (
     <div className="flex flex-col h-full bg-white border-r border-[#E9EBE8]">
-      {/* 1. Cabecera Oscura del Panel Lateral:Al Tope de la Página */}
-      <div className="bg-[#0F3D2E] text-white p-3.5 border-b border-[#D4B895]/25 space-y-2.5">
+      {/* 1. Cabecera Oscura del Panel Lateral: Al Tope de la Página */}
+      <div className="bg-[#0F3D2E] text-white p-3.5 border-b border-[#D4B895]/25">
         <div className="flex items-center justify-between gap-2">
           {(!sidebarCollapsed || isMobile) && (
-            <div className="flex items-center space-x-2 min-w-0">
+            <div className="flex items-center space-x-2.5 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-[#D4B895]/20 border border-[#D4B895]/40 flex items-center justify-center text-[#D4B895] shrink-0">
                 <Shield className="w-3.5 h-3.5" />
               </div>
               <div className="truncate">
                 <span className="text-[9px] font-bold tracking-wider uppercase text-[#D4B895] block leading-none">
-                  Panel Multi-Comunidad
+                  Gestión de Comunidad
                 </span>
                 <h1 className="text-xs font-black text-white truncate mt-0.5">
-                  Administrador General
+                  Módulos Operativos
                 </h1>
               </div>
             </div>
@@ -2891,41 +2947,24 @@ _Administración ARANPRO_`;
           )}
         </div>
 
-        {(!sidebarCollapsed || isMobile) && (
-          <div className="space-y-1.5">
-            <select
-              value={selectedCommunityId || ''}
-              onChange={(e) => setSelectedCommunityId(e.target.value)}
-              className="w-full bg-[#0A291F] text-white text-xs font-bold px-2.5 py-2 rounded-xl border border-[#D4B895]/40 focus:outline-hidden focus:ring-2 focus:ring-[#D4B895]"
-            >
-              {communities.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.type} • {c.totalUnits} Casas)
-                </option>
-              ))}
-            </select>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => {
-                  setMobileSidebarOpen(false);
-                  setShowNewCommModal(true);
-                }}
-                className="flex-1 py-1.5 px-2.5 bg-[#D4B895] hover:bg-[#c5a67f] text-[#0F3D2E] text-[11px] font-black rounded-xl flex items-center justify-center shadow-2xs transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Nueva Comunidad
-              </button>
-              {currentCommunity && (
-                <span
-                  className="px-2 py-1.5 text-[10px] font-bold bg-[#0A291F]/90 text-[#D4B895] border border-white/10 rounded-xl truncate max-w-[115px]"
-                  title={`${currentCommunity.address}, ${currentCommunity.city}`}
-                >
-                  {currentCommunity.totalUnits} Casas
-                </span>
-              )}
-            </div>
-          </div>
+        {/* Solo en vista móvil se ofrece acceso directo al Panel Mi Empresa dentro del drawer */}
+        {isMobile && onSwitchCommunityWorkspace && (
+          <button
+            type="button"
+            onClick={() => {
+              setMobileSidebarOpen(false);
+              onSwitchCommunityWorkspace();
+            }}
+            className="w-full mt-2.5 py-2 px-3 bg-[#D4B895] hover:bg-[#c5a67f] text-[#0F3D2E] text-xs font-black rounded-xl flex items-center justify-between shadow-2xs transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-1.5">
+              <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+              <span>← Panel Mi Empresa</span>
+            </span>
+            <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-[#0F3D2E] text-[#D4B895]">
+              Inicio
+            </span>
+          </button>
         )}
       </div>
 
@@ -2947,6 +2986,9 @@ _Administración ARANPRO_`;
                   if (tab.id === 'gastos' && !expensesSubTab) {
                     setExpensesSubTab('gastos');
                   }
+                  if (tab.id === 'remuneraciones' && !remuneracionesSubTab) {
+                    setRemuneracionesSubTab('nomina');
+                  }
                   if (tab.id === 'unidades' && !unitsSubTab) {
                     setUnitsSubTab('nomina');
                   }
@@ -2963,7 +3005,7 @@ _Administración ARANPRO_`;
                     setComunicadosSubTab('mural');
                   }
                   if (tab.id === 'ajustes' && !companySubTab) {
-                    setCompanySubTab('empresa');
+                    setCompanySubTab('condominio');
                   }
                   if (isMobile) setMobileSidebarOpen(false);
                 }}
@@ -3030,6 +3072,34 @@ _Administración ARANPRO_`;
                         : 'bg-slate-100 text-slate-600'
                     }`}>
                       {currentCommunity?.units?.length || 0}
+                    </span>
+                  </button>
+
+                  {/* Sub-índice: Cartola & Cuenta Corriente por Unidad */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('unidades');
+                      setUnitsSubTab('cuenta_corriente');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'unidades' && unitsSubTab === 'cuenta_corriente'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <FileText className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'unidades' && unitsSubTab === 'cuenta_corriente' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">Cuenta Corriente</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'unidades' && unitsSubTab === 'cuenta_corriente'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      Extracto
                     </span>
                   </button>
 
@@ -3232,6 +3302,263 @@ _Administración ARANPRO_`;
                         : urgentMaintCount > 0 ? 'bg-rose-500 text-white font-black animate-pulse' : 'bg-emerald-100 text-emerald-800'
                     }`}>
                       {currentCommunity?.preventiveMaintenances?.length || 5}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* SUB-ÍNDICES DE RR.HH. & REMUNERACIONES EN LA BARRA LATERAL */}
+              {tab.id === 'remuneraciones' && (!sidebarCollapsed || isMobile) && (
+                <div className={`ml-3.5 pl-2 border-l-2 border-[#D4B895]/50 space-y-0.5 my-1 ${activeTab === 'remuneraciones' ? 'block' : 'hidden'}`}>
+                  {/* 1. Nómina Personal */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('remuneraciones');
+                      setRemuneracionesSubTab('nomina');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'nomina'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Users className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'remuneraciones' && remuneracionesSubTab === 'nomina' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">1. Nómina Personal</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'nomina'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {currentCommunity?.staff?.length || 0}
+                    </span>
+                  </button>
+
+                  {/* 2. Liquidaciones DT */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('remuneraciones');
+                      setRemuneracionesSubTab('liquidaciones');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'liquidaciones'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <FileSpreadsheet className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'remuneraciones' && remuneracionesSubTab === 'liquidaciones' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">2. Liquidaciones DT</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'liquidaciones'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      Mes
+                    </span>
+                  </button>
+
+                  {/* 3. Planilla & TXT Previred */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('remuneraciones');
+                      setRemuneracionesSubTab('previred');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'previred'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Landmark className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'remuneraciones' && remuneracionesSubTab === 'previred' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">3. Planilla Previred</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'previred'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      Día 13
+                    </span>
+                  </button>
+
+                  {/* 4. Feriado Legal & Vacaciones DT */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('remuneraciones');
+                      setRemuneracionesSubTab('vacaciones');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'vacaciones'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Palmtree className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'remuneraciones' && remuneracionesSubTab === 'vacaciones' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">4. Feriado Legal DT</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'vacaciones'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      Saldos
+                    </span>
+                  </button>
+
+                  {/* 5. Contratos de Trabajo DT */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('remuneraciones');
+                      setRemuneracionesSubTab('contratos');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'contratos'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <FileText className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'remuneraciones' && remuneracionesSubTab === 'contratos' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">5. Contratos DT</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'contratos'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      Leyes
+                    </span>
+                  </button>
+
+                  {/* 6. Pactos Horas Extras (Art. 32) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('remuneraciones');
+                      setRemuneracionesSubTab('horas_extras');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'horas_extras'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Clock className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'remuneraciones' && remuneracionesSubTab === 'horas_extras' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">6. Pactos H. Extras</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'horas_extras'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      Art. 32
+                    </span>
+                  </button>
+
+                  {/* 7. Finiquitos & Término Laboral */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('remuneraciones');
+                      setRemuneracionesSubTab('finiquitos');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'finiquitos'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <UserMinus className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'remuneraciones' && remuneracionesSubTab === 'finiquitos' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">7. Finiquitos & Término</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'finiquitos'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      Cálculo
+                    </span>
+                  </button>
+
+                  {/* 8. RIOHS & Protocolo Ley Karin */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('remuneraciones');
+                      setRemuneracionesSubTab('riohs');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'riohs'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <ShieldAlert className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'remuneraciones' && remuneracionesSubTab === 'riohs' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">8. RIOHS & Ley Karin</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'riohs'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      Norma
+                    </span>
+                  </button>
+
+                  {/* 9. Traspaso a Gastos Comunes */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('remuneraciones');
+                      setRemuneracionesSubTab('gastos_comunes');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'gastos_comunes'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <DollarSign className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'remuneraciones' && remuneracionesSubTab === 'gastos_comunes' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">9. Traspaso a Gastos</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+                      activeTab === 'remuneraciones' && remuneracionesSubTab === 'gastos_comunes'
+                        ? 'bg-[#0F3D2E] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      1-Clic
                     </span>
                   </button>
                 </div>
@@ -3738,115 +4065,31 @@ _Administración ARANPRO_`;
                   </button>
                 </div>
               )}
-              {/* SUB-ÍNDICES DE CONFIGURACIÓN & EMPRESA EN LA BARRA LATERAL */}
+              {/* SUB-ÍNDICES DE AJUSTES DE LA COMUNIDAD & ASPECTOS LEGALES EN LA BARRA LATERAL */}
               {tab.id === 'ajustes' && (!sidebarCollapsed || isMobile) && (
                 <div className={`ml-3.5 pl-2 border-l-2 border-[#D4B895]/50 space-y-0.5 my-1 ${activeTab === 'ajustes' ? 'block' : 'hidden'}`}>
-                  {/* 1. Empresa */}
+                  {/* 1. Ajustes del Condominio */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveTab('ajustes');
-                      setCompanySubTab('empresa');
+                      setCompanySubTab('condominio');
                       if (isMobile) setMobileSidebarOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                      activeTab === 'ajustes' && companySubTab === 'empresa'
+                      activeTab === 'ajustes' && companySubTab === 'condominio'
                         ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
                         : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
                     }`}
                   >
                     <div className="flex items-center space-x-1.5 min-w-0">
-                      <Building2 className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'ajustes' && companySubTab === 'empresa' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">1. Empresa & RUT</span>
+                      <Building2 className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'ajustes' && companySubTab === 'condominio' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">1. Ficha & Comité Condominio</span>
                     </div>
                   </button>
 
-                  {/* 2. Firma Digital */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveTab('ajustes');
-                      setCompanySubTab('firma');
-                      if (isMobile) setMobileSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                      activeTab === 'ajustes' && companySubTab === 'firma'
-                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
-                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-1.5 min-w-0">
-                      <PenTool className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'ajustes' && companySubTab === 'firma' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">2. Firma Digital</span>
-                    </div>
-                  </button>
-
-                  {/* 3. Acreditaciones & Títulos */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveTab('ajustes');
-                      setCompanySubTab('acreditacion');
-                      if (isMobile) setMobileSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                      activeTab === 'ajustes' && companySubTab === 'acreditacion'
-                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
-                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-1.5 min-w-0">
-                      <HardHat className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'ajustes' && companySubTab === 'acreditacion' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">3. Acreditaciones & Diplomas</span>
-                    </div>
-                  </button>
-
-                  {/* 4. Postulaciones & Dossier */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveTab('ajustes');
-                      setCompanySubTab('postulaciones');
-                      if (isMobile) setMobileSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                      activeTab === 'ajustes' && companySubTab === 'postulaciones'
-                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
-                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-1.5 min-w-0">
-                      <Briefcase className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'ajustes' && companySubTab === 'postulaciones' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">4. Postulaciones & Dossier</span>
-                    </div>
-                  </button>
-
-                  {/* 5. Respaldos & Seguridad */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveTab('ajustes');
-                      setCompanySubTab('respaldos');
-                      if (isMobile) setMobileSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                      activeTab === 'ajustes' && companySubTab === 'respaldos'
-                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
-                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-1.5 min-w-0">
-                      <Key className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'ajustes' && companySubTab === 'respaldos' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">5. Respaldos & Seguridad</span>
-                    </div>
-                  </button>
-
-                  {/* 6. Sobre la aplicación */}
+                  {/* 2. Sobre la aplicación & Aspectos Legales */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3863,7 +4106,7 @@ _Administración ARANPRO_`;
                   >
                     <div className="flex items-center space-x-1.5 min-w-0">
                       <BookOpen className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'ajustes' && companySubTab === 'sobre_app' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
-                      <span className="truncate">6. Sobre la aplicación</span>
+                      <span className="truncate">2. Sobre la Aplicación & Legal</span>
                     </div>
                   </button>
                 </div>
@@ -3897,18 +4140,17 @@ _Administración ARANPRO_`;
                 )}
               </div>
 
-              {/* Grilla de 2 Filas x 2 Columnas */}
-              <div className="grid grid-cols-2 gap-1.5">
+              {/* Barra Compacta de 1 Fila de Acciones Rápidas (36px - Libera 100px verticales) */}
+              <div className="flex items-center gap-1.5 p-1 bg-[#F5F4EF] rounded-xl border border-slate-200">
                 <button
                   onClick={() => {
                     setMobileSidebarOpen(false);
                     setShowCommitteeReportModal(true);
                   }}
-                  className="px-2 py-2 text-[11px] font-bold bg-[#0F3D2E] hover:bg-[#0A291F] text-[#F5F4EF] rounded-xl transition-colors flex items-center justify-center shadow-2xs"
+                  className="flex-1 py-1.5 px-2 bg-[#0F3D2E] hover:bg-[#0A291F] text-[#D4B895] rounded-lg transition-all flex items-center justify-center shadow-2xs cursor-pointer"
                   title="Generar Balance Comité en PDF"
                 >
-                  <Printer className="w-3.5 h-3.5 mr-1.5 text-[#D4B895] shrink-0" />
-                  <span className="truncate">Balance PDF</span>
+                  <Printer className="w-3.5 h-3.5" />
                 </button>
 
                 <button
@@ -3916,28 +4158,21 @@ _Administración ARANPRO_`;
                     setMobileSidebarOpen(false);
                     openEditCommunityModal();
                   }}
-                  className="px-2 py-2 text-[11px] font-bold bg-white hover:bg-slate-50 text-[#0F3D2E] border border-[#D4B895] rounded-xl transition-colors flex items-center justify-center"
-                  title="Editar datos y cuenta bancaria"
+                  className="flex-1 py-1.5 px-2 bg-white hover:bg-slate-100 text-[#0F3D2E] border border-slate-200 rounded-lg transition-all flex items-center justify-center cursor-pointer"
+                  title="Editar Datos de Comunidad y Cuenta Bancaria"
                 >
-                  <Edit3 className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E] shrink-0" />
-                  <span className="truncate">Datos y Banco</span>
+                  <Edit3 className="w-3.5 h-3.5" />
                 </button>
 
                 <button
                   onClick={() => copyLink(currentCommunity.slug)}
-                  className="px-2 py-2 text-[11px] font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition-colors flex items-center justify-center"
-                  title={`Copiar enlace para vecinos (?c=${currentCommunity.slug})`}
+                  className="flex-1 py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition-all flex items-center justify-center cursor-pointer"
+                  title={`Copiar Enlace para Vecinos (?c=${currentCommunity.slug})`}
                 >
                   {copiedSlug === currentCommunity.slug ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600 mr-1 shrink-0" />
-                      <span className="text-emerald-700 truncate">¡Copiado!</span>
-                    </>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
                   ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 mr-1.5 text-slate-500 shrink-0" />
-                      <span className="truncate">Copiar Link</span>
-                    </>
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
                   )}
                 </button>
 
@@ -3946,11 +4181,10 @@ _Administración ARANPRO_`;
                     setMobileSidebarOpen(false);
                     onSelectCommunityView(currentCommunity.slug);
                   }}
-                  className="px-2 py-2 text-[11px] font-bold bg-white hover:bg-[#D4B895]/20 text-[#0F3D2E] border border-slate-200 rounded-xl transition-colors flex items-center justify-center"
-                  title="Ver portal como vecino de esta comunidad"
+                  className="flex-1 py-1.5 px-2 bg-white hover:bg-[#D4B895]/20 text-[#0F3D2E] border border-slate-200 rounded-lg transition-all flex items-center justify-center cursor-pointer"
+                  title="Ver Portal como Vecino de esta Comunidad"
                 >
-                  <Eye className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E] shrink-0" />
-                  <span className="truncate">Ver Vecino</span>
+                  <Eye className="w-3.5 h-3.5 text-[#0F3D2E]" />
                 </button>
               </div>
             </>
@@ -3988,6 +4222,28 @@ _Administración ARANPRO_`;
           )}
         </div>
       )}
+
+      {/* Firma Oficial Red-Enlace Soluciones Digitales */}
+      {(!sidebarCollapsed || isMobile) && (
+        <div className="p-2 border-t border-[#E9EBE8] text-center bg-white">
+          <a
+            href="https://redenlace.cl/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[10.5px] text-slate-500 hover:text-[#0F3D2E] font-medium transition-colors group cursor-pointer"
+            title="Visitar Red-Enlace Soluciones Digitales"
+          >
+            <img
+              src="/red-enlace-logo.png"
+              alt="Logo Red-Enlace"
+              width={14}
+              height={14}
+              className="h-3 w-auto opacity-70 group-hover:opacity-100 transition-opacity grayscale group-hover:grayscale-0"
+            />
+            <span>Desarrollado por Red-Enlace</span>
+          </a>
+        </div>
+      )}
     </div>
   );
 
@@ -4007,9 +4263,20 @@ _Administración ARANPRO_`;
             <Menu className="w-5 h-5" />
           </button>
           <div className="truncate">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4B895] block leading-tight truncate">
-              {currentCommunity?.name || 'Comunidad'}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#D4B895] truncate">
+                {currentCommunity?.name || 'Comunidad'}
+              </span>
+              {currentCommunity && (
+                <span className="text-[8.5px] font-bold px-1 py-0.2 bg-white/10 text-white/90 rounded">
+                  {currentCommunity.totalUnits}u
+                </span>
+              )}
+            </div>
             <span className="text-xs font-black text-white truncate block">
               {activeTabObj.label}
             </span>
@@ -4017,6 +4284,7 @@ _Administración ARANPRO_`;
         </div>
 
         <div className="flex items-center space-x-1.5 shrink-0">
+          <PwaInstallButton variant="compact" label="Instalar" />
           <button
             onClick={() => setShowCommitteeReportModal(true)}
             className="px-2.5 py-1.5 bg-[#D4B895] text-[#0F3D2E] text-[11px] font-black rounded-lg flex items-center"
@@ -4066,21 +4334,25 @@ _Administración ARANPRO_`;
         {/* BARRA SUPERIOR EXCLUSIVA DEL SOFTWARE DE ADMINISTRACIÓN (Sin menú de la web pública) */}
         <header className="hidden lg:flex sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E9EBE8] px-6 h-16 items-center justify-between gap-4 shadow-2xs">
           
-          {/* Izquierda: Pestaña Activa y Comunidad */}
-          <div className="flex items-center space-x-3 min-w-0">
-            <span className="text-sm font-black text-[#0F3D2E] truncate">
-              {activeTabObj.label}
-            </span>
+          {/* Izquierda: Chip Distintivo de la Comunidad Activa (Sin texto redundante de pestaña) */}
+          <div className="flex items-center min-w-0">
             {currentCommunity && (
-              <>
-                <span className="text-slate-300">•</span>
-                <span className="text-xs font-semibold text-slate-600 truncate">
+              <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-gradient-to-r from-[#0F3D2E] to-[#144736] text-white rounded-xl shadow-xs border border-[#D4B895]/40 transition-all shrink-0">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                </span>
+                <Building2 className="w-3.5 h-3.5 text-[#D4B895] shrink-0" />
+                <span className="text-xs font-black text-[#F5F4EF] tracking-wide whitespace-nowrap" title={currentCommunity.name}>
                   {currentCommunity.name}
                 </span>
-                <span className="px-2 py-0.5 text-[10px] font-bold bg-[#F5F4EF] text-[#0F3D2E] border border-[#D4B895]/40 rounded-md shrink-0">
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-[#D4B895] text-[#0F3D2E] shrink-0 whitespace-nowrap">
+                  {currentCommunity.totalUnits} {currentCommunity.type || 'Casas'}
+                </span>
+                <span className="text-[10px] font-bold text-[#D4B895] border-l border-white/20 pl-2 shrink-0 whitespace-nowrap">
                   Período {currentCommunity.activePeriod?.month}/{currentCommunity.activePeriod?.year}
                 </span>
-              </>
+              </div>
             )}
           </div>
 
@@ -4095,6 +4367,7 @@ _Administración ARANPRO_`;
 
           {/* Derecha: Botón Panel Administrador / Sitio Web / Salir */}
           <div className="flex items-center space-x-2 shrink-0">
+            <PwaInstallButton variant="compact" label="Instalar App" />
             {onBackToWeb && (
               <button
                 onClick={onBackToWeb}
@@ -4106,10 +4379,17 @@ _Administración ARANPRO_`;
               </button>
             )}
 
-            <span className="px-3.5 py-1.5 bg-[#0F3D2E] text-[#F5F4EF] text-xs font-bold rounded-xl flex items-center shadow-2xs">
-              <Shield className="w-3.5 h-3.5 mr-1.5 text-[#D4B895]" />
-              Panel Administrador
-            </span>
+            {onSwitchCommunityWorkspace && (
+              <button
+                type="button"
+                onClick={onSwitchCommunityWorkspace}
+                className="px-3.5 py-1.5 bg-[#0F3D2E] hover:bg-[#0A291F] text-[#D4B895] text-xs font-black rounded-xl flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                title="Volver al Panel Central de Mi Empresa Administradora"
+              >
+                <Briefcase className="w-3.5 h-3.5 text-[#D4B895]" />
+                <span>Panel Mi Empresa</span>
+              </button>
+            )}
 
             <button
               onClick={() => {
@@ -4568,6 +4848,25 @@ _Administración ARANPRO_`;
                       </p>
                     </div>
                   </>
+                ) : unitsSubTab === 'cuenta_corriente' ? (
+                  <>
+                    <div className="p-2.5 bg-[#0F3D2E] text-[#D4B895] rounded-2xl shadow-xs shrink-0">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2 flex-wrap">
+                        <h3 className="text-base font-black text-slate-900 tracking-tight whitespace-nowrap">
+                          Cartola y Cuenta Corriente Individual
+                        </h3>
+                        <span className="text-[9.5px] bg-[#0F3D2E]/10 text-[#0F3D2E] font-black px-2 py-0.5 rounded-full border border-[#0F3D2E]/20 uppercase">
+                          Ley N° 21.442 • Art. 6°
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Historial cronológico de cobros y abonos por copropietario con extracto oficial imprimible
+                      </p>
+                    </div>
+                  </>
                 ) : unitsSubTab === 'validar_pagos' ? (
                   <>
                     <div className="p-2.5 bg-gradient-to-br from-[#0F3D2E] to-[#14533d] text-white rounded-2xl shadow-xs shrink-0">
@@ -4696,6 +4995,17 @@ _Administración ARANPRO_`;
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
                       <span>Validar Pagos ({pendingPaymentsCount}) →</span>
+                    </button>
+                  </>
+                ) : unitsSubTab === 'cuenta_corriente' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setUnitsSubTab('nomina')}
+                      className="px-3 py-2 bg-[#F5F4EF] hover:bg-[#eae7dd] text-[#0F3D2E] border border-[#D4B895] font-black text-xs rounded-xl flex items-center shadow-2xs transition-all cursor-pointer"
+                    >
+                      <Home className="w-3.5 h-3.5 mr-1.5 text-[#0F3D2E]" />
+                      <span>← Volver a Nómina de Casas</span>
                     </button>
                   </>
                 ) : unitsSubTab === 'validar_pagos' ? (
@@ -5359,6 +5669,18 @@ _Administración ARANPRO_`;
                                         type="button"
                                         onClick={() => {
                                           setActiveDropdownUnitId(null);
+                                          setResetPassModalUnit(unit);
+                                        }}
+                                        className="w-full px-3 py-2 text-amber-800 hover:bg-amber-50 flex items-center font-semibold"
+                                        title="Restablecer clave del vecino a su número de vivienda"
+                                      >
+                                        <KeyRound className="w-3.5 h-3.5 mr-2 text-amber-600" />
+                                        Restablecer Clave (a N° {unit.number})
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveDropdownUnitId(null);
                                           setActiveUnitBill(unit);
                                         }}
                                         className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center"
@@ -5416,6 +5738,16 @@ _Administración ARANPRO_`;
               </div>
             </div>
           </>
+        ) : unitsSubTab === 'cuenta_corriente' ? (
+          /* VISTA SUB-PESTAÑA: CARTOLA Y CUENTA CORRIENTE POR UNIDAD */
+          <div className="space-y-4 animate-fade-in">
+            <UnitAccountStatementView
+              community={currentCommunity}
+              initialUnitId={activeDropdownUnitId}
+              companySettings={companySettings}
+              currentUser={currentUser}
+            />
+          </div>
         ) : unitsSubTab === 'validar_pagos' ? (
           /* VISTA SUB-PESTAÑA: VALIDAR PAGOS NOTIFICADOS POR VECINOS */
           <div className="space-y-4 animate-fade-in">
@@ -10550,8 +10882,19 @@ _Administración ARANPRO_`;
             </div>
             )}
 
-            {/* PASO 3: DESPACHO MASIVO A LOS COPROPIETARIOS */}
-            {(emisionSubTab === 'todos' || emisionSubTab === 'despacho') && (
+            {/* SUB-PESTAÑA 3 EXCLUSIVA: CENTRO DE DESPACHO MASIVO CON TRACKING EDIPRO */}
+            {emisionSubTab === 'despacho' && (
+              <div className="animate-fade-in">
+                <EmailDispatchTrackingModule
+                  community={currentCommunity}
+                  companySettings={companySettings}
+                  currentUser={currentUser}
+                />
+              </div>
+            )}
+
+            {/* PASO 3 EN FLUJO COMPLETO (TODOS): RESUMEN DE DESPACHO */}
+            {emisionSubTab === 'todos' && (
             <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
               <div className="border-b border-slate-100 pb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#0F3D2E]">
@@ -10904,6 +11247,15 @@ _Administración ARANPRO_`;
           </div>
         )}
 
+        {/* PESTAÑA: RR.HH. & REMUNERACIONES DEL CONDOMINIO (LEY 21.442 / DT) */}
+        {activeTab === 'remuneraciones' && currentCommunity && (
+          <CommunityPayrollAndStaffModule
+            currentCommunity={currentCommunity}
+            activeSubTab={remuneracionesSubTab}
+            onSubTabChange={setRemuneracionesSubTab}
+          />
+        )}
+
         {/* PESTAÑA: COMITÉ DE ADMINISTRACIÓN - LIBRO DE REUNIONES, NOVEDADES & TAREAS (LEY 21.442) */}
         {activeTab === 'comite' && currentCommunity && (
           <CommitteeMeetingsAndLogModule
@@ -10938,9 +11290,14 @@ _Administración ARANPRO_`;
           <OfficialCertificatesModule currentCommunity={currentCommunity} />
         )}
 
-        {/* TAB 7: AJUSTES, EMPRESA & LICITACIONES ARANPRO */}
+        {/* TAB 7: AJUSTES DE LA COMUNIDAD & ASPECTOS LEGALES DE LA APLICACIÓN */}
         {activeTab === 'ajustes' && (
-          <CompanySettingsAndBackupModule currentCommunity={currentCommunity} activeSubTab={companySubTab} setActiveSubTab={setCompanySubTab} />
+          <CommunitySettingsAndLegalTab
+            currentCommunity={currentCommunity}
+            activeSubTab={companySubTab}
+            setActiveSubTab={setCompanySubTab}
+            onOpenCompanyHub={onSwitchCommunityWorkspace}
+          />
         )}
 
         </div>
@@ -11054,7 +11411,16 @@ _Administración ARANPRO_`;
                       required
                       placeholder="Ej: Condominio Los Aromos / Strip Center San Ramón"
                       value={newCommForm.name}
-                      onChange={(e) => setNewCommForm({ ...newCommForm, name: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const prevAuto = generateCommunityEmailProposal(newCommForm.name);
+                        const isAutoOrEmpty = !newCommForm.email || newCommForm.email === prevAuto;
+                        setNewCommForm({
+                          ...newCommForm,
+                          name: val,
+                          email: isAutoOrEmpty ? generateCommunityEmailProposal(val) : newCommForm.email
+                        });
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold"
                     />
                   </div>
@@ -11112,6 +11478,39 @@ _Administración ARANPRO_`;
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
                       />
                     </div>
+                  </div>
+
+                  {/* Correo Oficial Propuesto para la Comunidad */}
+                  <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-emerald-950">
+                        Correo Oficial de Despacho & Notificaciones *
+                      </label>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+                        ⚡ Propuesta Automática SaaS
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        required
+                        placeholder="admin.comunidad@aranpro.cl"
+                        value={newCommForm.email || generateCommunityEmailProposal(newCommForm.name)}
+                        onChange={(e) => setNewCommForm({ ...newCommForm, email: e.target.value })}
+                        className="flex-1 px-3.5 py-2 rounded-xl border border-emerald-300 bg-white text-sm font-semibold text-emerald-950 font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNewCommForm({ ...newCommForm, email: generateCommunityEmailProposal(newCommForm.name) })}
+                        title="Regenerar propuesta según el nombre"
+                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        Auto
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 leading-tight">
+                      Los vecinos recibirán cobros y citaciones desde esta casilla oficial con el nombre del condominio. Respuestas se reenviarán a tu bandeja.
+                    </p>
                   </div>
 
                   <div>
@@ -12246,7 +12645,7 @@ _Administración ARANPRO_`;
                       Administración Profesional de Condominios • Ley N° 21.442
                     </div>
                     <div className="text-[9px] text-slate-400">
-                      RUT: 76.999.888-1 • Fono: {companySettings.phone || '+56 9 5811 8504'}
+                      {companySettings.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? `RUT Empresa: ${companySettings.companyRut} • ` : ''}Ley N° 21.442 • Fono: {companySettings.phone || '+56 9 5811 8504'}
                     </div>
                   </div>
                 </div>
@@ -12450,12 +12849,17 @@ _Administración ARANPRO_`;
                 </div>
                 <div className="grid grid-cols-3 gap-6 text-center text-xs">
                   <div>
-                    <div className="h-20 print:h-16 w-full flex items-center justify-center mb-2">
+                    <div className="h-20 print:h-16 w-full flex items-center justify-center gap-2 mb-2">
+                      <AranproOfficialSeal size="sm" />
                       {companySettings?.signatureDataUrl ? (
                         <img 
                           src={companySettings.signatureDataUrl} 
                           alt="Firma Administrador" 
-                          className="max-h-20 print:max-h-16 object-contain mx-auto" 
+                          className="max-h-20 print:max-h-16 object-contain mx-auto"
+                          style={{
+                            transform: `scale(${companySettings?.signatureScale || 1.35})`,
+                            transformOrigin: 'bottom center'
+                          }}
                         />
                       ) : (
                         <div className="w-full max-w-[130px] h-14 print:h-12 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] print:text-[8px] text-slate-400 bg-slate-50/50">
@@ -13388,7 +13792,7 @@ _Administración ARANPRO_`;
                           ARANPRO • Gestión Integral Inmobiliaria
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">
-                          RUT: 76.999.888-1 • Reg. Nacional MINVU N° 45.291-K
+                          {companySettings?.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? `RUT Empresa: ${companySettings.companyRut} • ` : ''}Ley N° 21.442 de Copropiedad Inmobiliaria
                         </div>
                         <div className="text-[10px] text-slate-500">
                           administracion@aranpro.cl • www.aranpro.cl
@@ -13935,12 +14339,28 @@ _Administración ARANPRO_`;
                   </div>
 
                   {/* Footer con firmas institucionales */}
-                  <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-slate-500 gap-2">
-                    <div>
-                      <strong>Administración ARANPRO</strong> • Gestión Inmobiliaria & Cumplimiento Legal
+                  <div className="pt-4 border-t-2 border-slate-200 flex flex-col sm:flex-row sm:items-end justify-between text-[10px] text-slate-500 gap-4">
+                    <div className="flex items-center gap-3">
+                      <AranproOfficialSeal size="sm" />
+                      <div>
+                        <strong className="text-[#0F3D2E] block">Administración ARANPRO • Gestión Integral</strong>
+                        <span>{companySettings?.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? `RUT Empresa: ${companySettings.companyRut} • ` : ''}Ley N° 21.442 de Copropiedad Inmobiliaria</span>
+                      </div>
                     </div>
                     <div className="text-right">
-                      Aprobación en Asamblea Ordinaria de Copropietarios • {budgetYear}
+                      {companySettings?.signatureDataUrl && (
+                        <img
+                          src={companySettings.signatureDataUrl}
+                          alt="Firma"
+                          className="max-h-12 object-contain ml-auto mb-1"
+                          style={{
+                            transform: `scale(${companySettings?.signatureScale || 1.35})`,
+                            transformOrigin: 'bottom right'
+                          }}
+                        />
+                      )}
+                      <div className="font-bold text-slate-800">{companySettings?.adminName || companySettings?.administratorName || 'John Andrés Arancibia Maureira'}</div>
+                      <div>Aprobación en Asamblea Ordinaria de Copropietarios • {budgetYear}</div>
                     </div>
                   </div>
                 </div>
@@ -16053,12 +16473,22 @@ _Administración ARANPRO_`;
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Email para Comprobantes</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Email Oficial & Comprobantes</label>
+                      <button
+                        type="button"
+                        onClick={() => setEditCommForm({ ...editCommForm, email: generateCommunityEmailProposal(editCommForm.name) })}
+                        className="text-[10px] text-emerald-700 hover:text-emerald-800 font-bold underline"
+                      >
+                        Auto aranpro.cl
+                      </button>
+                    </div>
                     <input
                       type="email"
                       value={editCommForm.email}
                       onChange={(e) => setEditCommForm({ ...editCommForm, email: e.target.value })}
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
+                      placeholder="admin.comunidad@aranpro.cl"
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono font-semibold text-emerald-950"
                     />
                   </div>
                 </div>
@@ -16080,23 +16510,31 @@ _Administración ARANPRO_`;
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xs">
           <div 
             id="committee-report-printable-doc"
-            className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-[#D4B895] overflow-hidden p-8 space-y-6 max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-[#D4B895] overflow-hidden p-8 space-y-5 max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex items-center justify-between pb-4 border-b border-[#D4B895]">
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-[#0F3D2E]">
-                  ARANPRO • Gestión Integral • Rendición Documentada Ley 21.442
-                </span>
-                <h3 className="text-xl font-black text-slate-900">
-                  Balance Financiero Mensual — {currentCommunity.name}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Período {currentCommunity.activePeriod?.month}/{currentCommunity.activePeriod?.year} • Administrador: {companySettings.administratorName} (CGAI N° 13-563)
-                </p>
+            {/* Selector de Alternativas Visuales (No se imprime) */}
+            <div className="no-print pb-2 border-b border-slate-100">
+              <AranproPdfStyleSelector value={pdfStyle} onChange={setPdfStyle} compact />
+            </div>
+
+            <div className="flex items-start justify-between pb-4 border-b-2 border-[#0F3D2E] gap-4">
+              <div className="flex items-center space-x-3.5">
+                <AranproLogo variant="principal" className="h-12 w-auto" />
+                <div className="border-l border-slate-300 pl-3.5">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-[#0F3D2E] block">
+                    {companySettings?.brandName || 'ARANPRO'} • GESTIÓN INTEGRAL • RENDICIÓN DOCUMENTADA LEY N° 21.442
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight mt-0.5">
+                    Balance Financiero Mensual — {currentCommunity.name}
+                  </h3>
+                  <p className="text-[10.5px] text-slate-600 font-mono mt-0.5">
+                    Período {currentCommunity.activePeriod?.month}/{currentCommunity.activePeriod?.year}{companySettings?.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? ` • RUT Empresa: ${companySettings.companyRut}` : ''} • Ley N° 21.442
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowCommitteeReportModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600"
+                className="no-print p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
               >
                 ✕
               </button>
@@ -16147,7 +16585,38 @@ _Administración ARANPRO_`;
               </table>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+            {/* Sello Oficial y Firma del Administrador para el PDF */}
+            <div className="pt-4 border-t-2 border-slate-200 flex items-end justify-between gap-6">
+              <AranproOfficialSeal size="md" />
+              <div className="text-center min-w-[230px]">
+                <div className="h-16 flex items-end justify-center pb-1">
+                  {companySettings?.signatureDataUrl ? (
+                    <img
+                      src={companySettings.signatureDataUrl}
+                      alt="Firma Administrador"
+                      className="max-h-16 object-contain mx-auto"
+                      style={{
+                        transform: `scale(${companySettings?.signatureScale || 1.35})`,
+                        transformOrigin: 'bottom center'
+                      }}
+                    />
+                  ) : null}
+                </div>
+                <div className="border-t-2 border-[#0F3D2E] pt-1.5">
+                  <div className="text-xs font-black text-slate-900">
+                    {companySettings?.adminName || companySettings?.administratorName || 'John Andrés Arancibia Maureira'}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    RUT: {(companySettings?.adminRut && companySettings.adminRut !== '14.882.140-K') ? companySettings.adminRut : '16.012.871-2'} • RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}
+                  </div>
+                  <div className="text-[10px] font-bold text-[#0F3D2E]">
+                    Administrador Titular • {companySettings?.brandName || 'ARANPRO'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="no-print flex items-center justify-between pt-4 border-t border-slate-200">
               <button
                 onClick={() => {
                   const commName = (currentCommunity?.name || 'Condominio').replace(/\s+/g, '_');
@@ -16175,21 +16644,28 @@ _Administración ARANPRO_`;
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xs">
           <div 
             id="payment-receipt-printable-doc"
-            className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#D4B895] overflow-hidden p-7 space-y-5"
+            className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#D4B895] overflow-hidden p-7 space-y-4"
           >
-            <div className="flex justify-between items-start border-b border-slate-200 pb-4">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#0F3D2E] block">
-                  ARANPRO • Gestión Integral
-                </span>
-                <h3 className="text-lg font-black text-slate-900">Comprobante Oficial de Pago</h3>
-                <p className="text-xs font-mono font-bold text-emerald-700">
-                  Folio: {activePaymentReceipt.receiptFolio || 'REC-OFICIAL'}
-                </p>
+            <div className="no-print pb-2 border-b border-slate-100">
+              <AranproPdfStyleSelector value={pdfStyle} onChange={setPdfStyle} compact />
+            </div>
+
+            <div className="flex justify-between items-start border-b-2 border-[#0F3D2E] pb-3.5 gap-3">
+              <div className="flex items-center space-x-3">
+                <AranproLogo variant="principal" className="h-12 w-auto" />
+                <div className="border-l border-slate-300 pl-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#0F3D2E] block">
+                    {companySettings?.brandName || 'ARANPRO'} • GESTIÓN INTEGRAL
+                  </span>
+                  <h3 className="text-base font-black text-slate-900 leading-tight">Comprobante Oficial de Pago</h3>
+                  <p className="text-[11px] font-mono font-bold text-emerald-700">
+                    Folio: {activePaymentReceipt.receiptFolio || 'REC-OFICIAL'} • RNAC N° {companySettings?.rnacNumber || '48.912'}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setActivePaymentReceipt(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="no-print text-slate-400 hover:text-slate-600 p-1"
               >
                 ✕
               </button>
@@ -16223,23 +16699,34 @@ _Administración ARANPRO_`;
             </div>
 
             {/* Timbre y Firma Digital de Emisión */}
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-slate-500 font-mono block">Recaudado y Validado</span>
-                <span className="font-bold text-[#0F3D2E] text-[11px] block">{companySettings?.adminName || companySettings?.administratorName || 'Administración ARANPRO'}</span>
-                <span className="text-[9px] text-slate-500 font-mono">RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}</span>
-              </div>
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-xs gap-3">
+              <AranproOfficialSeal size="sm" />
               <div className="text-right">
                 {companySettings?.signatureDataUrl ? (
-                  <img src={companySettings.signatureDataUrl} alt="Firma" className="max-h-11 object-contain ml-auto" />
+                  <img
+                    src={companySettings.signatureDataUrl}
+                    alt="Firma"
+                    className="max-h-14 object-contain ml-auto mb-1"
+                    style={{
+                      transform: `scale(${companySettings?.signatureScale || 1.35})`,
+                      transformOrigin: 'bottom right'
+                    }}
+                  />
                 ) : (
                   <div className="h-6"></div>
                 )}
-                <span className="text-[9px] font-mono text-emerald-800 font-bold block">✓ Timbre Digital Verificado</span>
+                <div className="border-t border-slate-300 pt-1">
+                  <span className="font-bold text-[#0F3D2E] text-[11px] block">
+                    {companySettings?.adminName || companySettings?.administratorName || 'John Andrés Arancibia Maureira'}
+                  </span>
+                  <span className="text-[9px] font-mono text-emerald-800 font-bold block">
+                    ✓ Recaudado y Validado • RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="no-print flex items-center justify-between pt-2">
               <button
                 onClick={() => {
                   const commName = (activePaymentReceipt.communityName || 'Condominio').replace(/\s+/g, '_');
@@ -16262,75 +16749,152 @@ _Administración ARANPRO_`;
         </div>
       )}
 
-      {/* MODAL VER COLILLA DE COBRO DE UNA UNIDAD (IMPRIMIBLE / DESCARGABLE) */}
+      {/* MODAL VER COLILLA DE COBRO DE UNA UNIDAD (IMPRIMIBLE / DESCARGABLE CON 3 DISEÑOS SELECCIONABLES) */}
       {activeUnitBill && currentCommunity && (() => {
         const fin = getUnitFinancials(activeUnitBill);
         const commTotals = calculateCommunityTotals(currentCommunity);
+        const bank = currentCommunity.bankInfo || {};
+        const groupedExpenses = groupExpensesByCategory(currentCommunity.expenses || []);
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xs">
             <div 
               id="unit-bill-printable-doc"
-              className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden p-7 space-y-5"
+              className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden p-6 sm:p-7 space-y-4 max-h-[92vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#0F3D2E] text-white flex items-center justify-center font-bold">
-                    <Building2 className="w-5 h-5 text-[#D4B895]" />
+              {/* Barra de Selección de las 3 Alternativas de Diseño de Colilla + Estilo de Hoja (Oculta en Impresión) */}
+              <div className="no-print space-y-2 pb-3 border-b border-slate-200">
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-[#F5F4EF] px-3 py-2 rounded-xl border border-[#D4B895]/60">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#0F3D2E]">
+                    Diseño de Colilla:
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      { id: 'ejecutiva', label: '1. Ejecutiva Oficial' },
+                      { id: 'transparencia', label: '2. Transparencia Ley 21.442 (Desglose)' },
+                      { id: 'cupon', label: '3. Con Cupón Recortable Conserjería' }
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setColillaDesign(opt.id)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                          colillaDesign === opt.id
+                            ? 'bg-[#0F3D2E] text-[#D4B895] shadow-xs'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">{currentCommunity.name}</h3>
-                    <p className="text-xs text-slate-500">
-                      Colilla Oficial de Cobro • Período {currentCommunity.activePeriod?.month}/{currentCommunity.activePeriod?.year}
+                </div>
+                <AranproPdfStyleSelector value={pdfStyle} onChange={setPdfStyle} compact />
+              </div>
+
+              {/* Membrete Oficial Alternativa 4 con Logo Vertical Principal */}
+              <div className="flex items-start justify-between pb-3.5 border-b-2 border-[#0F3D2E] gap-3">
+                <div className="flex items-center space-x-3">
+                  <AranproLogo variant="principal" className="h-12 w-auto" />
+                  <div className="border-l border-slate-300 pl-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#0F3D2E] block">
+                      {companySettings?.brandName || 'ARANPRO'} • GESTIÓN INTEGRAL INMOBILIARIA
+                    </span>
+                    <h3 className="text-base font-black text-slate-900 leading-tight">{currentCommunity.name}</h3>
+                    <p className="text-[10.5px] text-slate-500 font-mono">
+                      RUT Comunidad: {currentCommunity.rut || bank.rut || '65.123.456-7'} • RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setActiveUnitBill(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full"
-                >
-                  ✕
-                </button>
+                <div className="flex items-start gap-2">
+                  <div className="text-right">
+                    <span className="inline-block px-2.5 py-0.5 rounded bg-[#0F3D2E] text-[#D4B895] text-[9.5px] font-black uppercase tracking-wider">
+                      Colilla Oficial Gasto Común
+                    </span>
+                    <p className="text-[11px] font-bold text-slate-800 mt-1">
+                      Período {currentCommunity.activePeriod?.month}/{currentCommunity.activePeriod?.year}
+                    </p>
+                    <p className="text-[10px] text-rose-700 font-bold">
+                      Vence: {formatDate(currentCommunity.activePeriod?.dueDate)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveUnitBill(null)}
+                    className="no-print p-1.5 text-slate-400 hover:text-slate-600 rounded-full"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
               {/* Ficha de la unidad y pagador */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-2 gap-2.5 text-xs">
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                 <div>
-                  <span className="text-slate-400 block text-[10px]">Unidad:</span>
-                  <span className="font-black text-slate-900 text-sm">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Unidad:</span>
+                  <span className="font-black text-[#0F3D2E] text-sm">
                     {getUnitLabel(currentCommunity.type, false)} {activeUnitBill.number}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px]">Propietario Titular:</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Copropietario Titular:</span>
                   <span className="font-bold text-slate-900">{activeUnitBill.owner}</span>
                 </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">RUT Titular:</span>
+                  <span className="font-mono font-bold text-slate-900">{activeUnitBill.rut || 'No informado'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Prorrateo / Alícuota:</span>
+                  <span className="font-mono font-bold text-slate-900">{activeUnitBill.sharePercentage}%</span>
+                </div>
                 {(!activeUnitBill.payerSameAsOwner && activeUnitBill.additionalUsers?.length > 0) && (
-                  <div className="col-span-2 pt-1 border-t border-slate-200/60">
-                    <span className="text-slate-400 block text-[10px]">Pagador Registrado:</span>
+                  <div className="col-span-2 sm:col-span-4 pt-1.5 border-t border-slate-200/60">
+                    <span className="text-slate-400 text-[10px] mr-1.5">Pagador Registrado:</span>
                     <span className="font-bold text-[#0F3D2E]">
                       {activeUnitBill.additionalUsers.map(su => `${su.name} (${su.role})`).join(' | ')}
                     </span>
                   </div>
                 )}
-                <div>
-                  <span className="text-slate-400 block text-[10px]">RUT Titular:</span>
-                  <span className="font-bold text-slate-900">{activeUnitBill.rut || 'No informado'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Prorrateo / Alícuota:</span>
-                  <span className="font-bold text-slate-900">{activeUnitBill.sharePercentage}%</span>
-                </div>
               </div>
 
+              {/* Diseño 2: Tabla de Desglose por Categoría de Gasto de la Comunidad (Ley 21.442) */}
+              {colillaDesign === 'transparencia' && groupedExpenses.length > 0 && (
+                <div className="border border-slate-200 rounded-xl overflow-hidden text-[11px]">
+                  <div className="bg-[#0F3D2E] text-white px-3 py-1.5 font-black uppercase tracking-wider text-[10px] flex justify-between">
+                    <span>Resumen de Egresos Comunidad por Categoría (Art. 6° Ley 21.442)</span>
+                    <span className="text-[#D4B895]">Prorrateo {activeUnitBill.sharePercentage}%</span>
+                  </div>
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-50 text-slate-500 text-[9.5px] uppercase border-b border-slate-200">
+                      <tr>
+                        <th className="px-3 py-1">Categoría de Gasto</th>
+                        <th className="px-3 py-1 text-right">Total Comunidad</th>
+                        <th className="px-3 py-1 text-right">Su Proporción</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {groupedExpenses.map((cat) => (
+                        <tr key={cat.name}>
+                          <td className="px-3 py-1 font-medium text-slate-700">{cat.name} ({cat.expenses.length})</td>
+                          <td className="px-3 py-1 text-right font-mono text-slate-600">{formatCLP(cat.total)}</td>
+                          <td className="px-3 py-1 text-right font-mono font-bold text-slate-900">
+                            {formatCLP(Math.round(cat.total * ((parseFloat(activeUnitBill.sharePercentage) || 0) / 100)))}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
               {/* Detalle numérico transparente */}
-              <div className="space-y-2 text-xs">
+              <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between py-1 border-b border-slate-100 text-slate-600">
                   <span>Total Gastos Operacionales Condominio:</span>
                   <span className="font-semibold text-slate-900">{formatCLP(commTotals.totalExpenses)}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100 text-slate-600">
-                  <span>Fondo de Reserva ({currentCommunity.reserveFundPercentage}%):</span>
+                  <span>Fondo de Reserva Legal Art. 14° ({currentCommunity.reserveFundPercentage}%):</span>
                   <span className="font-semibold text-slate-900">{formatCLP(commTotals.reserveFundAmount)}</span>
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-slate-100 font-bold text-slate-900">
@@ -16352,14 +16916,14 @@ _Administración ARANPRO_`;
 
                 {/* Convenio de Deuda Histórica Repactada si aplica */}
                 {fin.repactacionActive && (
-                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 space-y-1">
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 space-y-1">
                     <div className="flex justify-between font-black text-amber-950">
                       <span>
                         3. Cuota Deuda Histórica Repactada ({Math.min(fin.repactacionPaidInstallments + 1, fin.repactacionTotalInstallments)}/{fin.repactacionTotalInstallments}):
                       </span>
                       <span>{formatCLP(fin.repactedInstallment)}</span>
                     </div>
-                    <div className="flex justify-between text-[11px] text-amber-800">
+                    <div className="flex justify-between text-[10.5px] text-amber-800">
                       <span>Deuda Inicial: {formatCLP(fin.repactacionTotal)} | Ya Rebajado: -{formatCLP(fin.repactacionAlreadyPaidAmount)}</span>
                       <span className="font-bold">
                         Resta tras este pago: {formatCLP(Math.max(0, fin.repactacionRemainingBeforeThisMonth - fin.repactedInstallment))}
@@ -16388,23 +16952,86 @@ _Administración ARANPRO_`;
                 )}
 
                 {fin.favorBalance > 0 ? (
-                  <div className="flex justify-between py-3 text-sm font-black text-emerald-800 bg-emerald-50 px-3 rounded-xl border border-emerald-200">
+                  <div className="flex justify-between py-2.5 text-sm font-black text-emerald-800 bg-emerald-50 px-3 rounded-xl border border-emerald-200">
                     <span>SALDO A FAVOR (SE DESCUENTA EL PRÓXIMO MES):</span>
                     <span className="text-base">+ {formatCLP(fin.favorBalance)}</span>
                   </div>
                 ) : (
-                  <div className="flex justify-between py-3 text-sm font-black text-slate-900 border-t border-slate-200">
-                    <span>TOTAL A PAGAR (MONTO EN CONTRA):</span>
-                    <span className="text-base text-rose-700">{formatCLP(fin.pendingDebt)}</span>
+                  <div className="flex justify-between py-2.5 px-3 rounded-xl bg-[#0F3D2E] text-white text-sm font-black">
+                    <span className="text-[#D4B895]">TOTAL LÍQUIDO A PAGAR:</span>
+                    <span className="text-base font-mono">{formatCLP(fin.pendingDebt)}</span>
                   </div>
                 )}
               </div>
 
-              <div className="p-3 bg-[#F5F4EF] rounded-xl text-center text-xs text-[#0F3D2E] border border-[#D4B895]">
-                Fecha de Vencimiento: <strong>{formatDate(currentCommunity.activePeriod?.dueDate)}</strong>
+              {/* Datos Bancarios de Transferencia + Sello y Firma */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1 items-center">
+                <div className="sm:col-span-7 p-3 bg-[#F5F4EF] rounded-xl border border-[#D4B895] text-[10.5px] space-y-0.5">
+                  <div className="font-black uppercase text-[#0F3D2E] tracking-wider">
+                    Datos Oficiales de Transferencia — {currentCommunity.name}
+                  </div>
+                  <div className="text-slate-700">
+                    <strong>Banco:</strong> {bank.bank || 'Banco Estado'} • <strong>Cuenta:</strong> {bank.accountType || 'Cuenta Corriente'} N° <span className="font-mono font-bold">{bank.accountNumber || 'Por informar'}</span>
+                  </div>
+                  <div className="text-slate-700">
+                    <strong>RUT:</strong> <span className="font-mono">{bank.rut || currentCommunity.rut || '65.123.456-7'}</span> • <strong>Correo:</strong> {bank.email || companySettings?.email || 'pagos@aranpro.cl'}
+                  </div>
+                </div>
+                <div className="sm:col-span-5 flex items-center justify-between gap-2 px-2">
+                  <AranproOfficialSeal size="sm" showText={false} />
+                  <div className="text-right flex-1">
+                    {companySettings?.signatureDataUrl && (
+                      <img
+                        src={companySettings.signatureDataUrl}
+                        alt="Firma"
+                        className="max-h-11 object-contain ml-auto mb-0.5"
+                        style={{
+                          transform: `scale(${companySettings?.signatureScale || 1.35})`,
+                          transformOrigin: 'bottom right'
+                        }}
+                      />
+                    )}
+                    <div className="border-t border-[#0F3D2E] pt-0.5">
+                      <span className="text-[9.5px] font-black text-slate-900 block">
+                        {companySettings?.adminName || companySettings?.administratorName || 'John Andrés Arancibia M.'}
+                      </span>
+                      <span className="text-[8.5px] font-mono text-[#0F3D2E] font-bold block">
+                        RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
+              {/* Diseño 3: Cupón Recortable de Control de Pago para Conserjería / Recaudación */}
+              {colillaDesign === 'cupon' && (
+                <div className="pt-2 border-t-2 border-dashed border-slate-400 space-y-1.5 text-[10.5px]">
+                  <div className="flex items-center justify-between text-[9.5px] font-black uppercase tracking-widest text-slate-500">
+                    <span>✂ Cupón Desprendible de Control de Pago — Conserjería / Administración</span>
+                    <span>Período {currentCommunity.activePeriod?.month}/{currentCommunity.activePeriod?.year}</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-300">
+                    <div>
+                      <span className="text-[9px] text-slate-400 block uppercase">Comunidad / Unidad</span>
+                      <strong className="text-slate-900">{getUnitLabel(currentCommunity.type, false)} {activeUnitBill.number}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block uppercase">Copropietario</span>
+                      <strong className="text-slate-900 truncate block">{activeUnitBill.owner}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block uppercase">Monto Pagado / N° Op.</span>
+                      <strong className="text-[#0F3D2E] font-mono">{formatCLP(fin.pendingDebt)} / ___________</strong>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block uppercase">Timbre Recepción</span>
+                      <span className="text-slate-400">Fecha: ____/____/2026</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="no-print flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
                 <button
                   onClick={() => {
                     const commName = (currentCommunity?.name || 'Condominio').replace(/\s+/g, '_');
@@ -16658,20 +17285,23 @@ _Administración ARANPRO_`;
                 {/* Membrete Oficial para la Impresión / PDF */}
                 <div className="hidden print:block border-b-2 border-[#0F3D2E] pb-3">
                   <div className="flex items-start justify-between">
-                    <div>
-                      <h2 className="text-base font-black text-[#0F3D2E]">
-                        {companySettings.brandName} • Bitácora Oficial de Cobranza & Acuerdos
-                      </h2>
-                      <p className="text-xs text-slate-700">
-                        Comunidad: <strong>{currentCommunity.name}</strong> • Unidad: <strong>{bitacoraUnit.tower ? `${bitacoraUnit.tower} • ` : ''}{getUnitLabel(currentCommunity.type, false)} {bitacoraUnit.number}</strong>
-                      </p>
-                      <p className="text-xs text-slate-700">
-                        Copropietario: <strong>{bitacoraUnit.owner}</strong> • RUT: <strong>{bitacoraUnit.rut || 'No informado'}</strong>
-                      </p>
+                    <div className="flex items-center space-x-3">
+                      <AranproLogo variant="principal" className="h-12 w-auto" />
+                      <div className="border-l border-slate-300 pl-3">
+                        <h2 className="text-sm font-black text-[#0F3D2E] uppercase">
+                          {companySettings.brandName || 'ARANPRO'} • Bitácora Oficial de Cobranza & Acuerdos
+                        </h2>
+                        <p className="text-xs text-slate-700">
+                          Comunidad: <strong>{currentCommunity.name}</strong> • Unidad: <strong>{bitacoraUnit.tower ? `${bitacoraUnit.tower} • ` : ''}{getUnitLabel(currentCommunity.type, false)} {bitacoraUnit.number}</strong>
+                        </p>
+                        <p className="text-xs text-slate-700">
+                          Copropietario: <strong>{bitacoraUnit.owner}</strong> • RUT: <strong>{bitacoraUnit.rut || 'No informado'}</strong>
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right text-[10px] text-slate-500 font-mono">
                       <p>Fecha Emisión: {new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                      <p>Administrador: {companySettings.administratorName}</p>
+                      <p>Administrador: {companySettings.administratorName} • RNAC N° {companySettings?.rnacNumber || '48.912'}</p>
                     </div>
                   </div>
                 </div>
@@ -17032,19 +17662,19 @@ _Administración ARANPRO_`;
                 
                 {/* Encabezado Institucional ARANPRO y Cita Legal */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-[#0F3D2E] pb-4 gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <AranproLogo className="w-7 h-7 text-[#0F3D2E]" />
-                      <span className="font-black text-base tracking-wider text-[#0F3D2E]">
+                  <div className="flex items-center space-x-3.5">
+                    <AranproLogo variant="principal" className="h-12 w-auto" />
+                    <div className="border-l border-slate-300 pl-3.5 space-y-0.5">
+                      <span className="font-black text-base tracking-wider text-[#0F3D2E] block leading-tight">
                         {companySettings.brandName} • {companySettings.subtitle}
                       </span>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-[#D4B895]">
+                        {companySettings.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? `RUT Empresa: ${companySettings.companyRut} • ` : ''}Ley N° 21.442 de Copropiedad Inmobiliaria
+                      </p>
+                      <p className="text-[11px] text-slate-600 font-medium">
+                        Administrador: <strong>{companySettings.administratorName}</strong> • {companySettings.email} • {companySettings.phone}
+                      </p>
                     </div>
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-[#D4B895]">
-                      Gestión Inmobiliaria & Administración Profesional de Condominios
-                    </p>
-                    <p className="text-[11px] text-slate-600 font-medium">
-                      Administrador: <strong>{companySettings.administratorName}</strong> • {companySettings.email} • {companySettings.phone}
-                    </p>
                   </div>
                   <div className="text-right space-y-0.5">
                     <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300 inline-block">
@@ -17200,9 +17830,18 @@ _Administración ARANPRO_`;
 
                   <div className="grid grid-cols-2 gap-8 pt-6 print:pt-8">
                     <div className="text-center space-y-1">
-                      <div className="h-20 w-full flex items-center justify-center mb-2">
+                      <div className="h-20 w-full flex items-center justify-center gap-3 mb-2">
+                        <AranproOfficialSeal size="sm" showText={false} />
                         {companySettings?.signatureDataUrl ? (
-                          <img src={companySettings.signatureDataUrl} alt="Firma Administrador" className="max-h-20 object-contain mx-auto" />
+                          <img
+                            src={companySettings.signatureDataUrl}
+                            alt="Firma Administrador"
+                            className="max-h-20 object-contain mx-auto"
+                            style={{
+                              transform: `scale(${companySettings?.signatureScale || 1.35})`,
+                              transformOrigin: 'bottom center'
+                            }}
+                          />
                         ) : (
                           <div className="w-48 h-14 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50/50">
                             <span className="font-bold text-slate-500">Firma y Timbre</span>
@@ -17701,24 +18340,24 @@ _Administración ARANPRO_`;
                     >
                       {/* Membrete Institucional ARANPRO */}
                       <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <AranproLogo className="w-8 h-8 text-[#0F3D2E]" />
+                        <div className="flex items-center space-x-3.5">
+                          <AranproLogo variant="principal" className="h-12 w-auto" />
+                          <div className="border-l border-slate-300 pl-3.5 space-y-0.5">
                             <div>
-                              <span className="font-black text-lg tracking-wider text-[#0F3D2E] block leading-none">
-                                {companySettings.brandName}
+                              <span className="font-black text-base tracking-wider text-[#0F3D2E] block leading-none">
+                                {companySettings.brandName} • {companySettings.subtitle}
                               </span>
-                              <span className="text-[10px] uppercase font-bold tracking-widest text-[#D4B895]">
-                                {companySettings.subtitle}
+                              <span className="text-[10px] font-mono text-slate-500 block mt-0.5">
+                                {companySettings.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? `RUT Empresa: ${companySettings.companyRut} • ` : ''}Ley N° 21.442 de Copropiedad Inmobiliaria
                               </span>
                             </div>
+                            <p className="text-[11px] text-slate-600 font-medium">
+                              Administrador Profesional: <strong>{companySettings.administratorName}</strong>
+                            </p>
+                            <p className="text-[10px] text-slate-500 font-mono">
+                              {companySettings.email} • {companySettings.phone}
+                            </p>
                           </div>
-                          <p className="text-[11px] text-slate-600 font-medium">
-                            Administrador Profesional: <strong>{companySettings.administratorName}</strong>
-                          </p>
-                          <p className="text-[10px] text-slate-500 font-mono">
-                            {companySettings.email} • {companySettings.phone}
-                          </p>
                         </div>
 
                         <div className="text-right space-y-1">
@@ -17888,9 +18527,18 @@ _Administración ARANPRO_`;
                       {/* FIRMAS LEGALES */}
                       <div className="pt-6 grid grid-cols-2 gap-8 text-center text-xs print:pt-8">
                         <div className="space-y-1">
-                          <div className="h-20 w-full flex items-center justify-center mb-2">
+                          <div className="h-20 w-full flex items-center justify-center gap-3 mb-2">
+                            <AranproOfficialSeal size="sm" showText={false} />
                             {companySettings?.signatureDataUrl ? (
-                              <img src={companySettings.signatureDataUrl} alt="Firma Administrador" className="max-h-20 object-contain mx-auto" />
+                              <img
+                                src={companySettings.signatureDataUrl}
+                                alt="Firma Administrador"
+                                className="max-h-20 object-contain mx-auto"
+                                style={{
+                                  transform: `scale(${companySettings?.signatureScale || 1.35})`,
+                                  transformOrigin: 'bottom center'
+                                }}
+                              />
                             ) : (
                               <div className="w-48 h-14 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50/50">
                                 <span className="font-bold text-slate-500">Firma y Timbre</span>
@@ -18460,6 +19108,120 @@ _Administración ARANPRO_`;
         );
       })()}
 
+      {/* Modal de Advertencia al Cambiar de Comunidad (Verificación de Cambios sin Guardar) */}
+      {pendingCommunitySwitch && (() => {
+        const targetComm = communities.find(c => c.id === pendingCommunitySwitch);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-black text-slate-900">
+                  ¿Estás seguro de cambiar de comunidad?
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Estás trabajando en <strong>{currentCommunity?.name}</strong> y vas a pasar a gestionar <strong>{targetComm?.name}</strong>.
+                </p>
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-left text-xs text-amber-900 space-y-1">
+                  <span className="font-bold block text-[11px] uppercase tracking-wider text-amber-800">⚠️ Cambios sin guardar:</span>
+                  <p className="text-[11px] text-amber-900 leading-relaxed">
+                    Si tienes formularios abiertos, gastos en edición o registros sin guardar en esta comunidad, asegúrate de guardarlos antes de continuar para no perder tu trabajo.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setPendingCommunitySwitch(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancelar y quedarse
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCommunityId(pendingCommunitySwitch);
+                    setPendingCommunitySwitch(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-[#0F3D2E] hover:bg-[#0A291F] text-white text-xs font-black shadow-md transition-colors cursor-pointer"
+                >
+                  Sí, Cambiar de Comunidad
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Modal de Confirmación para Restablecer Clave de Unidad */}
+      {resetPassModalUnit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+              <KeyRound className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-black text-slate-900">
+                Restablecer Clave de Vecino
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                ¿Deseas restablecer la contraseña de acceso de la <strong>Unidad N° {resetPassModalUnit.number}</strong> ({resetPassModalUnit.owner})?
+              </p>
+              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-left text-xs text-amber-900 space-y-1">
+                <span className="font-bold block text-[11px] uppercase tracking-wider text-amber-800">Nueva clave restaurada:</span>
+                <span className="font-mono text-base font-black bg-white px-2.5 py-1 rounded-lg border border-amber-300 inline-block text-amber-950">
+                  {resetPassModalUnit.number}
+                </span>
+                <p className="text-[11px] text-amber-800 mt-1">
+                  La contraseña volverá a ser el número de su vivienda. Una vez que ingrese a su portal, el copropietario podrá volver a cambiarla en "Mi Clave".
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setResetPassModalUnit(null)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const res = resetResidentPassword(currentCommunity.id, resetPassModalUnit.id);
+                  if (res.success) {
+                    setResetPassToast(`✅ Clave de la Unidad N° ${resetPassModalUnit.number} restablecida exitosamente a: "${resetPassModalUnit.number}"`);
+                    setTimeout(() => setResetPassToast(''), 5000);
+                  }
+                  setResetPassModalUnit(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-md transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Confirmar y Restablecer</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification */}
+      {resetPassToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#0F3D2E] text-white px-5 py-3 rounded-2xl shadow-2xl border-2 border-[#D4B895] flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
+          <KeyRound className="w-5 h-5 text-[#D4B895] shrink-0" />
+          <span className="text-xs font-bold">{resetPassToast}</span>
+          <button
+            onClick={() => setResetPassToast('')}
+            className="p-1 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

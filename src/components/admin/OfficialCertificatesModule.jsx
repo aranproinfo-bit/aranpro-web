@@ -3,7 +3,7 @@ import { useCommunity } from '../../context/CommunityContext';
 import { formatDate, formatRut, formatCLP } from '../../utils/formatters';
 import { printDocumentDirectly, downloadHtmlDocument } from '../../utils/printDocument';
 import { AranproConfirmModal } from '../common/AranproConfirmModal';
-import { AranproLogo } from '../common/MauranLogo';
+import { AranproLogo, AranproOfficialSeal, AranproPdfStyleSelector, useAranproPdfStyle } from '../common/MauranLogo';
 import {
   ShieldCheck, FileText, CheckCircle2, AlertTriangle, Printer,
   Download, Share2, Search, Filter, Plus, X, ExternalLink,
@@ -26,6 +26,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [pdfStyle, setPdfStyle] = useAranproPdfStyle('alt4');
 
   // Estados de modales
   const [showNewModal, setShowNewModal] = useState(false);
@@ -395,7 +396,7 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
     if (cert.type.includes('Estado de Deuda')) {
       const debtFormatted = Number(cert.debtAmount || 0).toLocaleString('es-CL');
       return `CLÁUSULA DÉCIMO PRIMERA (DEUDA POR GASTOS COMUNES Y RETENCIÓN NOTARIAL):\n` +
-        `Las partes comparecientes declaran expresamente conocer el Certificado Oficial de Estado de Deuda y Liquidación Morosa Folio N° ${folio} (Cód. Hash ${hash}), emitido con fecha ${dateFormatted} por la Administración del "${communityName}" (RUT ${companySettings?.companyRut || '76.999.888-1'}, RNAC Minvu N° ${rnacNum}), conforme a los Artículos 20° y 36° de la Ley N° 21.442 de Copropiedad Inmobiliaria. En dicho instrumento se certifica que la Unidad correspondiente a la Casa/Departamento N° ${unit}, perteneciente a don(a) ${applicantName} (RUT ${rut}), mantiene una deuda líquida y exigible por concepto de gastos comunes que asciende a la suma total de $${debtFormatted} pesos chilenos.\n\n` +
+        `Las partes comparecientes declaran expresamente conocer el Certificado Oficial de Estado de Deuda y Liquidación Morosa Folio N° ${folio} (Cód. Hash ${hash}), emitido con fecha ${dateFormatted} por la Administración del "${communityName}"${companySettings?.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? ` (RUT ${companySettings.companyRut})` : ''}, conforme a los Artículos 20° y 36° de la Ley N° 21.442 de Copropiedad Inmobiliaria. En dicho instrumento se certifica que la Unidad correspondiente a la Casa/Departamento N° ${unit}, perteneciente a don(a) ${applicantName} (RUT ${rut}), mantiene una deuda líquida y exigible por concepto de gastos comunes que asciende a la suma total de $${debtFormatted} pesos chilenos.\n\n` +
         `En cumplimiento del Artículo 36° de la Ley N° 21.442 —conforme al cual la obligación por los gastos comunes sigue siempre al dominio del inmueble, aun respecto de los devengados con anterioridad a su adquisición—, las partes acuerdan e instruyen expresamente al Notario Público autorizante retener del precio de venta la suma de $${debtFormatted} mediante Vale Vista Bancario emitido nominativamente a nombre de "${communityName}". Dicho documento será entregado a la Administración del condominio contra entrega del respectivo comprobante oficial de cancelación definitiva, liberando al nuevo adquirente de toda responsabilidad pecuniaria precedente.`;
     }
 
@@ -473,7 +474,8 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
     printDocumentDirectly('printable-official-certificate', filename, {
       pageSize: 'letter portrait',
       fitPage: true,
-      margin: '8mm 10mm 8mm 10mm'
+      margin: '8mm 10mm 8mm 10mm',
+      pdfStyle
     });
   };
 
@@ -1266,22 +1268,25 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
             </div>
 
             {/* CONTENEDOR DEL DOCUMENTO CARTA IMPRIMIBLE */}
-            <div className="overflow-y-auto flex-1 pr-1">
+            <div className="overflow-y-auto flex-1 pr-1 space-y-3">
+              <div className="no-print max-w-3xl mx-auto">
+                <AranproPdfStyleSelector value={pdfStyle} onChange={setPdfStyle} compact />
+              </div>
               <div
                 id="printable-official-certificate"
-                className="bg-white p-8 md:p-12 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-6 text-slate-900"
-                style={{ minHeight: '840px', fontFamily: 'system-ui, -apple-system, sans-serif' }}
+                className="bg-white p-8 md:p-11 border border-slate-300 rounded-2xl shadow-xs max-w-3xl mx-auto space-y-5 text-slate-900"
+                style={{ minHeight: '800px', fontFamily: 'system-ui, -apple-system, sans-serif' }}
               >
-                {/* Membrete Corporativo Maestro ARANPRO */}
-                <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-5">
+                {/* Membrete Corporativo Maestro ARANPRO (Alternativa 4 con Logo Vertical Principal) */}
+                <div className="flex items-start justify-between border-b-2 border-[#0F3D2E] pb-4">
                   <div className="flex items-center space-x-3.5">
-                    <AranproLogo className="h-11 w-auto" />
-                    <div className="space-y-0.5">
+                    <AranproLogo variant="principal" className="h-12 w-auto" />
+                    <div className="border-l border-slate-300 pl-3.5 space-y-0.5">
                       <div className="text-sm font-black tracking-tight text-[#0F3D2E] uppercase">
                         {companySettings?.companyName || 'ARANPRO • GESTIÓN INTEGRAL INMOBILIARIA'}
                       </div>
                       <p className="text-[10px] text-slate-500 font-mono">
-                        RUT: {companySettings?.companyRut || '76.999.888-1'} • RNAC MINVU N° {companySettings?.rnacNumber || '48.912'}
+                        {companySettings?.companyRut && !String(companySettings.companyRut).includes('76.999.888') ? `RUT Empresa: ${companySettings.companyRut} • ` : ''}Ley N° 21.442 de Copropiedad Inmobiliaria
                       </p>
                       <p className="text-[10px] text-slate-500">
                         {companySettings?.email || 'contacto@aranpro.cl'} • {companySettings?.phone || '+56 9 5811 8504'} • {companySettings?.website || 'www.aranpro.cl'}
@@ -1518,37 +1523,36 @@ export const OfficialCertificatesModule = ({ currentCommunity }) => {
                   </p>
                 </div>
 
-                {/* Sección de Firmas, Timbre y Validación Notarial */}
-                <div className="pt-8 border-t border-slate-200 grid grid-cols-2 gap-8 items-end">
-                  {/* Firma de la Administración */}
+                {/* Sección de Firmas, Sello Circular Oficial y Validación Notarial */}
+                <div className="pt-6 border-t border-slate-200 grid grid-cols-2 gap-8 items-end">
+                  {/* Firma de la Administración + Sello Circular Dorado */}
                   <div className="text-center space-y-2">
-                    <div className="h-20 flex items-center justify-center gap-3">
+                    <div className="h-20 flex items-center justify-center gap-4">
+                      <AranproOfficialSeal size="md" showText={false} />
                       {companySettings?.signatureDataUrl ? (
                         <img 
                           src={companySettings.signatureDataUrl} 
                           alt="Firma Representante Legal" 
-                          className="max-h-20 max-w-[180px] object-contain drop-shadow-xs" 
+                          className="max-h-20 max-w-[180px] object-contain drop-shadow-xs"
+                          style={{
+                            transform: `scale(${companySettings?.signatureScale || 1.35})`,
+                            transformOrigin: 'bottom center'
+                          }}
                         />
                       ) : (
                         <div className="text-[11px] font-serif italic text-slate-400">
                           {companySettings?.adminName || 'Firma de la Administración'}
                         </div>
                       )}
-                      {/* Timbre Digital Simulado */}
-                      <div className="border-2 border-dashed border-[#0F3D2E] rounded-full w-24 h-14 flex flex-col items-center justify-center p-1 bg-[#0F3D2E]/5 shrink-0">
-                        <span className="text-[7px] font-black text-[#0F3D2E] uppercase">TIMBRE DIGITAL</span>
-                        <span className="text-[8.5px] font-bold text-[#0F3D2E]">ARANPRO SpA</span>
-                        <span className="text-[7px] text-[#0F3D2E]">RNAC N° {companySettings?.rnacNumber || '48.912'}</span>
-                      </div>
                     </div>
-                    <div className="border-t border-slate-400 pt-1.5">
-                      <p className="font-bold text-xs text-slate-900">
-                        {companySettings?.adminName || companySettings?.administratorName || 'ADMINISTRACIÓN ARANPRO'}
+                    <div className="border-t-2 border-[#0F3D2E] pt-1.5">
+                      <p className="font-black text-xs text-slate-900">
+                        {companySettings?.adminName || companySettings?.administratorName || 'John Andrés Arancibia Maureira'}
                       </p>
                       <p className="text-[10px] text-slate-500 font-mono">
                         RUT Administrador: {(companySettings?.adminRut && companySettings.adminRut !== '14.882.140-K') ? companySettings.adminRut : '16.012.871-2'}
                       </p>
-                      <p className="text-[9px] text-[#0F3D2E] font-semibold">
+                      <p className="text-[9px] text-[#0F3D2E] font-bold">
                         Administrador Legal de la Copropiedad (RNAC Minvu N° {companySettings?.rnacNumber || '48.912'})
                       </p>
                     </div>
