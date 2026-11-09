@@ -19,6 +19,7 @@ function MainApp() {
   const [currentView, setCurrentView] = useState('landing');
   const [selectedCommunitySlug, setSelectedCommunitySlug] = useState(null);
   const [showCertModal, setShowCertModal] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(() => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).has('demo') : false));
 
   // Leer parámetro ?c=slug o ?demo=... de la URL (para accesos directos desde QR o WhatsApp)
   useEffect(() => {
@@ -27,6 +28,7 @@ function MainApp() {
     const demoParam = urlParams.get('demo');
 
     if (demoParam) {
+      setIsDemoMode(true);
       setSelectedCommunitySlug(commSlug || communities[0]?.slug);
       setCurrentView('resident-login');
       return;
@@ -108,15 +110,29 @@ function MainApp() {
         {currentView === 'resident-login' && (
           <ResidentLogin
             communitySlug={selectedCommunitySlug || communities[0]?.slug}
-            onBack={() => setCurrentView('communities-selector')}
+            onBack={() => {
+              if (isDemoMode) {
+                setIsDemoMode(false);
+                setCurrentView('landing');
+              } else {
+                setCurrentView('communities-selector');
+              }
+            }}
             onSuccess={handleResidentLoginSuccess}
+            isDemo={isDemoMode}
           />
         )}
 
         {currentView === 'resident' && (
           <ResidentPortal
-            onBack={() => setCurrentView('landing')}
+            onBack={() => {
+              if (isDemoMode) {
+                setIsDemoMode(false);
+              }
+              setCurrentView('landing');
+            }}
             onOpenCertificates={() => setShowCertModal(true)}
+            isDemo={isDemoMode}
           />
         )}
 

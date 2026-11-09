@@ -12,8 +12,8 @@ import {
   FileCheck
 } from 'lucide-react';
 
-export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
-  const { currentUser, communities, getUnitFinancials, setActiveReceipt, reportPayment, addAnnouncement, calculateCommunityTotals, changeResidentPassword, logout, companySettings } = useCommunity();
+export const ResidentPortal = ({ onBack, onOpenCertificates, isDemo = false }) => {
+  const { currentUser, communities, getUnitFinancials, setActiveReceipt, reportPayment, addAnnouncement, calculateCommunityTotals, changeResidentPassword, logout, companySettings, loginResident } = useCommunity();
   const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'gastos' | 'mis-pagos' | 'comunicados' | 'cuenta-bancaria'
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showCommitteeAnnForm, setShowCommitteeAnnForm] = useState(false);
@@ -50,6 +50,14 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
 
   const unit = community.units.find(u => u.id === currentUser.unitId || u.number === currentUser.unitNumber);
   if (!unit) return null;
+
+  const isDemoActive = Boolean(
+    isDemo || 
+    currentUser?.isDemo || 
+    (typeof window !== 'undefined' && window.location.search.includes('demo'))
+  );
+  const displayCommunityName = isDemoActive ? 'Comunidad Demostración ARANPRO' : community.name;
+  const displayCommunityAddress = isDemoActive ? 'Condominio Piloto Interactivo • Ley N° 21.442' : `${community.address}, ${community.city}`;
 
   // Cálculos de la comunidad
   const commTotals = calculateCommunityTotals(community);
@@ -119,7 +127,7 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
                 Portal Copropietario • ARANPRO
               </span>
               <h1 className="text-xs font-black text-white truncate">
-                {community.name}
+                {displayCommunityName}
               </h1>
             </div>
           </div>
@@ -264,7 +272,50 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100/60 flex flex-col lg:flex-row pb-20 lg:pb-0">
+    <div className="min-h-screen bg-slate-100/60 flex flex-col">
+      {/* BARRA SUPERIOR FIJA DE CONTROL DE DEMOSTRACIÓN EN VIVO */}
+      {isDemoActive && (
+        <div className="bg-[#0F3D2E] text-white px-4 py-2.5 shadow-md flex flex-wrap items-center justify-between gap-2 sticky top-0 z-50 border-b-2 border-[#D4B895]">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2 py-0.5 rounded bg-[#D4B895] text-[#0F3D2E] font-black text-[10px] tracking-wider uppercase">
+              ★ DEMOSTRACIÓN ARANPRO
+            </span>
+            <span className="text-xs text-white/95">
+              Evaluando: <strong className="text-[#D4B895]">{unit.isCommittee ? `🛡️ ${unit.committeeRole || 'Comité'} (Casa ${unit.number})` : `🏠 Copropietario al Día (Casa ${unit.number})`}</strong>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            {!unit.isCommittee ? (
+              <button
+                type="button"
+                onClick={() => loginResident(community.slug, '1', '1')}
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-[#0F3D2E] font-black rounded-xl text-xs shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+                title="Cambiar con 1 clic a la vista de Integrante del Comité"
+              >
+                <span>🛡️ Cambiar a Vista Comité (Casa 1)</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => loginResident(community.slug, '6', '6')}
+                className="px-3 py-1.5 bg-[#D4B895] hover:bg-[#c4a885] text-[#0F3D2E] font-black rounded-xl text-xs shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+                title="Cambiar con 1 clic a la vista de Copropietario / Residente"
+              >
+                <span>🏠 Cambiar a Vista Copropietario (Casa 6)</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onBack}
+              className="px-2.5 py-1.5 bg-[#0A291F] hover:bg-rose-900 text-white/80 hover:text-white rounded-xl text-xs transition-colors cursor-pointer"
+            >
+              Salir de Demo
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 flex flex-col lg:flex-row pb-20 lg:pb-0">
       
       {/* Barra Superior Compacta en Celular (< lg) */}
       <div className="lg:hidden sticky top-0 z-30 bg-[#0F3D2E] text-white px-4 py-2.5 border-b border-[#D4B895]/30 flex items-center justify-between shadow-sm">
@@ -277,7 +328,7 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
           </button>
           <div className="truncate">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4B895] block leading-tight truncate">
-              Casa N° {unit.number} • {community.name}
+              Casa N° {unit.number} • {displayCommunityName}
             </span>
             <span className="text-xs font-black text-white truncate block">
               {activeResTabObj.label}
@@ -370,7 +421,7 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
                   <div>
                     <div className="flex items-center space-x-2 flex-wrap">
                       <h3 className="text-sm sm:text-base font-black text-[#0F3D2E]">
-                        Avisos y Comunicados de {community.name}
+                        Avisos y Comunicados de {displayCommunityName}
                       </h3>
                       {unit.isCommittee && (
                         <span className="px-2 py-0.5 text-[10px] font-black bg-[#0F3D2E] text-[#D4B895] rounded-full">
@@ -1014,7 +1065,7 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
                     </div>
                     <div>
                       <h3 className="text-base font-bold text-slate-900">Mural de Avisos y Comunicados</h3>
-                      <p className="text-xs text-slate-500">Informaciones oficiales de la Administración y del Comité para {community.name}</p>
+                      <p className="text-xs text-slate-500">Informaciones oficiales de la Administración y del Comité para {displayCommunityName}</p>
                     </div>
                   </div>
                   {unit.isCommittee && (
@@ -1394,7 +1445,7 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
               <div className="flex items-center space-x-3.5">
                 <AranproLogo className="h-10 w-auto" />
                 <div>
-                  <h3 className="text-base font-black text-slate-900">{community.name}</h3>
+                  <h3 className="text-base font-black text-slate-900">{displayCommunityName}</h3>
                   <p className="text-xs text-slate-500">Cobro de Gasto Común Oficial • Ley N° 21.442</p>
                 </div>
               </div>
@@ -1685,7 +1736,7 @@ export const ResidentPortal = ({ onBack, onOpenCertificates }) => {
         onClose={() => setShowExpenseReportModal(false)}
         community={community}
       />
-
+      </div>
     </div>
   );
 };
