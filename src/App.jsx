@@ -30,7 +30,11 @@ function MainApp() {
     if (demoParam) {
       setIsDemoMode(true);
       setSelectedCommunitySlug(commSlug || communities[0]?.slug);
-      setCurrentView('resident-login');
+      if (currentUser?.role === 'resident') {
+        setCurrentView('resident');
+      } else {
+        setCurrentView('resident-login');
+      }
       return;
     }
 
@@ -113,6 +117,10 @@ function MainApp() {
             onBack={() => {
               if (isDemoMode) {
                 setIsDemoMode(false);
+                try {
+                  const cleanUrl = window.location.pathname + (window.location.hash || '');
+                  window.history.replaceState({}, document.title, cleanUrl);
+                } catch (e) {}
                 setCurrentView('landing');
               } else {
                 setCurrentView('communities-selector');
@@ -128,6 +136,10 @@ function MainApp() {
             onBack={() => {
               if (isDemoMode) {
                 setIsDemoMode(false);
+                try {
+                  const cleanUrl = window.location.pathname + (window.location.hash || '');
+                  window.history.replaceState({}, document.title, cleanUrl);
+                } catch (e) {}
               }
               setCurrentView('landing');
             }}
