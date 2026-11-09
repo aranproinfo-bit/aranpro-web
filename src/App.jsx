@@ -20,10 +20,18 @@ function MainApp() {
   const [selectedCommunitySlug, setSelectedCommunitySlug] = useState(null);
   const [showCertModal, setShowCertModal] = useState(false);
 
-  // Leer parámetro ?c=slug de la URL (para enlaces compartidos a los vecinos en WhatsApp)
+  // Leer parámetro ?c=slug o ?demo=... de la URL (para accesos directos desde QR o WhatsApp)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const commSlug = urlParams.get('c');
+    const demoParam = urlParams.get('demo');
+
+    if (demoParam) {
+      setSelectedCommunitySlug(commSlug || communities[0]?.slug);
+      setCurrentView('resident-login');
+      return;
+    }
+
     if (commSlug) {
       setSelectedCommunitySlug(commSlug);
       // Si el usuario ya está autenticado en esta comunidad, ir a 'resident', sino a 'resident-login'
@@ -33,7 +41,7 @@ function MainApp() {
         setCurrentView('resident-login');
       }
     }
-  }, [currentUser]);
+  }, [currentUser, communities]);
 
   // Si el usuario se loguea como residente
   const handleResidentLoginSuccess = () => {
