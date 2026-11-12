@@ -24,6 +24,7 @@ export const Step5TransitionPanel = ({
   getStepMessages = () => ({}),
   handleCopyStepMessage = () => {}
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState('carta'); // 'carta' | 'checklist' | 'acta' | 'guias'
   const [actaOrContract, setActaOrContract] = useState('acta'); // 'acta' | 'contrato'
   const [expandedMsg, setExpandedMsg] = useState(false);
@@ -161,11 +162,11 @@ Se faculta expresamente a don JOHN ANDRÉS ARANCIBIA MAUREIRA o al Presidente de
   };
 
   return (
-    <div className="bg-white p-5 md:p-6 rounded-3xl border-2 border-emerald-700/30 shadow-xs hover:border-emerald-700/60 transition-all space-y-4">
+    <div className="p-5 md:p-6 rounded-3xl shadow-xs bg-teal-50/70 border border-teal-200 hover:border-teal-300 transition-all space-y-4">
       {/* 1. ENCABEZADO UNIFICADO CON LOS PASOS 1, 2, 3 Y 4 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#0F3D2E] text-[#D4B895] flex items-center justify-center font-black text-lg shrink-0 mt-0.5 shadow-xs">
+        <div className="flex items-start gap-3 cursor-pointer select-none flex-1" onClick={() => setIsOpen(!isOpen)}>
+          <div className="w-10 h-10 rounded-2xl bg-teal-200 text-teal-900 flex items-center justify-center font-black text-lg shrink-0 mt-0.5 shadow-xs">
             5
           </div>
           <div>
@@ -191,7 +192,9 @@ Se faculta expresamente a don JOHN ANDRÉS ARANCIBIA MAUREIRA o al Presidente de
         </div>
       </div>
 
-      <p className="text-xs text-slate-600 leading-relaxed">
+      {isOpen && (
+        <>
+        <p className="text-xs text-slate-600 leading-relaxed">
         <strong>Cuándo usarlo:</strong> Una vez adjudicada la administración, entrega al Comité este kit pericial para <strong>notificar al administrador saliente con el preaviso legal de 30 días</strong>, auditar la entrega de antecedentes con la <strong>Pauta de Traspaso de 3 páginas</strong> y formalizar el <strong>Acta de Nombramiento</strong> con facultades bancarias plenas ante bancos y notarías.
       </p>
 
@@ -743,6 +746,8 @@ Se faculta expresamente a don JOHN ANDRÉS ARANCIBIA MAUREIRA o al Presidente de
             {getStepMessages(5)?.whatsapp}
           </pre>
         </div>
+      )}
+      </>
       )}
 
       {/* ========================================================================= */}
