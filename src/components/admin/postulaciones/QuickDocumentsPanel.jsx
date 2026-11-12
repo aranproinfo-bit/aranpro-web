@@ -4,11 +4,14 @@ import {
   ShieldCheck, Award, CheckCircle2, AlertTriangle, Clock, HardHat, Scale,
   QrCode, Presentation, Calculator, Building2, Sparkles, Filter, Check,
   Settings, ChevronDown, ChevronUp, FolderArchive, X, ArrowUpRight,
-  FileCheck, DollarSign, Plus, PenTool, Trash2, Send
+  FileCheck, DollarSign, Plus, PenTool, Trash2, Send, CheckSquare, BookOpen
 } from 'lucide-react';
 import { formatCLP } from '../../../utils/formatters';
 import { openDataUrlInNewTab, downloadDataUrl } from '../../../utils/fileVault';
 import { printDocumentDirectly } from '../../../utils/printDocument';
+import { transitionChecklistPrintStyles } from './TransitionChecklist';
+import { activeProposalConditions, changeProposalCommunity } from '../../../utils/proposalConditions';
+import { canonicalPortraitPrintStyles, canonicalLandscapePrintStyles } from '../../common/CanonicalPdfParts';
 
 export const QuickDocumentsPanel = ({
   proposalConfig = {},
@@ -79,8 +82,10 @@ export const QuickDocumentsPanel = ({
     const targetClean = (proposalConfig.targetCondo || 'Comunidad').replace(/[^a-zA-Z0-9]/g, '_');
     printDocumentDirectly('printable-termination-notice', `ARANPRO_Carta_Preaviso_Termino_${targetClean}`, {
       pageSize: 'letter portrait',
-      fitPage: true,
-      margin: '4mm 6mm 4mm 6mm'
+      fitPage: false,
+      margin: '12mm 15mm 12mm 15mm',
+      pdfStyle: 'neutral',
+      extraStyles: '.dossier-page{height:255mm !important;min-height:255mm !important;max-height:255mm !important;overflow:hidden !important;display:flex !important;padding:0 !important;page-break-after:avoid !important;break-after:avoid !important;} .dossier-page > div{padding:0 !important;} .dossier-page li, .dossier-page p{orphans:3;widows:3;} .sig-block{page-break-inside:avoid !important;break-inside:avoid !important;}'
     });
   };
 
@@ -89,7 +94,8 @@ export const QuickDocumentsPanel = ({
     printDocumentDirectly('printable-transition-checklist', `ARANPRO_Pauta_Checklist_Traspaso_3Pags_${targetClean}`, {
       pageSize: 'letter portrait',
       fitPage: false,
-      margin: '4mm 6mm 4mm 6mm'
+      margin: '0',
+      extraStyles: transitionChecklistPrintStyles
     });
   };
 
@@ -98,16 +104,18 @@ export const QuickDocumentsPanel = ({
     printDocumentDirectly('printable-management-contract', `ARANPRO_Contrato_Servicios_Administracion_${targetClean}`, {
       pageSize: 'letter portrait',
       fitPage: false,
-      margin: '4mm 6mm 4mm 6mm'
+      margin: '0',
+      extraStyles: canonicalPortraitPrintStyles
     });
   };
 
   const handlePrintLegalGuides = () => {
     const targetClean = (proposalConfig.targetCondo || 'Comunidad').replace(/[^a-zA-Z0-9]/g, '_');
     printDocumentDirectly('printable-legal-advisory-sheet', `ARANPRO_Guias_Legales_Asambleas_y_Quorums_${targetClean}`, {
-      pageSize: 'letter portrait',
+      pageSize: 'letter landscape',
       fitPage: false,
-      margin: '4mm 6mm 4mm 6mm'
+      margin: '0',
+      extraStyles: canonicalLandscapePrintStyles
     });
   };
 
@@ -116,7 +124,7 @@ export const QuickDocumentsPanel = ({
     {
       id: 'carta-valor',
       title: 'Carta de Valor al Comité • Puerta en Frío',
-      subtitle: 'Presentación formal sin precios. Destaca experiencia pericial, App 24/7 y ofrece diagnóstico inicial gratuito.',
+      subtitle: 'Presentación formal sin precios. Destaca experiencia pericial, App 24/7 y ofrece diagnóstico inicial.',
       badge: 'Paso 1 • Embudo',
       badgeColor: 'emerald',
       format: 'PDF Oficial A4 (1 Pág)',
@@ -135,7 +143,7 @@ export const QuickDocumentsPanel = ({
       subtitle: 'Compendio maestro para licitaciones: Portada corporativa, Carta oficial, Peritaje constructivo, Acreditaciones y Diplomas.',
       badge: 'Paso 2 • Embudo',
       badgeColor: 'gold',
-      format: 'PDF Oficial A4 (3+ Págs)',
+      format: 'PDF Oficial Carta (páginas variables)',
       type: 'generado',
       category: 'generados',
       ready: true,
@@ -164,7 +172,7 @@ export const QuickDocumentsPanel = ({
     },
     {
       id: 'informe-diagnostico',
-      title: 'Informe de Diagnóstico Técnico Inicial Gratuito',
+      title: 'Informe de Diagnóstico Técnico Inicial',
       subtitle: 'Pauta de inspección pericial de salas de bombas, tableros eléctricos, cubiertas y sellos de gas para la primera visita.',
       badge: 'Paso 3 • Anexo Técnico',
       badgeColor: 'slate',
@@ -336,7 +344,7 @@ export const QuickDocumentsPanel = ({
     setPreviewInspectionModal, handlePrintInspectionReport,
     setPreviewBrochureModal, handlePrintBrochure,
     setPreviewComparisonModal, handlePrintComparisonMatrix,
-    onNavigateToSection
+    onNavigateToSection, proposalConfig.targetCondo
   ]);
 
   // 2. DOCUMENTOS Y ACREDITACIONES DE LA BÓVEDA DIGITAL
@@ -630,7 +638,7 @@ export const QuickDocumentsPanel = ({
                   type="text"
                   placeholder="Ej: Condominio Mirador"
                   value={proposalConfig?.targetCondo || ''}
-                  onChange={(e) => setProposalConfig({ ...proposalConfig, targetCondo: e.target.value })}
+                  onChange={(e) => { const name = e.target.value; setProposalConfig(prev => changeProposalCommunity(prev, name)); }}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
                 />
               </div>
@@ -651,7 +659,7 @@ export const QuickDocumentsPanel = ({
                   type="number"
                   min="0"
                   step="10000"
-                  value={proposalConfig?.proposedMonthlyFee ?? 850000}
+                  value={proposalConfig?.proposedMonthlyFee ?? ''}
                   onChange={(e) => setProposalConfig({ ...proposalConfig, proposedMonthlyFee: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-[#0F3D2E] focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
                 />
@@ -660,9 +668,10 @@ export const QuickDocumentsPanel = ({
                 <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Frecuencia Visitas</label>
                 <input
                   type="text"
+                  maxLength={120}
                   placeholder="Ej: 2 visitas semanales"
-                  value={proposalConfig?.visitFrequency || ''}
-                  onChange={(e) => setProposalConfig({ ...proposalConfig, visitFrequency: e.target.value })}
+                  value={activeProposalConditions(proposalConfig).visitFrequency}
+                  onChange={(e) => setProposalConfig(prev => ({ ...prev, proposalConditionsFor: prev.targetCondo, proposalConditions: { ...activeProposalConditions(prev), visitFrequency: e.target.value } }))}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F3D2E]"
                 />
               </div>
@@ -846,10 +855,10 @@ export const QuickDocumentsPanel = ({
                                 ? 'bg-[#0F3D2E] hover:bg-[#0A291F] text-white'
                                 : 'bg-emerald-50 hover:bg-emerald-100 text-[#0F3D2E] border border-emerald-300'
                             }`}
-                            title="Descargar o imprimir PDF oficial con los datos actuales"
+                            title={['carta-valor', 'dossier-maestro'].includes(doc.id) ? 'Descargar PDF oficial con los datos actuales' : 'Descargar o imprimir PDF oficial con los datos actuales'}
                           >
                             <Printer className="w-3.5 h-3.5 text-[#D4B895]" />
-                            <span>Imprimir / PDF</span>
+                            <span>{['carta-valor', 'dossier-maestro'].includes(doc.id) ? 'Descargar PDF' : 'Imprimir / PDF'}</span>
                           </button>
                         )}
 

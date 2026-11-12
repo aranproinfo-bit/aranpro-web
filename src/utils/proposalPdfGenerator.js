@@ -8,6 +8,7 @@
 
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
+import { canonicalPdfHeaderStyles } from '../components/common/CanonicalPdfParts';
 
 /**
  * Convierte un Blob en DataURL Base64
@@ -103,6 +104,28 @@ export const exportDomElementToPdfBase64 = async (elementOrId, options = {}) => 
         clonedDoc.body.style.padding = '0';
         clonedDoc.body.style.background = '#ffffff';
 
+        // La descarga y el adjunto parten del mismo documento. Aplicar aquí las
+        // medidas de impresión aprobadas: html2canvas no ejecuta @media print.
+        const canonicalStyle = clonedDoc.createElement('style');
+        canonicalStyle.textContent = `${canonicalPdfHeaderStyles}
+          .dossier-page { box-sizing:border-box!important; height:1056px!important; min-height:1056px!important; max-height:1056px!important;
+            padding:30.2px 60.5px 30.2px 64.3px!important; border:0!important; border-left:12.5px solid #0F3D2E!important;
+            background-color:#fff!important; background-image:linear-gradient(#D4B895,#D4B895)!important;
+            background-size:4.5px 100%!important; background-position:1.9px 0!important; background-repeat:no-repeat!important; }
+          .dossier-page > div[aria-hidden="true"], .aranpro-print-watermark { display:none!important; }
+          ${options.hideDecorativeWatermark ? '.dossier-page > img[aria-hidden="true"] { display:none!important; } .dossier-page h1 { font-size:12px!important; }' : ''}
+          .transition-header img[src*="ARANPRO_logo_horizontal"] { width:140px!important; max-width:140px!important; height:auto!important; max-height:42px!important; object-fit:contain!important; }
+          .proposal-page-footer,.brochure-footer { gap:8px!important; font-size:8px!important; white-space:nowrap!important; }
+          .transition-final-footer { gap:8px!important; }
+          .transition-footer-details { gap:8px!important; flex:1 1 auto; min-width:0; }
+          .transition-footer-seal { flex:0 0 auto; gap:6px!important; }
+          .transition-footer-seal > div { white-space:nowrap; }
+          .transition-footer-seal > div > div:first-child { font-size:8px!important; letter-spacing:0!important; }
+          .transition-footer-seal > div > div:last-child { font-size:7.5px!important; }
+          .transition-footer-contact { flex:0 0 auto; white-space:nowrap; font-size:8px!important; padding-left:8px!important; }
+          .transition-footer-signature { flex:0 0 210px; min-width:0!important; }`;
+        clonedDoc.head.appendChild(canonicalStyle);
+
         clonedEl.style.width = '816px';
         clonedEl.style.minHeight = '1056px';
         clonedEl.style.height = '1056px';
@@ -157,7 +180,9 @@ export const generateStepPdfAttachment = async ({
 }) => {
   const targetRaw = (proposalConfig.targetCondo || '').trim();
   const targetClean = targetRaw.replace(/[^a-zA-Z0-9]/g, '_');
-  const dateClean = (proposalConfig.proposalDate || new Date().toISOString().slice(0, 10)).replace(/[^0-9]/g, '');
+  const currentLocalDate = new Date();
+  const currentDateClean = `${currentLocalDate.getFullYear()}${String(currentLocalDate.getMonth() + 1).padStart(2, '0')}${String(currentLocalDate.getDate()).padStart(2, '0')}`;
+  const dateClean = stepNumber === 1 || stepNumber === 2 || stepNumber === 3 ? currentDateClean : (proposalConfig.proposalDate || new Date().toISOString().slice(0, 10)).replace(/[^0-9]/g, '');
 
   let elementId = 'printable-cold-value-letter';
   let defaultFilename = targetClean
@@ -204,7 +229,28 @@ export const generateStepPdfAttachment = async ({
     }
 
     if (el) {
-      const contentBase64 = await exportDomElementToPdfBase64(el, { filename: defaultFilename });
+      if (stepNumber === 2 || stepNumber === 3) {
+        const today = currentLocalDate.toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
+        el.querySelectorAll('[data-current-print-date]').forEach(node => { node.textContent = today; });
+      }
+      if (stepNumber === 2) {
+        const evidenceDeadline = Date.now() + 8000;
+        while (el.dataset.dossierEvidenceStatus === 'pending' && Date.now() < evidenceDeadline) {
+          await new Promise(resolve => setTimeout(resolve, 80));
+        }
+        if (el.dataset.dossierEvidenceStatus !== 'ready') {
+          throw new Error('No se pudieron cargar todos los archivos seleccionados de la bóveda. Revisa sus respaldos antes de generar el dossier.');
+        }
+        // Evitar que el PDF capture el QR provisional de otro destino.
+        const deadline = Date.now() + 5000;
+        let qr = el.querySelector('img[data-qr-value]');
+        while ((!qr || qr.dataset.qrReady !== 'true') && Date.now() < deadline) {
+          await new Promise(resolve => setTimeout(resolve, 80));
+          qr = el.querySelector('img[data-qr-value]');
+        }
+        if (!qr || qr.dataset.qrReady !== 'true') throw new Error('No se pudo preparar el código QR de la demostración');
+      }
+      const contentBase64 = await exportDomElementToPdfBase64(el, { filename: defaultFilename, hideDecorativeWatermark: stepNumber === 1 });
       if (contentBase64 && contentBase64.length > 500) {
         return {
           filename: defaultFilename,
