@@ -12,6 +12,7 @@ import { OfficialCertificatesModule } from './OfficialCertificatesModule';
 import { CompanySettingsAndBackupModule } from './CompanySettingsAndBackupModule';
 import { CommunitySettingsAndLegalTab } from './CommunitySettingsAndLegalTab';
 import { CommunityPayrollAndStaffModule } from './CommunityPayrollAndStaffModule';
+import CommunityHandoverAndAccountabilityModule from './CommunityHandoverAndAccountabilityModule';
 import { ExpenseReportModal } from '../common/ExpenseReportModal';
 import { UnitAccountStatementView } from './UnitAccountStatementView';
 import { EmailDispatchTrackingModule } from './EmailDispatchTrackingModule';
@@ -174,6 +175,7 @@ export const AdminDashboard = ({ onSelectCommunityView, onBackToWeb, initialComm
 
   // --- Sub-pestaña para Unidades y Registro Rápido de Pagos de Cartola ---
   const [unitsSubTab, setUnitsSubTab] = useState('nomina'); // 'nomina' | 'validar_pagos' | 'registro_pagos'
+  const [traspasoSubTab, setTraspasoSubTab] = useState('traspaso_pauta');
   const [showQuickBankPaymentModal, setShowQuickBankPaymentModal] = useState(false);
   const [quickPaySearchQuery, setQuickPaySearchQuery] = useState('');
   const [quickPaySelectedUnit, setQuickPaySelectedUnit] = useState(null);
@@ -2884,6 +2886,7 @@ _Administración ARANPRO_`;
     { id: 'asambleas', label: 'Asambleas & Quórum', shortLabel: 'Asambleas', icon: Users, badge: 'Ley 21.442' },
     { id: 'comunicados', label: 'Mural & Reclamos', shortLabel: 'Mural & Reclamos', icon: Megaphone, badge: totalDocsAndAnnCount, alertBadge: pendingTicketsCount > 0 },
     { id: 'certificados', label: 'Certificados', shortLabel: 'Certificados', icon: ShieldCheck, badge: pendingCertificatesCount > 0 ? `${pendingCertificatesCount} pend.` : certificates.length, alertBadge: pendingCertificatesCount > 0 },
+    { id: 'traspaso', label: 'Rendición & Traspaso', shortLabel: 'Traspaso', icon: Briefcase, badge: 'Ley 21.442' },
     { id: 'ajustes', label: 'Ajustes Comunidad & App', shortLabel: 'Ajustes', icon: Settings, badge: null }
   ];
 
@@ -4062,6 +4065,87 @@ _Administración ARANPRO_`;
                         0
                       </span>
                     )}
+                  </button>
+                </div>
+              )}
+              {/* SUB-ÍNDICES DE RENDICIÓN Y TRASPASO EN LA BARRA LATERAL */}
+              {tab.id === 'traspaso' && (!sidebarCollapsed || isMobile) && (
+                <div className={`ml-3.5 pl-2 border-l-2 border-[#D4B895]/50 space-y-0.5 my-1 ${activeTab === 'traspaso' ? 'block' : 'hidden'}`}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('traspaso');
+                      setTraspasoSubTab('traspaso_pauta');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'traspaso' && traspasoSubTab === 'traspaso_pauta'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Briefcase className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'traspaso' && traspasoSubTab === 'traspaso_pauta' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">1. Pauta Entrega (A–G)</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('traspaso');
+                      setTraspasoSubTab('documentos_traspaso');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'traspaso' && traspasoSubTab === 'documentos_traspaso'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <FileText className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'traspaso' && traspasoSubTab === 'documentos_traspaso' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">2. Bandeja Documentos</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('traspaso');
+                      setTraspasoSubTab('cierre_traspaso');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'traspaso' && traspasoSubTab === 'cierre_traspaso'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'traspaso' && traspasoSubTab === 'cierre_traspaso' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">3. Mandatos & Cierre</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('traspaso');
+                      setTraspasoSubTab('anual_pauta');
+                      if (isMobile) setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      activeTab === 'traspaso' && traspasoSubTab === 'anual_pauta'
+                        ? 'bg-[#0F3D2E]/10 text-[#0F3D2E] font-black border border-[#0F3D2E]/20'
+                        : 'text-slate-600 hover:text-[#0F3D2E] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <Calendar className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'traspaso' && traspasoSubTab === 'anual_pauta' ? 'text-[#0F3D2E]' : 'text-slate-400'}`} />
+                      <span className="truncate">4. Rendición Anual</span>
+                    </div>
                   </button>
                 </div>
               )}
@@ -11288,6 +11372,28 @@ _Administración ARANPRO_`;
         {/* TAB 6: BANDEJA DE CERTIFICADOS OFICIALES (LEY 21.442) */}
         {activeTab === 'certificados' && (
           <OfficialCertificatesModule currentCommunity={currentCommunity} />
+        )}
+
+        {/* TAB 8: RENDICIÓN DE CUENTAS & TRASPASO DE COMUNIDAD (LEY 21.442) */}
+        {activeTab === 'traspaso' && (
+          <CommunityHandoverAndAccountabilityModule
+            currentCommunity={currentCommunity}
+            activeSubSection={traspasoSubTab}
+            onChangeSubSection={setTraspasoSubTab}
+            onNavigateToTab={(tab, subTab) => {
+              setActiveTab(tab);
+              if (subTab) {
+                if (tab === 'gastos') setExpensesSubTab(subTab);
+                else if (tab === 'unidades') setUnitsSubTab(subTab);
+                else if (tab === 'remuneraciones') setRemuneracionesSubTab(subTab);
+                else if (tab === 'asambleas') setAsambleasSubTab(subTab);
+                else if (tab === 'comunicados') setComunicadosSubTab(subTab);
+                else if (tab === 'comite') setComiteSubTab(subTab);
+                else if (tab === 'emision') setEmisionSubTab(subTab);
+                else if (tab === 'ajustes') setCompanySubTab(subTab);
+              }
+            }}
+          />
         )}
 
         {/* TAB 7: AJUSTES DE LA COMUNIDAD & ASPECTOS LEGALES DE LA APLICACIÓN */}
