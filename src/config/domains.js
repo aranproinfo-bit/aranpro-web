@@ -30,17 +30,19 @@ export function getSubdomainMode(hostnameInput) {
 }
 
 function areDedicatedSubdomainsEnabled() {
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEDICATED_SUBDOMAINS === 'true') {
-    return true;
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEDICATED_SUBDOMAINS === 'false') {
+    return false;
   }
   if (typeof window !== 'undefined') {
     try {
-      return localStorage.getItem('aranpro_dedicated_subdomains') === 'true';
+      if (localStorage.getItem('aranpro_dedicated_subdomains') === 'false') {
+        return false;
+      }
     } catch {
-      return false;
+      // ignore storage restrictions
     }
   }
-  return false;
+  return true;
 }
 
 export const DOMAIN_CONFIG = {
